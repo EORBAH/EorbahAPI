@@ -1,0 +1,20 @@
+{
+    "name": "eor_bah545/eorbahapi",
+    "description": "EORBAH API. Un framework web moderne, rapide (haute performance), facile à utiliser et à apprendre, qui permet de créer des API avec php basé sur les normes des API moderne comme expressjs, Fastapi etc...",
+    "type": "library",
+    "autoload": {
+        "psr-4": {
+            "EorBah545\\Eorbahapi\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "EORBAH",
+            "email": "eor.bah545@gmail.com"
+        }
+    ],
+    "require": {
+        "twig/twig": "^3.0",
+        "vlucas/phpdotenv": "*"
+    }
+}
