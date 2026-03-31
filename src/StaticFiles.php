@@ -80,48 +80,6 @@ class StaticFiles
         $realPath = realpath($filePath);
         return $realPath && strpos($realPath, $this->directory) === 0;
     }
-    /*
-    private function sendFile($filePath)
-    {
-        if (function_exists('apache_setenv')) {
-            @apache_setenv('no-gzip', '1');
-        }
-        @ini_set('zlib.output_compression', '0');
-
-        $fileSize = filesize($filePath);
-        $lastModified = filemtime($filePath);
-        $etag = md5($filePath . $lastModified . $fileSize);
-        $mimeType = $this->getMimeType($filePath);
-
-        header('Content-Type: ' . $mimeType);
-        header('Last-Modified: ' . gmdate('D, d M Y H:i:s', $lastModified) . ' GMT');
-        header('ETag: "' . $etag . '"');
-
-        if ($this->cacheControl) {
-            header('Cache-Control: ' . $this->cacheControl);
-            
-            // Ajouter d'autres headers anti-cache
-            header('Pragma: no-cache');
-            header('Expires: 0');
-        }
-
-        $compressed = false;
-        if ($this->compression && $this->isCompressible($mimeType)) {
-            $compressed = $this->handleCompression($filePath, $mimeType);
-        }
-
-        // Désactiver la vérification 304 Not Modified pour éviter le cache navigateur
-        // if ($this->isNotModified($lastModified, $etag)) {
-        //     header('HTTP/1.1 304 Not Modified');
-        //     exit;
-        // }
-
-        if (!$compressed) {
-            header('Content-Length: ' . $fileSize);
-            readfile($filePath);
-        }
-    }
-    */
 
     private function sendFile($filePath)
     {
