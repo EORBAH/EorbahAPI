@@ -2,31 +2,21 @@
 
 namespace EorBah545\Eorbahapi;
 
-class Response
-{
-    public function withJson($data, $header = true)
-    {
+class Response {
+    public function JSONResponse($data, $header = true) {
         if ($header) {
             header("Content-Type: application/json");
         }
         echo json_encode($data);
     }
-
-    public function HTMLResponse($file, $data = [])
-    {
-        if (file_exists($file)) {
-            extract($data, EXTR_SKIP);
-            include $file;
-        } else {
-            error_log("Template file not found: $file\n");
-            $this->status(500)->send("File not found");
+ 
+    public function send($message = null, $type = null) {
+        if (is_string($message)) {
+            $message = trim($message);
         }
-    }
-
-    public function send($message = null, $type = null)
-    {
+        
         if ($type == "json") {
-            $this->withJson($message);
+            $this->JSONResponse($message);
         } elseif ($message === null) {
             echo "";
         } else {
@@ -34,10 +24,69 @@ class Response
         }
     }
 
-    public function status(int $code)
-    {
+    public function status(int $code) {
         http_response_code($code);
         return $this;
+    }
+
+   
+    function HTMLResponse(string $content, int $statusCode = 200, array $headers = []): void {
+        if (headers_sent()) {
+            $this->status(200)->send($content);
+            return;
+        }
+
+        $this->status($statusCode)->setHeader('Content-Type', 'text/html; charset=utf-8');
+
+        foreach ($headers as $name => $value) {
+            $this->setHeader($name, $value);
+        }
+
+        $this->send($content);
+    }
+
+    public function FileResponse(string $filePath, array $options = []): void {
+        if (!file_exists($filePath) || !is_readable($filePath)) {
+            $this->status(404)->send("File not found");
+            return;
+        }
+
+        $fileInfo = pathinfo($filePath);
+        $extension = strtolower($fileInfo['extension'] ?? '');
+        $contentTypeMap = [
+            'json' => 'json',
+            'html' => 'html',
+            'jpg' => 'image',
+            'jpeg' => 'image',
+            'png' => 'png',
+            'gif' => 'gif',
+            'css' => 'css',
+            'js' => 'javascript',
+            'pdf' => 'pdf',
+            'mp4' => 'video',
+            'mp3' => 'mp3',
+        ];
+
+        $contentType = $contentTypeMap[$extension] ?? 'application/octet-stream';
+
+        $this->set_content_type($contentType, null, [
+            'disposition' => $options['disposition'] ?? 'inline',
+            'filename' => $options['filename'] ?? basename($filePath),
+            'custom_headers' => $options['custom_headers'] ?? []
+        ]);
+
+        readfile($filePath);
+    }
+
+    public function StreamingResponse($gen, $ContentType = 'text/event-stream'): void {
+        $this->setHeader("Content-Type", $ContentType);
+        $this->setHeader('Cache-Control', 'no-cache');
+    
+        foreach ($gen as $event) {
+            echo $event;
+            ob_flush();
+            flush();
+        }
     }
 
     public function set_content_type(
@@ -94,54 +143,17 @@ class Response
         }
     }
 
-    public function RedirectResponse(string $url, int $statusCode = 302): void
-    {
+    public function RedirectResponse(string $url, int $statusCode = 302): void {
         http_response_code($statusCode);
         header("Location: $url");
         exit();
     }
 
-    public function FileResponse(string $filePath, array $options = []): void
-    {
-        if (!file_exists($filePath) || !is_readable($filePath)) {
-            $this->status(404)->send("File not found");
-            return;
-        }
-
-        $fileInfo = pathinfo($filePath);
-        $extension = strtolower($fileInfo['extension'] ?? '');
-        $contentTypeMap = [
-            'json' => 'json',
-            'html' => 'html',
-            'jpg' => 'image',
-            'jpeg' => 'image',
-            'png' => 'png',
-            'gif' => 'gif',
-            'css' => 'css',
-            'js' => 'javascript',
-            'pdf' => 'pdf',
-            'mp4' => 'video',
-            'mp3' => 'mp3',
-        ];
-
-        $contentType = $contentTypeMap[$extension] ?? 'application/octet-stream';
-
-        $this->set_content_type($contentType, null, [
-            'disposition' => $options['disposition'] ?? 'inline',
-            'filename' => $options['filename'] ?? basename($filePath),
-            'custom_headers' => $options['custom_headers'] ?? []
-        ]);
-
-        readfile($filePath);
-    }
-
-    public function setHeader($name, $value)
-    {
+    public function setHeader($name, $value) {
         header("$name: $value");
     }
 
-    public function cookie(string $name, $value, array $options = []): void
-    {
+    public function cookie(string $name, $value, array $options = []): void {
         $defaultOptions = [
             'expires' => 0,
             'path' => '/',
@@ -169,12 +181,10 @@ class Response
         $_COOKIE[$name] = $name;
     }
 
-    public function clearCookie($name)
-    {
+    public function clearCookie($name) {
         if (isset($_COOKIE[$name])) {
             setcookie(
-                $name,
-                '',
+                $name, '',
                 [
                     'expires' => time() - 3600,
                     'path' => '/',

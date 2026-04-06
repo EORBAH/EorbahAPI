@@ -2,16 +2,12 @@
 
 namespace EorBah545\Eorbahapi\datastructures;
 
-/**
- * Classe Address - Représente une adresse IP et port
- */
-class Address implements \JsonSerializable
-{
+
+class Address implements \JsonSerializable {
     private ?string $host;
     private ?int $port;
     
-    public function __construct(?string $host = null, ?int $port = null)
-    {
+    public function __construct(?string $host = null, ?int $port = null) {
         $this->host = $host;
         $this->port = $port;
     }
@@ -19,32 +15,28 @@ class Address implements \JsonSerializable
     /**
      * Récupère l'hôte (adresse IP)
      */
-    public function getHost(): ?string
-    {
+    public function getHost(): ?string {
         return $this->host;
     }
     
     /**
      * Récupère le port
      */
-    public function getPort(): ?int
-    {
+    public function getPort(): ?int {
         return $this->port;
     }
     
     /**
      * Vérifie si l'adresse est complète
      */
-    public function isComplete(): bool
-    {
+    public function isComplete(): bool {
         return $this->host !== null && $this->port !== null;
     }
     
     /**
      * Représentation sous forme de string
      */
-    public function __toString(): string
-    {
+    public function __toString(): string {
         if ($this->host === null && $this->port === null) {
             return 'unknown';
         }
@@ -59,8 +51,7 @@ class Address implements \JsonSerializable
     /**
      * Interface JsonSerializable
      */
-    public function jsonSerialize(): array
-    {
+    public function jsonSerialize(): array {
         return [
             'host' => $this->host,
             'port' => $this->port,
@@ -71,8 +62,7 @@ class Address implements \JsonSerializable
     /**
      * Crée depuis la variable $_SERVER
      */
-    public static function fromServerGlobal(): self
-    {
+    public static function fromServerGlobal(): self {
         $host = null;
         $port = null;
         
@@ -94,10 +84,9 @@ class Address implements \JsonSerializable
     }
     
     /**
-     * Déstructure comme un tuple (comme Python)
+     * Déstructure comme un tuple
      */
-    public function destructure(): array
-    {
+    public function destructure(): array {
         return [$this->host, $this->port];
     }
 }

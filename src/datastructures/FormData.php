@@ -1,9 +1,9 @@
 <?php
 
 namespace EorBah545\Eorbahapi\datastructures;
+
 // (interne, pour multipart/form-data)
-class FormData
-{
+class FormData {
     private $data = [];
 
     public function __construct($data = []) {
@@ -56,8 +56,7 @@ class FormData
      * @param array $rules
      * @return array
      */
-    public function sanitizeInput(array $rules): array
-    {
+    public function sanitizeInput(array $rules): array {
         $sanitized = [];
 
         foreach ($rules as $field => $rule) {

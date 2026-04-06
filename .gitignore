@@ -1,1 +1,6 @@
 /vendor/
+/docs/node_modules/
+composer.lock
+.idea/
+.cursor/
+/src-dev/

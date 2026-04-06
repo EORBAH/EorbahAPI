@@ -1,6 +1,6 @@
 <?php
 
-namespace EorBah545\Eorbahapi\Templating;
+namespace Eorbahapi\Templating;
 
 use Twig\Environment;
 use Twig\Loader\FilesystemLoader;

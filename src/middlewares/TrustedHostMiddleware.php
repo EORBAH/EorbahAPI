@@ -3,5 +3,11 @@
 namespace EorBah545\Eorbahapi\middlewares;
 
 class TrustedHostMiddleware {
-    // TrustedHost middleware implementation
+    public function __construct() {}
+    
+    public function process($request, $response, $next) {
+        
+        // TrustedHost middleware implementation
+        return $next();
+    }
 }

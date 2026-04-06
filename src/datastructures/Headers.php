@@ -4,16 +4,14 @@ namespace EorBah545\Eorbahapi\datastructures;
 /**
  * Classe Headers - Représentation immuable des en-têtes HTTP
  */
-class Headers implements \ArrayAccess, \IteratorAggregate, \Countable
-{
+class Headers implements \ArrayAccess, \IteratorAggregate, \Countable {
     private array $headers;
     private array $normalizedKeys;
     
     /**
      * @param array $headers Tableau d'en-têtes [key => value]
      */
-    public function __construct(array $headers = [])
-    {
+    public function __construct(array $headers = []) {
         $this->headers = [];
         $this->normalizedKeys = [];
         
@@ -25,16 +23,14 @@ class Headers implements \ArrayAccess, \IteratorAggregate, \Countable
     /**
      * Normalise la clé (case-insensitive)
      */
-    private function normalizeKey(string $key): string
-    {
+    private function normalizeKey(string $key): string {
         return strtolower(str_replace('_', '-', $key));
     }
     
     /**
      * Définit un en-tête (interne, utilisé à la construction)
      */
-    private function setHeader(string $key, $value): void
-    {
+    private function setHeader(string $key, $value): void {
         $normalizedKey = $this->normalizeKey($key);
         $originalKey = $this->findOriginalKey($key) ?? $key;
         
@@ -45,8 +41,7 @@ class Headers implements \ArrayAccess, \IteratorAggregate, \Countable
     /**
      * Trouve la clé originale (respectant la casse d'origine)
      */
-    private function findOriginalKey(string $key): ?string
-    {
+    private function findOriginalKey(string $key): ?string {
         $normalizedKey = $this->normalizeKey($key);
         return $this->normalizedKeys[$normalizedKey] ?? null;
     }
@@ -54,8 +49,7 @@ class Headers implements \ArrayAccess, \IteratorAggregate, \Countable
     /**
      * Récupère un en-tête
      */
-    public function get(string $key, $default = null)
-    {
+    public function get(string $key, $default = null) {
         $originalKey = $this->findOriginalKey($key);
         
         if (!$originalKey || !isset($this->headers[$originalKey])) {
@@ -69,8 +63,7 @@ class Headers implements \ArrayAccess, \IteratorAggregate, \Countable
     /**
      * Récupère tous les valeurs d'un en-tête (tableau)
      */
-    public function getAll(string $key): array
-    {
+    public function getAll(string $key): array {
         $originalKey = $this->findOriginalKey($key);
         return $originalKey ? $this->headers[$originalKey] : [];
     }
@@ -78,16 +71,14 @@ class Headers implements \ArrayAccess, \IteratorAggregate, \Countable
     /**
      * Vérifie si un en-tête existe
      */
-    public function has(string $key): bool
-    {
+    public function has(string $key): bool {
         return $this->findOriginalKey($key) !== null;
     }
     
     /**
      * Récupère tous les en-têtes sous forme de tableau
      */
-    public function toArray(): array
-    {
+    public function toArray(): array {
         $result = [];
         foreach ($this->headers as $key => $values) {
             $result[$key] = count($values) === 1 ? $values[0] : $values;
@@ -98,55 +89,47 @@ class Headers implements \ArrayAccess, \IteratorAggregate, \Countable
     /**
      * Récupère les clés originales
      */
-    public function keys(): array
-    {
+    public function keys(): array {
         return array_keys($this->headers);
     }
     
     /**
      * Interface ArrayAccess - Lecture seule
      */
-    public function offsetExists($offset): bool
-    {
+    public function offsetExists($offset): bool {
         return $this->has($offset);
     }
     
-    public function offsetGet($offset): mixed
-    {
+    public function offsetGet($offset): mixed {
         return $this->get($offset);
     }
     
-    public function offsetSet($offset, $value): void
-    {
+    public function offsetSet($offset, $value): void {
         throw new \RuntimeException('Headers object is immutable');
     }
     
-    public function offsetUnset($offset): void
-    {
+    public function offsetUnset($offset): void {
         throw new \RuntimeException('Headers object is immutable');
     }
     
     /**
      * Interface IteratorAggregate
      */
-    public function getIterator(): \Traversable
-    {
+    public function getIterator(): \Traversable {
         return new \ArrayIterator($this->toArray());
     }
     
     /**
      * Interface Countable
      */
-    public function count(): int
-    {
+    public function count(): int {
         return count($this->headers);
     }
     
     /**
      * Crée depuis les en-têtes PHP globaux
      */
-    public static function fromGlobals(): self
-    {
+    public static function fromGlobals(): self {
         if (function_exists('getallheaders')) {
             $headers = getallheaders();
         } else {

@@ -21,9 +21,12 @@ class CORSMiddleware
         $this->allowHeaders = $allow_headers;
     }
     
-    public function process($request, $response, $next)
-    {
-        
+    public function process($request, $response, $next) {
+        $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+        if (!in_array($origin, $this->allowOrigins)) {
+            http_response_code(403);
+            exit('Origin not allowed');
+        }
         // Ajouter les headers CORS
         return $next();
     }

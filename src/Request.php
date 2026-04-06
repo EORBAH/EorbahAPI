@@ -5,9 +5,15 @@ namespace EorBah545\Eorbahapi;
 class Request {
     public $segments;
 
+    public function __construct() {
+        $this->segments = [];
+    }
+
     public function params($value = null) {
-        if ($value !== null) {
+        if (is_array($value)) {
             $this->segments = $value;
+        } elseif (is_string($value)) {
+            return $this->segments[$value];
         }
         return $this->segments;
     }
@@ -81,15 +87,4 @@ class Request {
         }
         return $_FILES;
     }
-
-    /**
-     * Summary of requests
-     * @param mixed $method
-     * @param mixed $url
-     * @param mixed $data
-     * @param mixed $headers
-     * @return void
-     */
-    public function requests($method, $url, $data = null, $headers = []) {}
-    
 }
