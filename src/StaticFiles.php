@@ -3,8 +3,7 @@
 namespace EorBah545\Eorbahapi;
 
 
-class StaticFiles
-{
+class StaticFiles {
     private $directory;
     private $indexFile;
     private $cacheControl;
@@ -17,8 +16,7 @@ class StaticFiles
     /** @var Response|null */
     private $response;
 
-    public function __construct($directory, $options = [])
-    {
+    public function __construct($directory, $options = []) {
         $this->directory = realpath($directory);
         $this->indexFile = $options['index'] ?? 'index.html';
         $this->cacheControl = $options['cache_control'] ?? 'no-cache, no-store, must-revalidate';
@@ -43,8 +41,6 @@ class StaticFiles
             'txt',
             'md',
             'webmanifest',
-            'x',
-            'xcss',
             'tx',
             'eot'
         ];
@@ -58,8 +54,7 @@ class StaticFiles
      * Permet à EorbahAPI d'injecter les instances Request/Response partagées.
      * Appelé automatiquement par mount() si la méthode existe.
      */
-    public function setRequestResponse($request, $response): void
-    {
+    public function setRequestResponse($request, $response): void {
         $this->request = $request;
         $this->response = $response;
     }
@@ -71,8 +66,7 @@ class StaticFiles
      * @param Request  $request
      * @param Response $response
      */
-    public function handle($request, $response): void
-    {
+    public function handle($request, $response): void {
         $this->setRequestResponse($request, $response);
 
         // Récupération du chemin (après retrait du préfixe par mount)
@@ -88,15 +82,13 @@ class StaticFiles
                 echo 'File not found';
             }
         }
-        // Si le fichier a été servi, serve() termine l'exécution (exit).
     }
 
     /**
      * Compatibilité avec la signature run($http, $handler) de EorbahAPI.
      * Utilisé si l'application montée est appelée via run().
      */
-    public function run($http = "404", $handler = null): void
-    {
+    public function run($http = "404", $handler = null): void {
         // Si les objets ont déjà été injectés, on les utilise.
         if ($this->request && $this->response) {
             $this->handle($this->request, $this->response);
@@ -111,8 +103,7 @@ class StaticFiles
     // reste strictement identique.
     // ---------------------------------------------------------------------
 
-    public function serve($path)
-    {
+    public function serve($path): bool{
         $cleanPath = $this->sanitizePath($path);
         $filePath = $this->directory . DIRECTORY_SEPARATOR . $cleanPath;
 
@@ -131,8 +122,7 @@ class StaticFiles
         return true;
     }
 
-    private function sanitizePath($path)
-    {
+    private function sanitizePath($path): string {
         $path = str_replace(['../', '..\\'], '', $path);
 
         $path = preg_replace('#/+#', '/', $path);
@@ -144,20 +134,17 @@ class StaticFiles
         return $path;
     }
 
-    private function isAllowedExtension($filePath)
-    {
+    private function isAllowedExtension($filePath): bool {
         $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
         return in_array($extension, $this->allowedExtensions);
     }
 
-    private function isInDirectory($filePath)
-    {
+    private function isInDirectory($filePath): bool {
         $realPath = realpath($filePath);
         return $realPath && strpos($realPath, $this->directory) === 0;
     }
 
-    private function sendFile($filePath)
-    {
+    private function sendFile($filePath): void {
         if (function_exists('apache_setenv')) {
             @apache_setenv('no-gzip', '1');
         }
@@ -193,8 +180,7 @@ class StaticFiles
         }
     }
 
-    private function getMimeType($filePath)
-    {
+    private function getMimeType($filePath): bool|string {
         $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
 
         $mimeTypes = [
@@ -223,8 +209,7 @@ class StaticFiles
         return $mimeTypes[$extension] ?? mime_content_type($filePath) ?: 'application/octet-stream';
     }
 
-    private function isCompressible($mimeType)
-    {
+    private function isCompressible($mimeType): bool {
         $compressibleTypes = [
             'text/html',
             'text/css',
@@ -241,8 +226,7 @@ class StaticFiles
         return in_array($mimeType, $compressibleTypes);
     }
 
-    private function handleCompression($filePath, $mimeType)
-    {
+    private function handleCompression($filePath, $mimeType): bool {
         $acceptEncoding = isset($_SERVER['HTTP_ACCEPT_ENCODING']) ? $_SERVER['HTTP_ACCEPT_ENCODING'] : '';
 
         $content = file_get_contents($filePath);
@@ -276,8 +260,7 @@ class StaticFiles
         return true;
     }
 
-    private function isNotModified($lastModified, $etag)
-    {
+    private function isNotModified($lastModified, $etag): bool {
         if (isset($_SERVER['HTTP_IF_MODIFIED_SINCE'])) {
             $ifModifiedSince = strtotime($_SERVER['HTTP_IF_MODIFIED_SINCE']);
             if ($ifModifiedSince && $lastModified <= $ifModifiedSince) {
@@ -294,5 +277,4 @@ class StaticFiles
 
         return false;
     }
-
 }

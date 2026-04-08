@@ -10,6 +10,7 @@ class EorbahAPI
     private array $dynamicRoutes = [];
     private array $globalMiddlewares = [];
 
+    private array $exceptionHandlers = [];
 
     private string $currentRoute = '';
     private string $currentMethod = '';
@@ -17,7 +18,8 @@ class EorbahAPI
     public $request;
     public $response;
 
-    public function __construct(string $title = "EorbahAPI application") {
+    public function __construct(string $title = "EorbahAPI application")
+    {
         $this->title = $title;
         $this->request = new Request();
         $this->response = new Response();
@@ -26,7 +28,8 @@ class EorbahAPI
     /**
      * Route GET
      */
-    public function get($route, $callback): static{
+    public function get($route, $callback): static
+    {
         $this->currentRoute = $this->normalizeRoute($route);
         $this->currentMethod = 'GET';
         $this->registerRoute('GET', $route, $callback);
@@ -36,7 +39,8 @@ class EorbahAPI
     /**
      * Route POST
      */
-    public function post($route, $callback): static{
+    public function post($route, $callback): static
+    {
         $this->currentRoute = $this->normalizeRoute($route);
         $this->currentMethod = 'POST';
         $this->registerRoute('POST', $route, $callback);
@@ -46,7 +50,8 @@ class EorbahAPI
     /**
      * Route PUT
      */
-    public function put($route, $callback): static {
+    public function put($route, $callback): static
+    {
         $this->currentRoute = $this->normalizeRoute($route);
         $this->currentMethod = 'PUT';
         $this->registerRoute('PUT', $route, $callback);
@@ -56,7 +61,8 @@ class EorbahAPI
     /**
      * Route DELETE
      */
-    public function delete($route, $callback): static {
+    public function delete($route, $callback): static
+    {
         $this->currentRoute = $this->normalizeRoute($route);
         $this->currentMethod = 'DELETE';
         $this->registerRoute('DELETE', $route, $callback);
@@ -66,7 +72,8 @@ class EorbahAPI
     /**
      * Enregistrement d'une route
      */
-    private function registerRoute($method, $route, $callback): void{
+    private function registerRoute($method, $route, $callback): void
+    {
         $route = $this->normalizeRoute($route);
 
         if (preg_match('/\{(\w+)(?::(\w+))?\}/', $route)) {
@@ -86,7 +93,8 @@ class EorbahAPI
     /**
      * Ajoute un middleware global
      */
-    public function addMiddleware($middlewareClass, $options = []): static {
+    public function addMiddleware($middlewareClass, $options = []): static
+    {
         $this->globalMiddlewares[] = [
             'class' => $middlewareClass,
             'options' => $options,
@@ -98,7 +106,8 @@ class EorbahAPI
     /**
      * Ajoute un middleware à la dernière route définie
      */
-    public function middleware($middlewareConfig): static {
+    public function middleware($middlewareConfig): static
+    {
         if (empty($this->currentRoute) || empty($this->currentMethod)) {
             throw new \Exception("Vous devez définir une route avant d'ajouter un middleware");
         }
@@ -123,7 +132,8 @@ class EorbahAPI
     /**
      * Ajoute un middleware à une route dynamique
      */
-    private function addDynamicRouteMiddleware($method, $route, $middlewareConfig): void {
+    private function addDynamicRouteMiddleware($method, $route, $middlewareConfig): void
+    {
         foreach ($this->dynamicRoutes[$method] as &$dynamicRoute) {
             if ($dynamicRoute['route'] === $route) {
                 if (!isset($dynamicRoute['middlewares'])) {
@@ -147,7 +157,8 @@ class EorbahAPI
      * @param callable $routeCallback Callback final de la route
      * @return bool
      */
-    private function applyRouteMiddlewares($middlewares, $segments, $routeCallback): mixed{
+    private function applyRouteMiddlewares($middlewares, $segments, $routeCallback): mixed
+    {
         $next = function () use ($routeCallback, $segments) {
             return call_user_func_array($routeCallback, $segments);
         };
@@ -174,7 +185,8 @@ class EorbahAPI
      * @param callable $routingCallback Callback qui lance le routage
      * @return bool
      */
-    private function executeMiddlewares($routingCallback): mixed {
+    private function executeMiddlewares($routingCallback): mixed
+    {
         $next = $routingCallback;
 
         foreach (array_reverse($this->globalMiddlewares) as &$mwConfig) {
@@ -216,7 +228,8 @@ class EorbahAPI
      * @param mixed  $app    Instance d'EorbahAPI ou callable
      * @return self
      */
-    public function mount(string $prefix, $app): self {
+    public function mount(string $prefix, $app): self
+    {
         $prefix = $this->normalizeRoute($prefix);
 
         // Injection automatique si la méthode existe
@@ -227,25 +240,12 @@ class EorbahAPI
         $this->mountedApps[$prefix] = $app;
         return $this;
     }
-    /*
-    public function mount(string $prefix, $app): self {
-        $prefix = $this->normalizeRoute($prefix);
-
-        if ($app instanceof self) {
-            $app->setRequestResponse($this->request, $this->response);
-        } elseif (!is_object($app) || (!method_exists($app, 'run') && !method_exists($app, 'handle') && !is_callable($app))) {
-            throw new \InvalidArgumentException("L'application montée doit être une instance d'EorbahAPI ou un objet callable.");
-        }
-
-        $this->mountedApps[$prefix] = $app;
-        return $this;
-    }
-    */
 
     /**
      * Permet d'injecter les objets Request et Response (utilisé par mount)
      */
-    public function setRequestResponse($request, $response): void {
+    public function setRequestResponse($request, $response): void
+    {
         $this->request = $request;
         $this->response = $response;
     }
@@ -253,7 +253,8 @@ class EorbahAPI
     /**
      * Inclut une route (classe avec config)
      */
-    public function IncludeRoute(string $RouteClass, array $option = []): void {
+    public function IncludeRoute(string $RouteClass, array $option = []): void
+    {
         if (!class_exists($RouteClass)) {
             throw new \InvalidArgumentException("La classe route '$RouteClass' n'existe pas.");
         }
@@ -298,7 +299,8 @@ class EorbahAPI
     /**
      * Inclut un ensemble de routes (classe invocable)
      */
-    public function IncludeRoutes(string $RouteClass, array $option = []): void {
+    public function IncludeRoutes(string $RouteClass, array $option = []): void
+    {
         if (!class_exists($RouteClass)) {
             throw new \InvalidArgumentException("La classe route '$RouteClass' n'existe pas.");
         }
@@ -316,14 +318,16 @@ class EorbahAPI
     /**
      * Normalise une route (supprime le slash final)
      */
-    private function normalizeRoute($route): string{
+    private function normalizeRoute($route): string
+    {
         return rtrim($route, '/');
     }
 
     /**
      * Cherche une correspondance avec une route dynamique
      */
-    private function matchDynamicRoute($method, $uri): bool {
+    private function matchDynamicRoute($method, $uri): bool
+    {
         if (!isset($this->dynamicRoutes[$method])) {
             return false;
         }
@@ -344,7 +348,7 @@ class EorbahAPI
                     return $callback($this->request, $this->response);
                 };
 
-                
+
                 if (!empty($middlewares)) {
                     $result = $this->applyRouteMiddlewares($middlewares, [$this->request, $this->response], $routeCallback);
                     if ($result === false) {
@@ -362,7 +366,8 @@ class EorbahAPI
     /**
      * Construit le motif regex pour une route paramétrée
      */
-    private function buildPattern($route): string {
+    private function buildPattern($route): string
+    {
         $escapedRoute = preg_quote($route, '/');
         $pattern = preg_replace_callback(
             '/\\\\\{(\w+)(?:\\\\:(\w+))?\\\\\}/',
@@ -380,7 +385,8 @@ class EorbahAPI
     /**
      * Extrait les paramètres d'une correspondance
      */
-    private function extractSegments($matches, $matchType): array{
+    private function extractSegments($matches, $matchType): array
+    {
         if ($matchType === 'parametrized') {
             $params = [];
             foreach ($matches as $key => $value) {
@@ -393,103 +399,142 @@ class EorbahAPI
         return [];
     }
 
+    public function setExceptionHandler(string $exceptionClass, callable $handler): self
+    {
+        $this->exceptionHandlers[$exceptionClass] = $handler;
+        return $this;
+    }
+
+    public function handleException(\Throwable $e): void
+    {
+        // Chercher un gestionnaire spécifique
+        $class = get_class($e);
+        $handler = $this->exceptionHandlers[$class] ?? null;
+
+        // Sinon chercher un gestionnaire pour une classe parente
+        if (!$handler) {
+            foreach ($this->exceptionHandlers as $exceptionType => $h) {
+                if ($e instanceof $exceptionType) {
+                    $handler = $h;
+                    break;
+                }
+            }
+        }
+
+        if ($handler) {
+            $result = $handler($e, $this->request, $this->response);
+            if ($result instanceof Response) {
+                $result->send();
+            }
+        } else {
+            // Fallback basique
+            $this->response->status(500)->text('Internal Server Error');
+        }
+        exit;
+    }
+
     /**
      * Lance l'application
      */
-    public function run($http = "404", $handler = null): void {
-        $routingCallback = function () use ($http, $handler) {
-            $method = $_SERVER['REQUEST_METHOD'];
-            $uri = $this->normalizeRoute(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH));
+    public function run($http = "404", $handler = null): void
+    {
+        try {
+            $routingCallback = function () use ($http, $handler) {
+                $method = $_SERVER['REQUEST_METHOD'];
+                $uri = $this->normalizeRoute(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH));
 
-            foreach ($this->mountedApps as $prefix => $app) {
-                if ($uri === $prefix || strpos($uri, $prefix . '/') === 0) {
-                    $subUri = substr($uri, strlen($prefix));
-                    $subUri = '/' . ltrim($subUri, '/');
+                foreach ($this->mountedApps as $prefix => $app) {
+                    if ($uri === $prefix || strpos($uri, $prefix . '/') === 0) {
+                        $subUri = substr($uri, strlen($prefix));
+                        $subUri = '/' . ltrim($subUri, '/');
 
-                    
-                    $originalUri = $_SERVER['REQUEST_URI'];
-                    $originalPathInfo = $_SERVER['PATH_INFO'] ?? null;
-                    $originalScriptName = $_SERVER['SCRIPT_NAME'] ?? null;
 
-                    if ($originalScriptName) {
-                        $_SERVER['SCRIPT_NAME'] = $originalScriptName . $prefix;
+                        $originalUri = $_SERVER['REQUEST_URI'];
+                        $originalPathInfo = $_SERVER['PATH_INFO'] ?? null;
+                        $originalScriptName = $_SERVER['SCRIPT_NAME'] ?? null;
+
+                        if ($originalScriptName) {
+                            $_SERVER['SCRIPT_NAME'] = $originalScriptName . $prefix;
+                        }
+                        $_SERVER['REQUEST_URI'] = $subUri;
+                        $_SERVER['PATH_INFO'] = $subUri;
+
+                        try {
+                            if ($app instanceof self) {
+                                $app->run($http, $handler);
+                            } elseif (method_exists($app, 'run')) {
+                                $app->run($http, $handler);
+                            } elseif (method_exists($app, 'handle')) {
+                                $app->handle($this->request, $this->response);
+                            } elseif (is_callable($app)) {
+                                $app($this->request, $this->response);
+                            }
+                        } finally {
+                            $_SERVER['REQUEST_URI'] = $originalUri;
+                            if ($originalPathInfo !== null) {
+                                $_SERVER['PATH_INFO'] = $originalPathInfo;
+                            } else {
+                                unset($_SERVER['PATH_INFO']);
+                            }
+                            if ($originalScriptName !== null) {
+                                $_SERVER['SCRIPT_NAME'] = $originalScriptName;
+                            } else {
+                                unset($_SERVER['SCRIPT_NAME']);
+                            }
+                        }
+
+                        return true;
                     }
-                    $_SERVER['REQUEST_URI'] = $subUri;
-                    $_SERVER['PATH_INFO'] = $subUri;
+                }
 
-                    try {
-                        if ($app instanceof self) {
-                            $app->run($http, $handler);
-                        } elseif (method_exists($app, 'run')) {
-                            $app->run($http, $handler);
-                        } elseif (method_exists($app, 'handle')) {
-                            $app->handle($this->request, $this->response);
-                        } elseif (is_callable($app)) {
-                            $app($this->request, $this->response);
-                        }
-                    } finally {
-                        $_SERVER['REQUEST_URI'] = $originalUri;
-                        if ($originalPathInfo !== null) {
-                            $_SERVER['PATH_INFO'] = $originalPathInfo;
-                        } else {
-                            unset($_SERVER['PATH_INFO']);
-                        }
-                        if ($originalScriptName !== null) {
-                            $_SERVER['SCRIPT_NAME'] = $originalScriptName;
-                        } else {
-                            unset($_SERVER['SCRIPT_NAME']);
-                        }
+                if (isset($this->routes[$method][$uri])) {
+                    $routeConfig = $this->routes[$method][$uri];
+                    $middlewares = [];
+                    $callback = $routeConfig;
+
+                    if (is_array($routeConfig) && isset($routeConfig['callback'])) {
+                        $callback = $routeConfig['callback'];
+                        $middlewares = $routeConfig['middlewares'] ?? [];
                     }
 
+                    $routeCallback = function () use ($callback) {
+                        return $callback($this->request, $this->response);
+                    };
+
+                    if (!empty($middlewares)) {
+                        $result = $this->applyRouteMiddlewares($middlewares, [$this->request, $this->response], $routeCallback);
+                        if ($result === false) {
+                            return false;
+                        }
+                    } else {
+                        $routeCallback();
+                    }
                     return true;
                 }
-            }
 
-            if (isset($this->routes[$method][$uri])) {
-                $routeConfig = $this->routes[$method][$uri];
-                $middlewares = [];
-                $callback = $routeConfig;
-
-                if (is_array($routeConfig) && isset($routeConfig['callback'])) {
-                    $callback = $routeConfig['callback'];
-                    $middlewares = $routeConfig['middlewares'] ?? [];
+                if ($this->matchDynamicRoute($method, $uri)) {
+                    return true;
                 }
 
-                $routeCallback = function () use ($callback) {
-                    return $callback($this->request, $this->response);
-                };
-
-                if (!empty($middlewares)) {
-                    $result = $this->applyRouteMiddlewares($middlewares, [$this->request, $this->response], $routeCallback);
-                    if ($result === false) {
-                        return false;
+                if ($http === '404') {
+                    http_response_code(404);
+                    if (is_callable($handler)) {
+                        $handler($this->request, $this->response);
                     }
+                    return false;
                 } else {
-                    $routeCallback();
+                    $segment = explode('/', $uri);
+                    if (is_callable($handler)) {
+                        $this->request->params($segment);
+                        $handler($this->request, $this->response);
+                    }
+                    return false;
                 }
-                return true;
-            }
+            };
 
-            if ($this->matchDynamicRoute($method, $uri)) {
-                return true;
-            }
-
-            if ($http === '404') {
-                http_response_code(404);
-                if (is_callable($handler)) {
-                    $handler($this->request, $this->response);
-                }
-                return false;
-            } else {
-                $segment = explode('/', $uri);
-                if (is_callable($handler)) {
-                    $this->request->params($segment);
-                    $handler($this->request, $this->response);
-                }
-                return false;
-            }
-        };
-
-        $this->executeMiddlewares($routingCallback);
+            $this->executeMiddlewares($routingCallback);
+        } catch (\Throwable $e) {
+            $this->handleException($e);
+        }
     }
 }
