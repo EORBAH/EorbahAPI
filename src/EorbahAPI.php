@@ -2,13 +2,14 @@
 
 namespace EorBah545\Eorbahapi;
 
-class EorbahAPI {
+class EorbahAPI
+{
     private string $title;
     private array $routes = [];
     private array $mountedApps = [];
     private array $dynamicRoutes = [];
     private array $globalMiddlewares = [];
-    
+
 
     private string $currentRoute = '';
     private string $currentMethod = '';
@@ -25,17 +26,17 @@ class EorbahAPI {
     /**
      * Route GET
      */
-    public function get($route, $callback) {
+    public function get($route, $callback): static{
         $this->currentRoute = $this->normalizeRoute($route);
         $this->currentMethod = 'GET';
         $this->registerRoute('GET', $route, $callback);
         return $this;
     }
-    
+
     /**
      * Route POST
      */
-    public function post($route, $callback) {
+    public function post($route, $callback): static{
         $this->currentRoute = $this->normalizeRoute($route);
         $this->currentMethod = 'POST';
         $this->registerRoute('POST', $route, $callback);
@@ -45,7 +46,7 @@ class EorbahAPI {
     /**
      * Route PUT
      */
-    public function put($route, $callback) {
+    public function put($route, $callback): static {
         $this->currentRoute = $this->normalizeRoute($route);
         $this->currentMethod = 'PUT';
         $this->registerRoute('PUT', $route, $callback);
@@ -55,7 +56,7 @@ class EorbahAPI {
     /**
      * Route DELETE
      */
-    public function delete($route, $callback) {
+    public function delete($route, $callback): static {
         $this->currentRoute = $this->normalizeRoute($route);
         $this->currentMethod = 'DELETE';
         $this->registerRoute('DELETE', $route, $callback);
@@ -65,7 +66,7 @@ class EorbahAPI {
     /**
      * Enregistrement d'une route
      */
-    private function registerRoute($method, $route, $callback) {
+    private function registerRoute($method, $route, $callback): void{
         $route = $this->normalizeRoute($route);
 
         if (preg_match('/\{(\w+)(?::(\w+))?\}/', $route)) {
@@ -82,12 +83,10 @@ class EorbahAPI {
         $this->currentMethod = '';
     }
 
-    /* -------------------- MIDDLEWARES -------------------- */
-
     /**
      * Ajoute un middleware global
      */
-    public function addMiddleware($middlewareClass, $options = []) {
+    public function addMiddleware($middlewareClass, $options = []): static {
         $this->globalMiddlewares[] = [
             'class' => $middlewareClass,
             'options' => $options,
@@ -99,7 +98,7 @@ class EorbahAPI {
     /**
      * Ajoute un middleware à la dernière route définie
      */
-    public function middleware($middlewareConfig) {
+    public function middleware($middlewareConfig): static {
         if (empty($this->currentRoute) || empty($this->currentMethod)) {
             throw new \Exception("Vous devez définir une route avant d'ajouter un middleware");
         }
@@ -120,11 +119,11 @@ class EorbahAPI {
         }
         return $this;
     }
-    
+
     /**
      * Ajoute un middleware à une route dynamique
      */
-    private function addDynamicRouteMiddleware($method, $route, $middlewareConfig) {
+    private function addDynamicRouteMiddleware($method, $route, $middlewareConfig): void {
         foreach ($this->dynamicRoutes[$method] as &$dynamicRoute) {
             if ($dynamicRoute['route'] === $route) {
                 if (!isset($dynamicRoute['middlewares'])) {
@@ -148,17 +147,15 @@ class EorbahAPI {
      * @param callable $routeCallback Callback final de la route
      * @return bool
      */
-    private function applyRouteMiddlewares($middlewares, $segments, $routeCallback) {
-        // Dernier maillon : la route elle-même
-        $next = function() use ($routeCallback, $segments) {
+    private function applyRouteMiddlewares($middlewares, $segments, $routeCallback): mixed{
+        $next = function () use ($routeCallback, $segments) {
             return call_user_func_array($routeCallback, $segments);
         };
 
-        // Empiler les middlewares en sens inverse
         foreach (array_reverse($middlewares) as $mwConfig) {
             $middlewareInstance = new $mwConfig['class'](...$mwConfig['options']);
             $currentNext = $next;
-            $next = function() use ($middlewareInstance, $currentNext) {
+            $next = function () use ($middlewareInstance, $currentNext) {
                 $result = $middlewareInstance->process($this->request, $this->response, $currentNext);
                 if ($result === false) {
                     return false;
@@ -177,30 +174,30 @@ class EorbahAPI {
      * @param callable $routingCallback Callback qui lance le routage
      * @return bool
      */
-    private function  executeMiddlewares($routingCallback) {
-        // Dernier maillon : le routage
+    private function executeMiddlewares($routingCallback): mixed {
         $next = $routingCallback;
 
-        // Empiler les middlewares globaux en sens inverse
         foreach (array_reverse($this->globalMiddlewares) as &$mwConfig) {
             if ($mwConfig['instance'] === null) {
                 $mwConfig['instance'] = new $mwConfig['class'](...$mwConfig['options']);
             }
             $middlewareInstance = $mwConfig['instance'];
             $currentNext = $next;
-            $next = function() use ($middlewareInstance, $currentNext) {
-                // Support des différentes interfaces
+            $next = function () use ($middlewareInstance, $currentNext) {
                 if (method_exists($middlewareInstance, 'process')) {
                     $result = $middlewareInstance->process($this->request, $this->response, $currentNext);
-                    if ($result === false) return false;
+                    if ($result === false)
+                        return false;
                     return $result;
                 } elseif (method_exists($middlewareInstance, '__invoke')) {
                     $result = $middlewareInstance($this->request, $currentNext);
-                    if ($result === false) return false;
+                    if ($result === false)
+                        return false;
                     return $result;
                 } elseif (method_exists($middlewareInstance, 'handle')) {
                     $result = $middlewareInstance->handle($this->request, $this->response, $currentNext);
-                    if ($result === false) return false;
+                    if ($result === false)
+                        return false;
                     return $result;
                 }
                 return $currentNext();
@@ -210,12 +207,48 @@ class EorbahAPI {
         return $next();
     }
 
-    /* -------------------- FIN MIDDLEWARES -------------------- */
+    /**
+     * Monte une sous-application sur un préfixe d'URL.
+     * les requêtes commençant par $prefix
+     * sont déléguées à $app après retrait du préfixe.
+     *
+     * @param string $prefix Le chemin de base (ex: "/admin")
+     * @param mixed  $app    Instance d'EorbahAPI ou callable
+     * @return self
+     */
+    public function mount(string $prefix, $app): self {
+        $prefix = $this->normalizeRoute($prefix);
+
+        // Injection automatique si la méthode existe
+        if (is_object($app) && method_exists($app, 'setRequestResponse')) {
+            $app->setRequestResponse($this->request, $this->response);
+        }
+
+        $this->mountedApps[$prefix] = $app;
+        return $this;
+    }
+    /*
+    public function mount(string $prefix, $app): self {
+        $prefix = $this->normalizeRoute($prefix);
+
+        if ($app instanceof self) {
+            $app->setRequestResponse($this->request, $this->response);
+        } elseif (!is_object($app) || (!method_exists($app, 'run') && !method_exists($app, 'handle') && !is_callable($app))) {
+            throw new \InvalidArgumentException("L'application montée doit être une instance d'EorbahAPI ou un objet callable.");
+        }
+
+        $this->mountedApps[$prefix] = $app;
+        return $this;
+    }
+    */
 
     /**
-     * Mount (à implémenter)
+     * Permet d'injecter les objets Request et Response (utilisé par mount)
      */
-    public function mount() {}
+    public function setRequestResponse($request, $response): void {
+        $this->request = $request;
+        $this->response = $response;
+    }
 
     /**
      * Inclut une route (classe avec config)
@@ -283,14 +316,14 @@ class EorbahAPI {
     /**
      * Normalise une route (supprime le slash final)
      */
-    private function normalizeRoute($route) {
+    private function normalizeRoute($route): string{
         return rtrim($route, '/');
     }
 
     /**
      * Cherche une correspondance avec une route dynamique
      */
-    private function matchDynamicRoute($method, $uri) {
+    private function matchDynamicRoute($method, $uri): bool {
         if (!isset($this->dynamicRoutes[$method])) {
             return false;
         }
@@ -307,16 +340,15 @@ class EorbahAPI {
                 $segments = $this->extractSegments($matches, $matchType);
                 $this->request->params($segments);
 
-                // Construction du callback final (la route)
-                $routeCallback = function() use ($callback) {
+                $routeCallback = function () use ($callback) {
                     return $callback($this->request, $this->response);
                 };
 
-                // Exécution des middlewares de la route (s'il y en a)
+                
                 if (!empty($middlewares)) {
                     $result = $this->applyRouteMiddlewares($middlewares, [$this->request, $this->response], $routeCallback);
                     if ($result === false) {
-                        return true; // Interruption par un middleware, on ne fait rien de plus
+                        return true;
                     }
                 } else {
                     $routeCallback();
@@ -330,7 +362,7 @@ class EorbahAPI {
     /**
      * Construit le motif regex pour une route paramétrée
      */
-    private function buildPattern($route) {
+    private function buildPattern($route): string {
         $escapedRoute = preg_quote($route, '/');
         $pattern = preg_replace_callback(
             '/\\\\\{(\w+)(?:\\\\:(\w+))?\\\\\}/',
@@ -348,7 +380,7 @@ class EorbahAPI {
     /**
      * Extrait les paramètres d'une correspondance
      */
-    private function extractSegments($matches, $matchType) {
+    private function extractSegments($matches, $matchType): array{
         if ($matchType === 'parametrized') {
             $params = [];
             foreach ($matches as $key => $value) {
@@ -364,13 +396,55 @@ class EorbahAPI {
     /**
      * Lance l'application
      */
-    public function run($http = "404", $handler = null) {
-        // Construction du callback de routage
-        $routingCallback = function() use ($http, $handler) {
+    public function run($http = "404", $handler = null): void {
+        $routingCallback = function () use ($http, $handler) {
             $method = $_SERVER['REQUEST_METHOD'];
             $uri = $this->normalizeRoute(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH));
 
-            // Route statique
+            foreach ($this->mountedApps as $prefix => $app) {
+                if ($uri === $prefix || strpos($uri, $prefix . '/') === 0) {
+                    $subUri = substr($uri, strlen($prefix));
+                    $subUri = '/' . ltrim($subUri, '/');
+
+                    
+                    $originalUri = $_SERVER['REQUEST_URI'];
+                    $originalPathInfo = $_SERVER['PATH_INFO'] ?? null;
+                    $originalScriptName = $_SERVER['SCRIPT_NAME'] ?? null;
+
+                    if ($originalScriptName) {
+                        $_SERVER['SCRIPT_NAME'] = $originalScriptName . $prefix;
+                    }
+                    $_SERVER['REQUEST_URI'] = $subUri;
+                    $_SERVER['PATH_INFO'] = $subUri;
+
+                    try {
+                        if ($app instanceof self) {
+                            $app->run($http, $handler);
+                        } elseif (method_exists($app, 'run')) {
+                            $app->run($http, $handler);
+                        } elseif (method_exists($app, 'handle')) {
+                            $app->handle($this->request, $this->response);
+                        } elseif (is_callable($app)) {
+                            $app($this->request, $this->response);
+                        }
+                    } finally {
+                        $_SERVER['REQUEST_URI'] = $originalUri;
+                        if ($originalPathInfo !== null) {
+                            $_SERVER['PATH_INFO'] = $originalPathInfo;
+                        } else {
+                            unset($_SERVER['PATH_INFO']);
+                        }
+                        if ($originalScriptName !== null) {
+                            $_SERVER['SCRIPT_NAME'] = $originalScriptName;
+                        } else {
+                            unset($_SERVER['SCRIPT_NAME']);
+                        }
+                    }
+
+                    return true;
+                }
+            }
+
             if (isset($this->routes[$method][$uri])) {
                 $routeConfig = $this->routes[$method][$uri];
                 $middlewares = [];
@@ -381,7 +455,7 @@ class EorbahAPI {
                     $middlewares = $routeConfig['middlewares'] ?? [];
                 }
 
-                $routeCallback = function() use ($callback) {
+                $routeCallback = function () use ($callback) {
                     return $callback($this->request, $this->response);
                 };
 
@@ -396,12 +470,10 @@ class EorbahAPI {
                 return true;
             }
 
-            // Route dynamique
             if ($this->matchDynamicRoute($method, $uri)) {
                 return true;
             }
 
-            // Gestion 404 ou autre
             if ($http === '404') {
                 http_response_code(404);
                 if (is_callable($handler)) {
@@ -418,7 +490,6 @@ class EorbahAPI {
             }
         };
 
-        // Exécution des middlewares globaux puis du routage
         $this->executeMiddlewares($routingCallback);
     }
 }
