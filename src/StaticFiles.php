@@ -2,13 +2,20 @@
 
 namespace EorBah545\Eorbahapi;
 
+
 class StaticFiles
 {
     private $directory;
     private $indexFile;
     private $cacheControl;
     private $compression;
-    private $allowedExtensions; 
+    private $allowedExtensions;
+
+    /** @var Request|null */
+    private $request;
+
+    /** @var Response|null */
+    private $response;
 
     public function __construct($directory, $options = [])
     {
@@ -17,9 +24,29 @@ class StaticFiles
         $this->cacheControl = $options['cache_control'] ?? 'no-cache, no-store, must-revalidate';
         $this->compression = $options['compression'] ?? true;
         $this->allowedExtensions = $options['allowed_extensions'] ?? [
-            'html', 'css', 'js', 'jsx', 'json', 'xml', 'png',
-            'jpg', 'jpeg', 'gif', 'ico', 'svg', 'ttf', 'woff', 'woff2',
-            'pdf', 'txt', 'md', 'webmanifest', 'x', 'xcss', 'tx', 'eot'
+            'html',
+            'css',
+            'js',
+            'jsx',
+            'json',
+            'xml',
+            'png',
+            'jpg',
+            'jpeg',
+            'gif',
+            'ico',
+            'svg',
+            'ttf',
+            'woff',
+            'woff2',
+            'pdf',
+            'txt',
+            'md',
+            'webmanifest',
+            'x',
+            'xcss',
+            'tx',
+            'eot'
         ];
 
         if (!$this->directory || !is_dir($this->directory)) {
@@ -27,10 +54,66 @@ class StaticFiles
         }
     }
 
+    /**
+     * Permet à EorbahAPI d'injecter les instances Request/Response partagées.
+     * Appelé automatiquement par mount() si la méthode existe.
+     */
+    public function setRequestResponse($request, $response): void
+    {
+        $this->request = $request;
+        $this->response = $response;
+    }
+
+    /**
+     * Point d'entrée principal appelé par mount().
+     * Compatible avec l'interface attendue par EorbahAPI::mount().
+     *
+     * @param Request  $request
+     * @param Response $response
+     */
+    public function handle($request, $response): void
+    {
+        $this->setRequestResponse($request, $response);
+
+        // Récupération du chemin (après retrait du préfixe par mount)
+        $uri = $_SERVER['REQUEST_URI'] ?? '/';
+        $path = parse_url($uri, PHP_URL_PATH);
+
+        $served = $this->serve($path);
+        if (!$served) {
+            if ($this->response) {
+                $this->response->status(404)->send('File not found');
+            } else {
+                http_response_code(404);
+                echo 'File not found';
+            }
+        }
+        // Si le fichier a été servi, serve() termine l'exécution (exit).
+    }
+
+    /**
+     * Compatibilité avec la signature run($http, $handler) de EorbahAPI.
+     * Utilisé si l'application montée est appelée via run().
+     */
+    public function run($http = "404", $handler = null): void
+    {
+        // Si les objets ont déjà été injectés, on les utilise.
+        if ($this->request && $this->response) {
+            $this->handle($this->request, $this->response);
+        } else {
+            // Fallback : création d'instances par défaut
+            $this->handle(new Request(), new Response());
+        }
+    }
+
+    // ---------------------------------------------------------------------
+    // Le reste du code de la classe (serve(), sanitizePath(), etc.)
+    // reste strictement identique.
+    // ---------------------------------------------------------------------
+
     public function serve($path)
     {
         $cleanPath = $this->sanitizePath($path);
-
         $filePath = $this->directory . DIRECTORY_SEPARATOR . $cleanPath;
 
         if (is_dir($filePath)) {
@@ -40,15 +123,7 @@ class StaticFiles
             }
         }
 
-        if (!file_exists($filePath)) {
-            return false;
-        }
-
-        if (!$this->isAllowedExtension($filePath)) {
-            return false;
-        }
-
-        if (!$this->isInDirectory($filePath)) {
+        if (!file_exists($filePath) || !$this->isAllowedExtension($filePath) || !$this->isInDirectory($filePath)) {
             return false;
         }
 
@@ -106,7 +181,7 @@ class StaticFiles
             $compressed = $this->handleCompression($filePath, $mimeType);
         }
 
-     
+
         if ($this->isNotModified($lastModified, $etag)) {
             header('HTTP/1.1 304 Not Modified');
             exit;
@@ -220,36 +295,4 @@ class StaticFiles
         return false;
     }
 
-    public function serveSpa($path)
-    {
-        $filePath = $this->directory . DIRECTORY_SEPARATOR . $this->sanitizePath($path);
-
-        if (file_exists($filePath) && !is_dir($filePath) && $this->isAllowedExtension($filePath)) {
-            return $this->sendFile($filePath);
-        }
-
-        $spaIndex = $this->directory . DIRECTORY_SEPARATOR . $this->indexFile;
-        if (file_exists($spaIndex)) {
-            return $this->sendFile($spaIndex);
-        }
-
-        return false;
-    }
-
-    private function addSecurityHeaders()
-    {
-        header('X-Content-Type-Options: nosniff');
-        header('X-Frame-Options: DENY');
-        header('X-XSS-Protection: 1; mode=block');
-    }
-
-    private function handleHeadRequest($filePath)
-    {
-        if ($_SERVER['REQUEST_METHOD'] === 'HEAD') {
-            header('Content-Type: ' . $this->getMimeType($filePath));
-            header('Content-Length: ' . filesize($filePath));
-            header('Last-Modified: ' . gmdate('D, d M Y H:i:s', filemtime($filePath)) . ' GMT');
-            exit;
-        }
-    }
 }
