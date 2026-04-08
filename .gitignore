@@ -4,3 +4,7 @@ composer.lock
 .idea/
 .cursor/
 /src-dev/
+/templates/
+/conf/
+/server/
+/examples/

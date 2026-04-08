@@ -2,5 +2,11 @@
 
 namespace EorBah545\Eorbahapi\middlewares;
 class BaseHTTPMiddleware {
-    // Code du middleware de base HTTP
+    public function __construct() {}
+    
+    public function process($request, $response, $next) {
+        
+        // BaseHTTP middleware implementation
+        return $next();
+    }
 }

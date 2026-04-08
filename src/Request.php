@@ -4,9 +4,11 @@ namespace EorBah545\Eorbahapi;
 
 class Request {
     public $segments;
+    private $session; // Propriété pour stocker la session
 
     public function __construct() {
         $this->segments = [];
+        $this->session = [];
     }
 
     public function params($value = null) {
@@ -86,5 +88,31 @@ class Request {
             return $_FILES[$key] ?? null;
         }
         return $_FILES;
+    }
+
+    /**
+     * Définit les données de session (appelé par SessionMiddleware)
+     * @param array $session
+     */
+    public function setSession(array $session) {
+        $this->session = $session;
+    }
+
+    /**
+     * Récupère les données de session
+     * @return array
+     */
+    public function getSession(): array {
+        return $this->session;
+    }
+
+    /**
+     * Récupère une valeur spécifique de la session
+     * @param string $key
+     * @param mixed $default
+     * @return mixed
+     */
+    public function session(string $key, $default = null) {
+        return $this->session[$key] ?? $default;
     }
 }

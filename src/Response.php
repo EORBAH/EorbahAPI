@@ -9,6 +9,10 @@ class Response {
         }
         echo json_encode($data);
     }
+
+    public function json($data, $header = true) {
+        $this->JSONResponse($data, $header);
+    }
  
     public function send($message = null, $type = null) {
         if (is_string($message)) {
