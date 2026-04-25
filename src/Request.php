@@ -2,16 +2,18 @@
 
 namespace EorBah545\Eorbahapi;
 
-class Request {
+class Request
+{
     public $segments;
-    private $session; // Propriété pour stocker la session
+    private ?array $bodyCache = null;
 
-    public function __construct() {
+    public function __construct()
+    {
         $this->segments = [];
-        $this->session = [];
     }
 
-    public function params($value = null) {
+    public function params($value = null)
+    {
         if (is_array($value)) {
             $this->segments = $value;
         } elseif (is_string($value)) {
@@ -20,23 +22,40 @@ class Request {
         return $this->segments;
     }
 
-    public function body() {
-        return json_decode(file_get_contents("php://input"), true) ?? $_POST ?? [];
+    public function body(?string $key = null, $default = null)
+    {
+        // Lazy loading : on ne parse qu'une seule fois
+        if ($this->bodyCache === null) {
+            $input = file_get_contents("php://input");
+            $decoded = json_decode($input, true);
+            // Si JSON invalide ou vide, on utilise $_POST (pour les requêtes traditionnelles)
+            $this->bodyCache = is_array($decoded) ? $decoded : ($_POST ?: []);
+        }
+
+        if ($key === null) {
+            return $this->bodyCache;
+        }
+
+        return $this->bodyCache[$key] ?? $default;
     }
 
-    public function query(){
+    public function query()
+    {
         return $_GET;
     }
 
-    public function query_string(){
+    public function query_string()
+    {
         return $_SERVER['QUERY_STRING'];
     }
 
-    public function post() {
+    public function post()
+    {
         return $_POST;
     }
 
-    public function getBearerToken() {
+    public function getBearerToken()
+    {
         $headers = $this->getHeader('Authorization');
         if (!empty($headers)) {
             if (preg_match('/Bearer\s(\S+)/', $headers, $matches)) {
@@ -46,20 +65,24 @@ class Request {
         return null;
     }
 
-    public function method(){
+    public function method()
+    {
         return $_SERVER['REQUEST_METHOD'];
     }
 
-    public function uri() {
+    public function uri()
+    {
         return $_SERVER['REQUEST_URI'];
     }
 
-    public function path() {
+    public function path()
+    {
         $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
         return rtrim($uri, '/');
     }
 
-    public function getHeader($key = null) {
+    public function getHeader($key = null)
+    {
         $headers = getallheaders();
         if ($key) {
             return $headers[$key] ?? null;
@@ -67,23 +90,32 @@ class Request {
         return $headers;
     }
 
-    public function cookie($key = null) {
+    public function header($key = null)
+    {
+        return $this->getHeader($key);
+    }
+
+    public function cookie($key = null)
+    {
         if ($key) {
             return $_COOKIE[$key] ?? null;
         }
         return $_COOKIE;
     }
 
-    public function input($key, $default = null) {
+    public function input($key, $default = null)
+    {
         $data = array_merge($this->body(), $_POST, $_GET);
         return $data[$key] ?? $default;
     }
-    
-    public function FormData() {
+
+    public function FormData()
+    {
         return $this->post();
     }
 
-    public function File($key = null) {
+    public function File($key = null)
+    {
         if ($key) {
             return $_FILES[$key] ?? null;
         }
@@ -91,19 +123,12 @@ class Request {
     }
 
     /**
-     * Définit les données de session (appelé par SessionMiddleware)
-     * @param array $session
-     */
-    public function setSession(array $session) {
-        $this->session = $session;
-    }
-
-    /**
      * Récupère les données de session
      * @return array
      */
-    public function getSession(): array {
-        return $this->session;
+    public function getSession(): array
+    {
+        return $_SESSION;
     }
 
     /**
@@ -112,7 +137,16 @@ class Request {
      * @param mixed $default
      * @return mixed
      */
-    public function session(string $key, $default = null) {
-        return $this->session[$key] ?? $default;
+    public function session(string $key, $default = null)
+    {
+        return $_SESSION[$key] ?? $default;
+    }
+
+    /**
+     * Définit une valeur dans la session.
+     */
+    public function setSessionValue(string $key, $value): void
+    {
+        $_SESSION[$key] = $value;
     }
 }

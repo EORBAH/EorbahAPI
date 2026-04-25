@@ -2,21 +2,18 @@
 
 namespace Eorbahapi\Templating;
 
-class TempxTemplates
-{
+class TempxTemplates {
     private $templateDir;
     private $cacheEnabled;
     private $cacheDir;
     
-    public function __construct($templateDir = 'templates', $cacheEnabled = true, $cacheDir = 'cache/tempx')
-    {
+    public function __construct($templateDir = 'templates', $cacheEnabled = true, $cacheDir = 'cache/tempx') {
         $this->templateDir = $templateDir;
         $this->cacheEnabled = $cacheEnabled;
         $this->cacheDir = $cacheDir;
     }
     
-    public function render($file, $data = [])
-    {
+    public function render($file, $data = []): string {
         $fullPath = $this->templateDir . '/' . ltrim($file, '/');
         
         if (file_exists($fullPath)) {
@@ -29,14 +26,12 @@ class TempxTemplates
         }
     }
     
-    public function tempx($comp, $data)
-    {
+    public function tempx($comp, $data): string {
         $compVersion = md5($comp);
         return $this->processTemplate($data, $comp, $compVersion);
     }
     
-    private function processTemplate($data, $comp, $version): string
-    {
+    private function processTemplate($data, $comp, $version): string {
         if ($this->cacheEnabled) {
             $cacheKey = md5($comp . serialize($data) . $version) . '.cache';
             $cacheFile = $this->cacheDir . '/' . $cacheKey;
@@ -71,8 +66,7 @@ class TempxTemplates
         return $result;
     }
     
-    private function evaluateExpression($expr, $context)
-    {
+    private function evaluateExpression($expr, $context): mixed {
         if (strpos($expr, '.') !== false) {
             $parts = explode('.', $expr);
             $current = $context;
@@ -94,8 +88,7 @@ class TempxTemplates
         return $context[$expr] ?? '{{' . $expr . '}}';
     }
     
-    private function processConditions($content, $data)
-    {
+    private function processConditions($content, $data): array|string|null {
         $content = preg_replace_callback(
             '/{{#if\s+([\w.]+)\s*}}(.*?){{\/if}}/s',
             function($matches) use ($data) {
@@ -112,7 +105,7 @@ class TempxTemplates
         
         $content = preg_replace_callback(
             '/{{#unless\s+([\w.]+)\s*}}(.*?){{\/unless}}/s',
-            function($matches) use ($data) {
+            function($matches) use ($data): mixed {
                 $variable = trim($matches[1]);
                 $blockContent = $matches[2];
                 $value = $this->evaluateExpression($variable, $data);
@@ -127,8 +120,7 @@ class TempxTemplates
         return $content;
     }
     
-    private function processLoops($content, $data)
-    {
+    private function processLoops($content, $data): array|string|null {
         $content = preg_replace_callback(
             '/{{#loop\s+([\w.]+)\s*}}(.*?){{\/loop}}/s',
             function($matches) use ($data) {
@@ -190,8 +182,7 @@ class TempxTemplates
         return $content;
     }
     
-    private function processFilters($content, $data)
-    {
+    private function processFilters($content, $data): array|string|null {
         $content = preg_replace_callback(
             '/{{\s*([\w.]+)\s*\|\s*(\w+)(?::([^}]+))?\s*}}/',
             function($matches) use ($data) {
@@ -208,8 +199,7 @@ class TempxTemplates
         return $content;
     }
     
-    private function applyFilter($value, $filter, $parameter = null)
-    {
+    private function applyFilter($value, $filter, $parameter = null): mixed {
         switch ($filter) {
             case 'uppercase':
                 return strtoupper($value);
@@ -237,8 +227,7 @@ class TempxTemplates
         }
     }
     
-    private function processPartials($content, $data)
-    {
+    private function processPartials($content, $data): array|string|null {
         $content = preg_replace_callback(
             '/{{\s*>\s*([\w\/\.]+)(?:\s+data="([^"]+)")?\s*}}/',
             function($matches) use ($data) {
@@ -266,8 +255,7 @@ class TempxTemplates
         return $content;
     }
     
-    private function parsePartialData($dataString, $parentData)
-    {
+    private function parsePartialData($dataString, $parentData): mixed {
         $partialData = $parentData;
         preg_match_all('/(\w+):([\'"]?)([^\s\'"]+)\2/', $dataString, $matches, PREG_SET_ORDER);
         
@@ -286,8 +274,7 @@ class TempxTemplates
         return $partialData;
     }
     
-    private function resolvePartialPath($partialPath)
-    {
+    private function resolvePartialPath($partialPath): string {
         if (strpos($partialPath, '/') === 0) {
             return $this->templateDir . $partialPath . '.tempx';
         }

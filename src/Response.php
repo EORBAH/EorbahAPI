@@ -150,7 +150,11 @@ class Response {
     public function RedirectResponse(string $url, int $statusCode = 302): void {
         http_response_code($statusCode);
         header("Location: $url");
-        exit();
+        exit;
+    }
+
+    public function redirect(string $url, int $statusCode = 302): void {
+        $this->RedirectResponse($url, $statusCode);
     }
 
     public function setHeader($name, $value) {

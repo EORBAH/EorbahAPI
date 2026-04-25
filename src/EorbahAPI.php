@@ -18,12 +18,26 @@ class EorbahAPI
     public $request;
     public $response;
 
+    // Dans EorbahAPI
+    private DependencyResolver $resolver;
+
     public function __construct(string $title = "EorbahAPI application")
     {
         $this->title = $title;
         $this->request = new Request();
         $this->response = new Response();
+        $this->resolver = new DependencyResolver($this->request, $this->response);
     }
+
+    /**
+     * Enregistre une dépendance dans le conteneur (ex: connexion BDD)
+     */
+    public function register(string $id, mixed $value): self
+    {
+        $this->resolver->set($id, $value);
+        return $this;
+    }
+
 
     /**
      * Route GET
@@ -326,6 +340,7 @@ class EorbahAPI
     /**
      * Cherche une correspondance avec une route dynamique
      */
+    /*
     private function matchDynamicRoute($method, $uri): bool
     {
         if (!isset($this->dynamicRoutes[$method])) {
@@ -348,6 +363,44 @@ class EorbahAPI
                     return $callback($this->request, $this->response);
                 };
 
+
+                if (!empty($middlewares)) {
+                    $result = $this->applyRouteMiddlewares($middlewares, [$this->request, $this->response], $routeCallback);
+                    if ($result === false) {
+                        return true;
+                    }
+                } else {
+                    $routeCallback();
+                }
+                return true;
+            }
+        }
+        return false;
+    }*/
+    private function matchDynamicRoute($method, $uri)
+    {
+        if (!isset($this->dynamicRoutes[$method])) {
+            return false;
+        }
+
+        foreach ($this->dynamicRoutes[$method] as $routeConfig) {
+            $route = $routeConfig['route'];
+            $matchType = $routeConfig['matchType'];
+            $callback = $routeConfig['callback'];
+            $middlewares = $routeConfig['middlewares'] ?? [];
+
+            $pattern = $this->buildPattern($route);
+
+            if (preg_match($pattern, $uri, $matches)) {
+                $segments = $this->extractSegments($matches, $matchType);
+                $this->request->params($segments);
+
+                // --- Modification : utilisation du resolver ---
+                $routeCallback = function () use ($callback) {
+                    $args = $this->resolver->resolve($callback);
+                    return $callback(...$args);
+                };
+                // -------------------------------------------
 
                 if (!empty($middlewares)) {
                     $result = $this->applyRouteMiddlewares($middlewares, [$this->request, $this->response], $routeCallback);
@@ -407,11 +460,9 @@ class EorbahAPI
 
     public function handleException(\Throwable $e): void
     {
-        // Chercher un gestionnaire spécifique
         $class = get_class($e);
         $handler = $this->exceptionHandlers[$class] ?? null;
 
-        // Sinon chercher un gestionnaire pour une classe parente
         if (!$handler) {
             foreach ($this->exceptionHandlers as $exceptionType => $h) {
                 if ($e instanceof $exceptionType) {
@@ -427,15 +478,11 @@ class EorbahAPI
                 $result->send();
             }
         } else {
-            // Fallback basique
-            $this->response->status(500)->text('Internal Server Error');
+            $this->response->status(500)->send('Internal Server Error');
         }
         exit;
     }
 
-    /**
-     * Lance l'application
-     */
     public function run($http = "404", $handler = null): void
     {
         try {
@@ -447,7 +494,6 @@ class EorbahAPI
                     if ($uri === $prefix || strpos($uri, $prefix . '/') === 0) {
                         $subUri = substr($uri, strlen($prefix));
                         $subUri = '/' . ltrim($subUri, '/');
-
 
                         $originalUri = $_SERVER['REQUEST_URI'];
                         $originalPathInfo = $_SERVER['PATH_INFO'] ?? null;
@@ -487,6 +533,7 @@ class EorbahAPI
                     }
                 }
 
+                
                 if (isset($this->routes[$method][$uri])) {
                     $routeConfig = $this->routes[$method][$uri];
                     $middlewares = [];
@@ -498,7 +545,8 @@ class EorbahAPI
                     }
 
                     $routeCallback = function () use ($callback) {
-                        return $callback($this->request, $this->response);
+                        $args = $this->resolver->resolve($callback);
+                        return $callback(...$args);
                     };
 
                     if (!empty($middlewares)) {

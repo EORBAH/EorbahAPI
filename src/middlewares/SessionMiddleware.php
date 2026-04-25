@@ -17,7 +17,8 @@ class SessionMiddleware
      *   - samesite: 'Lax', 'Strict' ou 'None' (défaut: 'Lax')
      *   - gc_maxlifetime: durée de vie des données sur le serveur (secondes, défaut: 1440)
      */
-    public function __construct(array $options = []) {
+    public function __construct(array $options = [])
+    {
         $defaults = [
             'name' => 'PHPSESSID',
             'lifetime' => 0,
@@ -39,15 +40,14 @@ class SessionMiddleware
      * @param callable $next Middleware suivant
      * @return mixed
      */
-    public function process($request, $response, $next) {
+    public function process($request, $response, $next)
+    {
         $this->configureSession();
 
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
 
-        $request->setSession($_SESSION);
-        
         $response = $next();
 
         session_write_close();
@@ -58,7 +58,8 @@ class SessionMiddleware
     /**
      * Configure les paramètres de session (cookie, durée, sécurité).
      */
-    private function configureSession(): void {
+    private function configureSession(): void
+    {
         // Nom du cookie
         session_name($this->options['name']);
 
