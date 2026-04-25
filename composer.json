@@ -30,7 +30,7 @@
         "twig/twig": "^3.0"
     },
     "require-dev": {
-        "laravel/pint": "^1.0",
+        "laravel/pint": "^1.29",
         "phpstan/phpstan": "^1.10",
         "pestphp/pest": "^2.0",
         "pestphp/pest-plugin-type-coverage": "^2.0"
