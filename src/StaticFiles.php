@@ -42,7 +42,8 @@ class StaticFiles {
             'md',
             'webmanifest',
             'tx',
-            'eot'
+            'eot',
+            'xcss'
         ];
 
         if (!$this->directory || !is_dir($this->directory)) {
@@ -98,9 +99,6 @@ class StaticFiles {
         }
     }
 
-    // ---------------------------------------------------------------------
-    // Le reste du code de la classe (serve(), sanitizePath(), etc.)
-    // reste strictement identique.
     // ---------------------------------------------------------------------
 
     public function serve($path): bool{

@@ -26,7 +26,7 @@ $app->get("/sw.js", function ($req, $res) {
     $res->FileResponse("frontend/sw.js");
 });
 
-$app->get("/{full_path}:path", function ($req, $res) {
+$app->get("/{full_path:path}", function ($req, $res) {
     $res->FileResponse("frontend/index.html");
 });
 
