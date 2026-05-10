@@ -60,14 +60,14 @@ class XcssCompiler {
      */
     private function openx($path) {
         if (!file_exists($path)) {
-            throw new \RuntimeException("xpj: file not found: $path");
+            throw new \RuntimeException("xcss: file not found: $path");
         }
         if (!is_readable($path)) {
-            throw new \RuntimeException("xpj: file not readable: $path");
+            throw new \RuntimeException("xcss: file not readable: $path");
         }
         $content = file_get_contents($path);
         if ($content === false) {
-            throw new \RuntimeException("xpj: read failed for file: $path");
+            throw new \RuntimeException("xcss: read failed for file: $path");
         }
         return $content;
     }
