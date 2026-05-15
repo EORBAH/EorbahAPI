@@ -51,8 +51,7 @@ class ExceptionHandlers {
             'error' => true,
             'status' => 500,
             'message' => 'Internal Server Error',
-            'debug' => $e->getMessage()
-            //'debug' => getenv('APP_ENV') === 'dev' ? $e->getMessage() : null
+            'debug' => getenv('APP_ENV') === 'dev' ? $e->getMessage() : null
         ]);
         return $response;
     }

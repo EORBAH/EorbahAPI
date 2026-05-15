@@ -5,23 +5,34 @@ require __DIR__ . '/vendor/autoload.php';
 use EorBah545\Eorbahapi\Request;
 use EorBah545\Eorbahapi\Response;
 use EorBah545\Eorbahapi\EorbahAPI;
-use EorBah545\Eorbahapi\StaticFiles;
+use EorBah545\Eorbahapi\mcp\EorbahApiMCP;
 use EorBah545\Eorbahapi\ExceptionHandlers;
-use EorBah545\Eorbahapi\Attributes\Depends;
-use EorBah545\Eorbahapi\DependencyInterface;
 use EorBah545\Eorbahapi\Exceptions\HTTPException;
-use EorBah545\Eorbahapi\middlewares\CORSMiddleware;
-use EorBah545\Eorbahapi\middlewares\SessionMiddleware;
 
 
-$app = new EorbahAPI("API principale");
 
+$app = new EorbahAPI();
 $exceptionHandlers = new ExceptionHandlers();
 $exceptionHandlers->overrideExceptionHandlers($app);
 
-$app->get('/', function(Request $req, Response $res) {
-    $res->FileResponse(__DIR__ . '/templates/index.html');
+$mcp = new EorbahApiMCP([
+    'name' => 'Mon Serveur MCP',
+    'description' => 'Expose des outils via MCP',
+]);
+
+$mcp->get('/hello/{name}', function (Request $request, Response $response) {
+    $name = $request->params('name');
+    $response->json(['message' => "Hello $name"]);
 });
 
-$app->mount('/static', new StaticFiles(__DIR__ . '/public'));
+$mcp->post('/calculate', function (Request $request, Response $response) {
+    $body = $request->body();
+    $a = $body['a'] ?? 0;
+    $b = $body['b'] ?? 0;
+    $response->json(['sum' => $a + $b]);
+});
+
+// Monter le serveur MCP sur '/mcp'
+$app->mount('/mcp', $mcp);
+
 $app->run();

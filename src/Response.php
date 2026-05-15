@@ -29,7 +29,10 @@ class Response {
     }
 
     public function status(int $code) {
-        http_response_code($code);
+        if (!headers_sent()) {
+            http_response_code($code);
+        }
+
         return $this;
     }
 

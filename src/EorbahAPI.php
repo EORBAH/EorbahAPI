@@ -18,7 +18,6 @@ class EorbahAPI
     public $request;
     public $response;
 
-    // Dans EorbahAPI
     private DependencyResolver $resolver;
 
     public function __construct(string $title = "EorbahAPI application")

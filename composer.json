@@ -29,12 +29,6 @@
     "require": {
         "twig/twig": "^3.0"
     },
-    "require-dev": {
-        "laravel/pint": "^1.0",
-        "phpstan/phpstan": "^1.10",
-        "pestphp/pest": "^2.0",
-        "pestphp/pest-plugin-type-coverage": "^2.0"
-    },
     "autoload": {
         "psr-4": {
             "EorBah545\\Eorbahapi\\": "src/"
@@ -47,34 +41,5 @@
         }
     },
     "minimum-stability": "dev",
-    "prefer-stable": true,
-    "scripts": {
-        "lint": "pint -v",
-        "server:test": "php -S localhost:5000 -t server/",
-        "server:app": "php -S localhost:8080 -t server/app/",
-        "server:api": "php -S localhost:3000 -t server/api/",
-        "server": [
-            "@server:app",
-            "@server:api"
-        ],
-        "test:lint": "pint --test -v",
-        "test:types": "phpstan analyse --ansi",
-        "test:type-coverage": "pest --type-coverage --min=100",
-        "test:unit": "pest --colors=always",
-        "test": [
-            "@test:lint",
-            "@test:types",
-            "@test/type-coverage",
-            "@test/unit"
-        ]
-    },
-    "config": {
-        "sort-packages": true,
-        "preferred-install": "dist",
-        "optimize-autoloader": false,
-        "allow-plugins": {
-            "pestphp/pest-plugin": true,
-            "php-http/discovery": true
-        }
-    }
+    "prefer-stable": true
 }
