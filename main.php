@@ -8,13 +8,16 @@ use EorBah545\Eorbahapi\EorbahAPI;
 use EorBah545\Eorbahapi\StaticFiles;
 use EorBah545\Eorbahapi\ExceptionHandlers;
 use EorBah545\Eorbahapi\Exceptions\HTTPException;
+use EorBah545\Eorbahapi\security\OAuth2\OAuth2;
 
 $app = new EorbahAPI();
 $exceptionHandlers = new ExceptionHandlers();
 $exceptionHandlers->overrideExceptionHandlers($app);
 
-/**
- * Allumage de la documentation
- */
-$app->mount("/docs", new StaticFiles("docs/"));
+$app->post('/protected', function(Response $res) {
+    $oauth = new OAuth2('');
+    $token = $oauth();
+    $res->json(['token' => $token]);
+});
+
 $app->run();

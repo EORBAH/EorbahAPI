@@ -10,7 +10,7 @@ class OAuth2 {
     private ?string $description;
     
     public function __construct(
-        string $tokenUrl,
+        string $tokenUrl = '',
         array $scopes = [],
         bool $autoError = true,
         string $schemeName = "OAuth2",
