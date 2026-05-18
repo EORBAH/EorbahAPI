@@ -396,8 +396,8 @@ class EorbahAPI
 
                 // --- Modification : utilisation du resolver ---
                 $routeCallback = function () use ($callback) {
-                    $args = $this->resolver->resolve($callback);
-                    return $callback(...$args);
+                     $args = $this->resolver->resolve($callback, $this->request->params());
+                     return $callback(...$args);
                 };
                 // -------------------------------------------
 
@@ -544,9 +544,9 @@ class EorbahAPI
                     }
 
                     $routeCallback = function () use ($callback) {
-                        $args = $this->resolver->resolve($callback);
-                        return $callback(...$args);
-                    };
+    $args = $this->resolver->resolve($callback, $this->request->params());
+    return $callback(...$args);
+};
 
                     if (!empty($middlewares)) {
                         $result = $this->applyRouteMiddlewares($middlewares, [$this->request, $this->response], $routeCallback);
