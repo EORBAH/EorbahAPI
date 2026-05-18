@@ -50,20 +50,19 @@ class DependencyResolver
         $typeName = $type instanceof ReflectionNamedType && !$type->isBuiltin() ? $type->getName() : null;
         $paramName = $param->getName();
 
-        // 1. Attribut #[Depends] (si utilisé)
+        // 1. Attribut #[Depends]
         $dependsAttr = $this->getDependsAttribute($param);
         if ($dependsAttr) {
             return $this->resolveFromAttribute($dependsAttr, $typeName);
         }
 
-        // 2. Paramètre fourni par la requête (nommé ou indexé)
+        // 2. Paramètre fourni par la requête (URL ou body)
         $value = $this->extractProvidedValue($param, $providedParams);
         if ($value !== null) {
-            // Application du typage (cast)
             return $this->castValue($value, $type);
         }
 
-        // 3. Dépendances système Request / Response
+        // 3. Request / Response (injection automatique)
         if ($typeName === Request::class) {
             return $this->request;
         }
@@ -71,17 +70,29 @@ class DependencyResolver
             return $this->response;
         }
 
-        // 4. Service depuis le conteneur (par nom de classe)
+        // 4. Service enregistré dans le conteneur
         if ($typeName && isset($this->container[$typeName])) {
             return $this->container[$typeName];
         }
 
-        // 5. Valeur par défaut du paramètre
+        // 5. Instanciation automatique (constructeur sans paramètres requis)
+        if ($typeName && class_exists($typeName)) {
+            $reflectionClass = new \ReflectionClass($typeName);
+            $constructor = $reflectionClass->getConstructor();
+            // Pas de constructeur, ou constructeur sans paramètres obligatoires
+            if (!$constructor || $constructor->getNumberOfRequiredParameters() === 0) {
+                $instance = $reflectionClass->newInstance();
+                $this->container[$typeName] = $instance; // mise en cache (singleton)
+                return $instance;
+            }
+        }
+
+        // 6. Valeur par défaut du paramètre
         if ($param->isDefaultValueAvailable()) {
             return $param->getDefaultValue();
         }
 
-        // 6. Null autorisé
+        // 7. Null autorisé
         if ($type && $type->allowsNull()) {
             return null;
         }
@@ -91,10 +102,6 @@ class DependencyResolver
         );
     }
 
-    /**
-     * Extrait la valeur depuis $providedParams (par nom ou par position).
-     * Retourne null si non trouvée.
-     */
     private function extractProvidedValue(ReflectionParameter $param, array $providedParams): mixed
     {
         $name = $param->getName();
@@ -108,32 +115,22 @@ class DependencyResolver
         return null;
     }
 
-    /**
-     * Caste une valeur en fonction du type hint du paramètre.
-     */
     private function castValue(mixed $value, ?\ReflectionType $type): mixed
     {
-        if ($type === null || $type->allowsNull() && $value === null) {
+        if ($type === null || ($type->allowsNull() && $value === null)) {
             return $value;
         }
         if (!$type instanceof ReflectionNamedType || $type->isBuiltin() === false) {
-            return $value; // on ne caste pas les types objet (ils seront injectés par le conteneur)
+            return $value;
         }
-
         $typeName = $type->getName();
         switch ($typeName) {
-            case 'int':
-                return (int) $value;
-            case 'float':
-                return (float) $value;
-            case 'string':
-                return (string) $value;
-            case 'bool':
-                return filter_var($value, FILTER_VALIDATE_BOOLEAN);
-            case 'array':
-                return (array) $value;
-            default:
-                return $value;
+            case 'int': return (int) $value;
+            case 'float': return (float) $value;
+            case 'string': return (string) $value;
+            case 'bool': return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+            case 'array': return (array) $value;
+            default: return $value;
         }
     }
 
@@ -149,16 +146,13 @@ class DependencyResolver
         if (!$class) {
             throw new \RuntimeException("La classe de dépendance doit être spécifiée.");
         }
-
         if (is_subclass_of($class, DependencyInterface::class)) {
             $instance = new $class(...$attr->args);
             return $instance->resolve($this->request, $this->response);
         }
-
         if (isset($this->container[$class])) {
             return $this->container[$class];
         }
-
         return new $class(...$attr->args);
     }
 }
