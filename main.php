@@ -14,10 +14,13 @@ $app = new EorbahAPI();
 $exceptionHandlers = new ExceptionHandlers();
 $exceptionHandlers->overrideExceptionHandlers($app);
 
-$app->post('/protected', function(Response $res) {
-    $oauth = new OAuth2('');
+$app->post('/protected', function(Response $res, OAuth2 $oauth) {
     $token = $oauth();
     $res->json(['token' => $token]);
+});
+
+$app->post('/api/{version}', function (Response $res, $version) {
+    $res->json(['version' => $version]);
 });
 
 $app->run();

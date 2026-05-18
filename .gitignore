@@ -2,11 +2,3 @@
 /docs/node_modules/
 composer.lock
 .idea/
-.cursor/
-/src-dev/
-/templates/
-/conf/
-/server/
-/examples/
-/public/
-main.php
