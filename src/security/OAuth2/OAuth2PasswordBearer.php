@@ -5,8 +5,9 @@ namespace EorBah545\Eorbahapi\security\OAuth2;
 use EorBah545\Eorbahapi\DependencyInterface;
 use EorBah545\Eorbahapi\Request;
 use EorBah545\Eorbahapi\Response;
-use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
+use EorBah545\Eorbahapi\security\JWTAuth\JWT;
+use EorBah545\Eorbahapi\security\JWTAuth\JsonWebTokenError;
+use EorBah545\Eorbahapi\security\JWTAuth\TokenExpiredError;
 
 class OAuth2PasswordBearer extends OAuth2 implements DependencyInterface
 {
@@ -14,8 +15,7 @@ class OAuth2PasswordBearer extends OAuth2 implements DependencyInterface
     private ?Response $response = null;
 
     private UserProviderInterface $userProvider;
-    private string $jwtSecret;
-    private string $jwtAlgo;
+    private JWT $jwtHandler;
     private int $tokenExpiration;
 
     public function __construct(
@@ -31,15 +31,10 @@ class OAuth2PasswordBearer extends OAuth2 implements DependencyInterface
     ) {
         parent::__construct($tokenUrl, $scopes, $autoError, $schemeName, $description);
         $this->userProvider = $userProvider;
-        $this->jwtSecret = $jwtSecret;
-        $this->jwtAlgo = $jwtAlgo;
+        $this->jwtHandler = new JWT($jwtSecret, $jwtAlgo);
         $this->tokenExpiration = $tokenExpiration;
     }
 
-    /**
-     * Appelé automatiquement par DependencyResolver si l'attribut #[Depends] est utilisé.
-     * Permet d'injecter Request/Response si nécessaire (par exemple pour lire les identifiants depuis le body).
-     */
     public function resolve(Request $request, Response $response): mixed
     {
         $this->request = $request;
@@ -49,7 +44,6 @@ class OAuth2PasswordBearer extends OAuth2 implements DependencyInterface
 
     /**
      * Valide les identifiants username/password et retourne un access token JWT.
-     * Utilise le UserProvider pour vérifier les identifiants.
      *
      * @param string $username
      * @param string $password
@@ -58,23 +52,20 @@ class OAuth2PasswordBearer extends OAuth2 implements DependencyInterface
      */
     public function validatePasswordGrant(string $username, string $password): array
     {
-        // Vérification des identifiants via le provider
         $user = $this->userProvider->findUserByCredentials($username, $password);
         if (!$user) {
-            // En cas d'erreur, on peut lever une exception ou retourner une structure d'erreur OAuth2
             throw new \Exception('Invalid credentials', 401);
         }
 
-        // Génération du JWT
         $payload = [
-            'sub' => $user->getIdentifier(),  // ex: id, email
+            'sub' => $user->getIdentifier(),
             'username' => $user->getUsername(),
             'scopes' => $this->scopes,
             'iat' => time(),
-            'exp' => time() + $this->tokenExpiration
         ];
 
-        $accessToken = JWT::encode($payload, $this->jwtSecret, $this->jwtAlgo);
+        // Notre JWT::sign accepte un tableau d'options avec 'expiresIn' (en secondes ou chaîne comme '1h')
+        $accessToken = $this->jwtHandler->sign($payload, null, ['expiresIn' => $this->tokenExpiration]);
 
         return [
             'access_token' => $accessToken,
@@ -84,13 +75,17 @@ class OAuth2PasswordBearer extends OAuth2 implements DependencyInterface
     }
 
     /**
-     * Optionnel : méthode pour décoder et vérifier un token (pour les endpoints protégés)
+     * Vérifie et décode un token JWT.
+     *
+     * @param string $token
+     * @return object|null
      */
     public function verifyToken(string $token): ?object
     {
         try {
-            return JWT::decode($token, new Key($this->jwtSecret, $this->jwtAlgo));
-        } catch (\Exception $e) {
+            $payload = $this->jwtHandler->verify($token);
+            return (object) $payload;
+        } catch (JsonWebTokenError | TokenExpiredError $e) {
             return null;
         }
     }

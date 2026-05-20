@@ -1,3 +1,23 @@
+Pour connecter votre application EorbahAPI à des fournisseurs d’identité comme Google, Keycloak ou Auth0, je vous propose une classe OpenIdConnect robuste, basée sur la bibliothèque recommandée hvatum/oauth2-openid-connect-client. Ce choix vous garantit une solution moderne, complète et pensée pour la production.
+
+---
+
+🔍 Pourquoi cette bibliothèque ?
+
+J’ai retenu hvatum/oauth2-openid-connect-client pour les raisons suivantes :
+
+· Respect des standards les plus récents : elle implémente fidèlement les RFCs OAuth 2.0 et OpenID Connect，avec des fonctionnalités avancées telles que PKCE, DPoP, ou la découverte automatique des endpoints.
+· Très active et maintenue : sa dernière mise à jour date de mars 2026，ce qui en fait un choix fiable pour les projets actuels.
+· Axée sur la sécurité : elle gère nativement des mécanismes de pointe comme la liaison de jetons (DPoP).
+· Orientée client : alors que certaines solutions se concentrent sur l’aspect serveur，celle-ci est dédiée à la création de clients OpenID Connect，ce qui correspond parfaitement à votre besoin.
+
+---
+
+🧩 Notre classe OpenIdConnect sur mesure
+
+J’ai conçu cette classe pour encapsuler la complexité et s’intégrer naturellement dans votre framework, en utilisant vos composants existants (DependencyResolver, JWT).
+
+```php
 <?php
 
 namespace EorBah545\Eorbahapi\Security\OAuth2;
@@ -5,7 +25,7 @@ namespace EorBah545\Eorbahapi\Security\OAuth2;
 use EorBah545\Eorbahapi\DependencyInterface;
 use EorBah545\Eorbahapi\Request;
 use EorBah545\Eorbahapi\Response;
-use EorBah545\Eorbahapi\security\JWTAuth\JWT;
+use EorBah545\Eorbahapi\Security\JWTAuth\JWT;
 use Hvatum\OpenIDConnect\Client\Provider\OpenIDConnectProvider;
 
 class OpenIdConnect implements DependencyInterface
@@ -180,3 +200,100 @@ class OpenIdConnect implements DependencyInterface
         ];
     }
 }
+```
+
+---
+
+🚀 Exemple d’utilisation avec EorbahAPI
+
+Voici un exemple de bout en bout. Vous pouvez l’intégrer comme suit dans votre application.
+
+1. Définition de la route pour initier la connexion
+
+```php
+$app->get('/login', function(Response $res, OpenIdConnect $oidc) {
+    // Générer l'URL d'autorisation et rediriger l'utilisateur
+    $authUrl = $oidc->getAuthorizationUrl();
+    $res->redirect($authUrl);
+});
+```
+
+2. Définition de la route de callback (après authentification)
+
+```php
+$app->get('/callback', function(Request $req, Response $res, OpenIdConnect $oidc) {
+    // Le code est automatiquement récupéré depuis la requête
+    $code = $req->query()['code'] ?? null;
+    if (!$code) {
+        $res->status(400)->json(['error' => 'Missing authorization code']);
+        return;
+    }
+    
+    try {
+        // Échanger le code contre un token
+        $tokenData = $oidc->authenticate($code);
+        
+        // Récupérer les informations utilisateur
+        $userInfo = $oidc->getUserInfo($tokenData['access_token']);
+        
+        // Générer un token JWT pour votre application
+        $jwt = new \EorBah545\Eorbahapi\Security\JWTAuth\JWT('votre_secret', 'HS256');
+        $appToken = $jwt->sign([
+            'user' => $userInfo['id'],
+            'email' => $userInfo['email']
+        ], null, ['expiresIn' => 3600]);
+        
+        $res->json([
+            'access_token' => $appToken,
+            'token_type' => 'bearer',
+            'expires_in' => 3600,
+            'user' => $userInfo
+        ]);
+    } catch (\Exception $e) {
+        $res->status(401)->json(['error' => 'Authentication failed', 'message' => $e->getMessage()]);
+    }
+});
+```
+
+3. Utilisation avec injection automatique via #[Depends]
+
+```php
+use EorBah545\Eorbahapi\Attributes\Depends;
+
+$app->get('/login', function(
+    Response $res,
+    #[Depends(class: OpenIdConnect::class, args: [
+        'https://accounts.google.com',
+        'VOTRE_CLIENT_ID',
+        'VOTRE_CLIENT_SECRET',
+        'https://votre-site.com/callback'
+    ])]
+    OpenIdConnect $oidc
+) {
+    $authUrl = $oidc->getAuthorizationUrl();
+    $res->redirect($authUrl);
+});
+```
+
+---
+
+📦 Installation de la dépendance nécessaire
+
+Pour utiliser cette classe, installez le client OpenID Connect recommandé via Composer :
+
+```bash
+composer require hvatum/oauth2-openid-connect-client
+```
+
+Cette bibliothèque est compatible PHP 8.2 et plus，et ses fonctionnalités de sécurité avancées en font un excellent partenaire pour votre framework.
+
+---
+
+🎯 Résumé
+
+Composant Rôle
+Bibliothèque externe hvatum/oauth2-openid-connect-client – client moderne，complet et sécurisé
+Classe OpenIdConnect Interface sur mesure pour EorbahAPI，compatible avec DependencyResolver
+Intégration Routes /login (redirection) et /callback (échange de jetons)
+
+Cette architecture vous offre un socle fiable et prêt pour la production. Si vous souhaitez l’adapter à un fournisseur particulier (Google, Keycloak, etc.), sa conception modulaire le permet aisément.

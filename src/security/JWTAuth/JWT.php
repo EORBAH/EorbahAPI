@@ -1,161 +1,154 @@
 <?php
 
-namespace EorBah545\Eorbahapi\Security\JWTAuth;
+namespace EorBah545\Eorbahapi\security\JWTAuth;
 
 use Exception;
+use Firebase\JWT\JWT as FirebaseJWT;
+use Firebase\JWT\Key;
+use Firebase\JWT\ExpiredException;
+use Firebase\JWT\SignatureInvalidException;
+use Firebase\JWT\BeforeValidException;
 
-class JWT {
-    private $secret;
-    private $algorithm;
+class JWT
+{
+    private string $secret;
+    private string $algorithm;
     
-    public function __construct($secret, $algorithm = 'HS256') {
+    /**
+     * @param string $secret   Clé secrète (pour HMAC) ou clé privée/publique (pour RSA/ECDSA)
+     * @param string $algorithm Algorithme supporté par firebase/php-jwt (ex: 'HS256', 'RS256', 'ES384')
+     */
+    public function __construct(string $secret, string $algorithm = 'HS256')
+    {
         $this->secret = $secret;
         $this->algorithm = $algorithm;
     }
     
-    public function sign($payload, $secretOrPrivateKey = null, $options = null) {
-        if ($secretOrPrivateKey === null) {
-            $secretOrPrivateKey = $this->secret;
+    /**
+     * Signe un payload et retourne un JWT.
+     *
+     * @param array       $payload
+     * @param string|null $secretOrPrivateKey Si null, utilise le secret du constructeur
+     * @param array       $options            ['expiresIn' => int|string, 'notBefore' => ...]
+     * @return string
+     */
+    public function sign(array $payload, ?string $secretOrPrivateKey = null, array $options = []): string
+    {
+        $key = $secretOrPrivateKey ?? $this->secret;
+        $payloadToSign = $payload;
+        
+        $now = time();
+        if (isset($options['expiresIn'])) {
+            $payloadToSign['exp'] = $now + $this->parseTime($options['expiresIn']);
+        }
+        if (isset($options['notBefore'])) {
+            $payloadToSign['nbf'] = $now + $this->parseTime($options['notBefore']);
+        }
+        if (!isset($payloadToSign['iat'])) {
+            $payloadToSign['iat'] = $now;
         }
         
-        $header = [
-            'alg' => $this->algorithm,
-            'typ' => 'JWT'
-        ];
-        
-        $timestamp = time();
-        
-        $defaultClaims = [
-            'iat' => $timestamp
-        ];
-        
-        if ($options && isset($options['expiresIn'])) {
-            $defaultClaims['exp'] = $timestamp + $this->parseTime($options['expiresIn']);
-        }
-        
-        if ($options && isset($options['notBefore'])) {
-            $defaultClaims['nbf'] = $timestamp + $this->parseTime($options['notBefore']);
-        }
-        
-        $fullPayload = array_merge($defaultClaims, (array)$payload);
-        
-        $headerEncoded = $this->base64UrlEncode(json_encode($header));
-        $payloadEncoded = $this->base64UrlEncode(json_encode($fullPayload));
-        
-        $signature = $this->createSignature($headerEncoded . '.' . $payloadEncoded, $secretOrPrivateKey);
-        
-        return $headerEncoded . '.' . $payloadEncoded . '.' . $signature;
+        return FirebaseJWT::encode($payloadToSign, $key, $this->algorithm);
     }
     
-    public function verify($token, $secretOrPublicKey = null, $options = null) {
-        if ($secretOrPublicKey === null) {
-            $secretOrPublicKey = $this->secret;
-        }
+    /**
+     * Vérifie un token et retourne le payload (tableau).
+     *
+     * @param string      $token
+     * @param string|null $secretOrPublicKey Si null, utilise le secret du constructeur
+     * @return array
+     * @throws JsonWebTokenError
+     * @throws TokenExpiredError
+     * @throws NotBeforeError
+     */
+    public function verify(string $token, ?string $secretOrPublicKey = null): array
+    {
+        $key = $secretOrPublicKey ?? $this->secret;
         
-        $parts = explode('.', $token);
-        if (count($parts) !== 3) {
-            throw new JsonWebTokenError();
-        }
-        
-        list($headerB64, $payloadB64, $signatureB64) = $parts;
-        
-        $header = json_decode($this->base64UrlDecode($headerB64), true);
-        
-        $this->verifySignature($headerB64 . '.' . $payloadB64, $signatureB64, $secretOrPublicKey, $header['alg']);
-        
-        $payload = json_decode($this->base64UrlDecode($payloadB64), true);
-        
-        if (isset($payload['exp']) && $payload['exp'] < time()) {
+        try {
+            $decoded = FirebaseJWT::decode($token, new Key($key, $this->algorithm));
+            return (array) $decoded;
+        } catch (ExpiredException $e) {
             $error = new TokenExpiredError();
-            $error->expiredAt = $payload['exp'];
+            $error->expiredAt = null; // On pourrait extraire le claim 'exp' si besoin
             throw $error;
+        } catch (BeforeValidException $e) {
+            throw new NotBeforeError($e->getMessage());
+        } catch (SignatureInvalidException $e) {
+            throw new JsonWebTokenError($e->getMessage());
+        } catch (Exception $e) {
+            throw new JsonWebTokenError($e->getMessage());
         }
-        
-        if (isset($payload['nbf']) && $payload['nbf'] > time()) {
-            $error = new NotBeforeError();
-            $error->date = $payload['nbf'];
-            throw $error;
-        }
-        
-        return $payload;
     }
     
-    public function decode($token, $options = null) {
+    /**
+     * Décode un token sans vérifier la signature (attention : usage interne uniquement).
+     */
+    public function decode(string $token): array
+    {
         $parts = explode('.', $token);
         if (count($parts) !== 3) {
-            throw new JsonWebTokenError();
+            throw new JsonWebTokenError('Token malformé');
         }
-        
         $payloadB64 = $parts[1];
         $payload = json_decode($this->base64UrlDecode($payloadB64), true);
-        
+        if (!is_array($payload)) {
+            throw new JsonWebTokenError('Payload invalide');
+        }
         return $payload;
     }
     
-    public function token_pair($userData) {
-        $accessToken = $this->sign(
-            ['user' => $userData],
-            null,
-            ['expiresIn' => '15m']
-        );
-        
-        $refreshToken = $this->sign(
-            ['sub' => $userData['id'] ?? null, 'type' => 'refresh'],
-            null,
-            ['expiresIn' => '7d']
-        );
-        
-        return [
-            'access_token' => $accessToken,
-            'refresh_token' => $refreshToken
-        ];
-    }
-    
-    public function is_expired($token) {
+    /**
+     * Vérifie si un token est expiré (ne vérifie pas la signature).
+     */
+    public function isExpired(string $token): bool
+    {
         try {
             $payload = $this->decode($token);
-            
-            if (isset($payload['exp']) && $payload['exp'] < time()) {
-                return true;
-            }
-            
-            return false;
+            return isset($payload['exp']) && $payload['exp'] < time();
         } catch (Exception $e) {
             return true;
         }
     }
     
-    private function createSignature($data, $secret) {
-        $hash = hash_hmac('sha256', $data, $secret, true);
-        return $this->base64UrlEncode($hash);
-    }
-    
-    private function verifySignature($data, $signature, $secret, $alg) {
-        $expected = $this->createSignature($data, $secret);
+    /**
+     * Génère une paire access_token / refresh_token.
+     *
+     * @param array $userData
+     * @param int   $accessExpiresIn  Durée de vie de l'access token (secondes)
+     * @param int   $refreshExpiresIn Durée de vie du refresh token (secondes)
+     * @return array
+     */
+    public function tokenPair(array $userData, int $accessExpiresIn = 900, int $refreshExpiresIn = 604800): array
+    {
+        $accessToken = $this->sign(
+            ['user' => $userData],
+            null,
+            ['expiresIn' => $accessExpiresIn]
+        );
         
-        if (!hash_equals($expected, $signature)) {
-            throw new JsonWebTokenError();
-        }
+        $refreshToken = $this->sign(
+            ['sub' => $userData['id'] ?? null, 'type' => 'refresh'],
+            null,
+            ['expiresIn' => $refreshExpiresIn]
+        );
+        
+        return [
+            'access_token' => $accessToken,
+            'refresh_token' => $refreshToken,
+            'expires_in' => $accessExpiresIn,
+            'token_type'  => 'bearer'
+        ];
     }
     
-    private function base64UrlEncode($data) {
-        return str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($data));
-    }
-    
-    private function base64UrlDecode($data) {
-        $data = str_replace(['-', '_'], ['+', '/'], $data);
-        $mod4 = strlen($data) % 4;
-        if ($mod4) {
-            $data .= substr('====', $mod4);
-        }
-        return base64_decode($data);
-    }
-    
-    private function parseTime($time) {
+    /**
+     * Convertit une durée relative en secondes (ex: '15m', '1h', '7d')
+     */
+    private function parseTime($time): int
+    {
         if (is_numeric($time)) {
-            return (int)$time;
+            return (int) $time;
         }
-        
         $units = [
             's' => 1,
             'm' => 60,
@@ -163,14 +156,21 @@ class JWT {
             'd' => 86400,
             'w' => 604800
         ];
-        
         $unit = substr($time, -1);
         $number = substr($time, 0, -1);
-        
         if (isset($units[$unit]) && is_numeric($number)) {
-            return $number * $units[$unit];
+            return (int) $number * $units[$unit];
         }
-        
         return 0;
+    }
+    
+    private function base64UrlDecode(string $data): string
+    {
+        $data = strtr($data, '-_', '+/');
+        $mod4 = strlen($data) % 4;
+        if ($mod4) {
+            $data .= str_repeat('=', 4 - $mod4);
+        }
+        return base64_decode($data);
     }
 }
