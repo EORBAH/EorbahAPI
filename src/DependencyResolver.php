@@ -1,6 +1,5 @@
 <?php
 
-// src/DependencyResolver.php
 namespace EorBah545\Eorbahapi;
 
 use EorBah545\Eorbahapi\Attributes\Depends;
@@ -125,12 +124,18 @@ class DependencyResolver
         }
         $typeName = $type->getName();
         switch ($typeName) {
-            case 'int': return (int) $value;
-            case 'float': return (float) $value;
-            case 'string': return (string) $value;
-            case 'bool': return filter_var($value, FILTER_VALIDATE_BOOLEAN);
-            case 'array': return (array) $value;
-            default: return $value;
+            case 'int':
+                return (int) $value;
+            case 'float':
+                return (float) $value;
+            case 'string':
+                return (string) $value;
+            case 'bool':
+                return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+            case 'array':
+                return (array) $value;
+            default:
+                return $value;
         }
     }
 

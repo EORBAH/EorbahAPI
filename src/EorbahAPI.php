@@ -241,7 +241,7 @@ class EorbahAPI
      * @param mixed  $app    Instance d'EorbahAPI ou callable
      * @return self
      */
-    public function mount(string $prefix, $app): self
+    public function mount(string $prefix, $app, $name = null): self
     {
         $prefix = $this->normalizeRoute($prefix);
 
@@ -336,46 +336,6 @@ class EorbahAPI
         return rtrim($route, '/');
     }
 
-    /**
-     * Cherche une correspondance avec une route dynamique
-     */
-    /*
-    private function matchDynamicRoute($method, $uri): bool
-    {
-        if (!isset($this->dynamicRoutes[$method])) {
-            return false;
-        }
-
-        foreach ($this->dynamicRoutes[$method] as $routeConfig) {
-            $route = $routeConfig['route'];
-            $matchType = $routeConfig['matchType'];
-            $callback = $routeConfig['callback'];
-            $middlewares = $routeConfig['middlewares'] ?? [];
-
-            $pattern = $this->buildPattern($route);
-
-            if (preg_match($pattern, $uri, $matches)) {
-                $segments = $this->extractSegments($matches, $matchType);
-                $this->request->params($segments);
-
-                $routeCallback = function () use ($callback) {
-                    return $callback($this->request, $this->response);
-                };
-
-
-                if (!empty($middlewares)) {
-                    $result = $this->applyRouteMiddlewares($middlewares, [$this->request, $this->response], $routeCallback);
-                    if ($result === false) {
-                        return true;
-                    }
-                } else {
-                    $routeCallback();
-                }
-                return true;
-            }
-        }
-        return false;
-    }*/
     private function matchDynamicRoute($method, $uri)
     {
         if (!isset($this->dynamicRoutes[$method])) {
@@ -394,12 +354,10 @@ class EorbahAPI
                 $segments = $this->extractSegments($matches, $matchType);
                 $this->request->params($segments);
 
-                // --- Modification : utilisation du resolver ---
                 $routeCallback = function () use ($callback) {
-                     $args = $this->resolver->resolve($callback, $this->request->params());
-                     return $callback(...$args);
+                    $args = $this->resolver->resolve($callback, $this->request->params());
+                    return $callback(...$args);
                 };
-                // -------------------------------------------
 
                 if (!empty($middlewares)) {
                     $result = $this->applyRouteMiddlewares($middlewares, [$this->request, $this->response], $routeCallback);
@@ -451,12 +409,23 @@ class EorbahAPI
         return [];
     }
 
+    /**
+     * Summary of setExceptionHandler
+     * @param string $exceptionClass
+     * @param callable $handler
+     * @return EorbahAPI
+     */
     public function setExceptionHandler(string $exceptionClass, callable $handler): self
     {
         $this->exceptionHandlers[$exceptionClass] = $handler;
         return $this;
     }
 
+    /**
+     * Summary of handleException
+     * @param \Throwable $e
+     * @return never
+     */
     public function handleException(\Throwable $e): void
     {
         $class = get_class($e);
@@ -482,6 +451,12 @@ class EorbahAPI
         exit;
     }
 
+    /**
+     * Summary of run
+     * @param mixed $http
+     * @param mixed $handler
+     * @return void
+     */
     public function run($http = "404", $handler = null): void
     {
         try {
@@ -532,7 +507,7 @@ class EorbahAPI
                     }
                 }
 
-                
+
                 if (isset($this->routes[$method][$uri])) {
                     $routeConfig = $this->routes[$method][$uri];
                     $middlewares = [];
@@ -544,9 +519,9 @@ class EorbahAPI
                     }
 
                     $routeCallback = function () use ($callback) {
-    $args = $this->resolver->resolve($callback, $this->request->params());
-    return $callback(...$args);
-};
+                        $args = $this->resolver->resolve($callback, $this->request->params());
+                        return $callback(...$args);
+                    };
 
                     if (!empty($middlewares)) {
                         $result = $this->applyRouteMiddlewares($middlewares, [$this->request, $this->response], $routeCallback);
