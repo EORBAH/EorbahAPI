@@ -1,8 +1,8 @@
 <?php
 
-namespace EorBah545\Eorbahapi\xcss;
+namespace EorBah545\Eorbahapi\css;
 
-class XcssCompiler {
+class cssCompiler {
     public function __construct() {}
 
     /**
@@ -60,14 +60,14 @@ class XcssCompiler {
      */
     private function openx($path) {
         if (!file_exists($path)) {
-            throw new \RuntimeException("xcss: file not found: $path");
+            throw new \RuntimeException("css: file not found: $path");
         }
         if (!is_readable($path)) {
-            throw new \RuntimeException("xcss: file not readable: $path");
+            throw new \RuntimeException("css: file not readable: $path");
         }
         $content = file_get_contents($path);
         if ($content === false) {
-            throw new \RuntimeException("xcss: read failed for file: $path");
+            throw new \RuntimeException("css: read failed for file: $path");
         }
         return $content;
     }
@@ -110,10 +110,10 @@ class XcssCompiler {
     }
 
     /**
-     * Point d'entrée principal : charge un fichier .xcss et retourne le CSS compilé
+     * Point d'entrée principal : charge un fichier .css et retourne le CSS compilé
      */
     public function render($path) {
-        $root = $this->auto_ext($path, '__init__.xcss', '.xcss');   // chemin final du fichier
+        $root = $this->auto_ext($path, '__init__.css', '.css');   // chemin final du fichier
         $xcss_root = $this->removeLastFile($root);                  // dossier racine
         $xcss_code = $this->openx($root);                           // contenu brut
         $compiled_code = $this->compile($xcss_code, $xcss_root);    // compilation

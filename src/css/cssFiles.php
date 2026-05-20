@@ -1,11 +1,11 @@
 <?php
 
-namespace EorBah545\Eorbahapi\xcss;
+namespace EorBah545\Eorbahapi\css;
 
 use EorBah545\Eorbahapi\Request;
 use EorBah545\Eorbahapi\Response;
 
-class XcssFiles {
+class cssFiles {
     private string $directory;
     private string $indexFile;
     private string $cacheControl;
@@ -13,7 +13,7 @@ class XcssFiles {
 
     private ?Request $request = null;
     private ?Response $response = null;
-    private XcssCompiler $xcssCompiler;
+    private cssCompiler $cssCompiler;
 
     /**
      * @param string $directory Chemin absolu du dossier racine
@@ -23,11 +23,11 @@ class XcssFiles {
     public function __construct(string $directory, array $options = [])
     {
         $this->directory = realpath($directory);
-        $this->indexFile = $options['index'] ?? 'index.xcss';   // <-- .xcss par défaut
+        $this->indexFile = $options['index'] ?? 'index.css';   // <-- .xcss par défaut
         $this->cacheControl = $options['cache_control'] ?? 'no-cache, no-store, must-revalidate';
         $this->compression = $options['compression'] ?? true;
 
-        $this->xcssCompiler = new XcssCompiler();
+        $this->cssCompiler = new cssCompiler();
 
         if (!$this->directory || !is_dir($this->directory)) {
             throw new \RuntimeException("Le répertoire '$directory' n'existe pas");
@@ -108,7 +108,7 @@ class XcssFiles {
 
     private function isAllowedExtension(string $filePath): bool
     {
-        return strtolower(pathinfo($filePath, PATHINFO_EXTENSION)) === 'xcss';
+        return strtolower(pathinfo($filePath, PATHINFO_EXTENSION)) === 'css';
     }
 
     private function isInDirectory(string $filePath): bool
@@ -130,11 +130,11 @@ class XcssFiles {
         @ini_set('zlib.output_compression', '0');
 
         // Compiler le fichier .xcss en CSS
-        $compiledCss = $this->xcssCompiler->render($filePath);
+        $compiledCss = $this->cssCompiler->render($filePath);
         if ($compiledCss === null) {
             // Erreur de compilation
             http_response_code(500);
-            echo 'XCSS compilation error';
+            echo 'CSS compilation error';
             return;
         }
 
