@@ -30,18 +30,24 @@ class DependencyResolver
      * @param array    $providedParams Paramètres nommés ou indexés (ex: segments d'URL, body JSON-RPC)
      * @return array
      */
+     
     public function resolve(callable $callback, array $providedParams = []): array
-    {
-        $reflection = is_array($callback)
-            ? new ReflectionMethod($callback[0], $callback[1])
-            : new ReflectionFunction($callback);
-
-        $args = [];
-        foreach ($reflection->getParameters() as $param) {
-            $args[] = $this->resolveParameter($param, $providedParams);
-        }
-        return $args;
+{
+    if (is_array($callback)) {
+        $reflection = new ReflectionMethod($callback[0], $callback[1]);
+    } elseif (is_object($callback) && method_exists($callback, '__invoke')) {
+        $reflection = new ReflectionMethod($callback, '__invoke');
+    } else {
+        $reflection = new ReflectionFunction($callback);
     }
+
+    // plus l'ancien ternaire !!!
+    $args = [];
+    foreach ($reflection->getParameters() as $param) {
+        $args[] = $this->resolveParameter($param, $providedParams);
+    }
+    return $args;
+}
 
     private function resolveParameter(ReflectionParameter $param, array $providedParams): mixed
     {

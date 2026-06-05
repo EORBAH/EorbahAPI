@@ -55,7 +55,7 @@ class ExceptionHandlers
             'error' => true,
             'status' => 500,
             'message' => 'Internal Server Error',
-            'debug' => $_ENV['APP_DEBUG'] || $_ENV['APP_ENV'] === 'dev' || $_ENV['APP_ENV'] === 'devlopment' ? $e->getMessage() : null
+            'debug' => ($_ENV['APP_DEBUG'] ?? '') || ($_ENV['APP_ENV'] ?? '') === 'dev' || ($_ENV['APP_ENV'] ?? '') === 'devlopment' ? $e->getMessage() : null
         ]);
         return $response;
     }
