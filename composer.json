@@ -27,8 +27,8 @@
     },
     "version": "0.1.0",
     "require": {
-        "twig/twig": "^3.0",
-        "firebase/php-jwt": "^7.0",
+        "twig/twig": "^3.27",
+        "firebase/php-jwt": "^7.1",
         "hvatum/oauth2-openid-connect-client": "^0.2.2"
     },
     "autoload": {
