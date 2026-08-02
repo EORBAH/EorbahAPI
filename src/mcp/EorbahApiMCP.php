@@ -3,6 +3,4 @@
 namespace EorBah545\Eorbahapi\rpc;
 
 
-class EorbahApiMCP  {
-   
-}
+class EorbahApiMCP  {}

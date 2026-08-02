@@ -128,7 +128,7 @@ class JWT
         );
         
         $refreshToken = $this->sign(
-            ['sub' => $userData['id'] ?? null, 'type' => 'refresh'],
+            ['sub' => $userData['id'] ?? null, 'sid' => $userData['sid'] ?? null,  'type' => 'refresh'],
             null,
             ['expiresIn' => $refreshExpiresIn]
         );

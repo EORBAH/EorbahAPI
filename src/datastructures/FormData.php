@@ -38,7 +38,7 @@ class FormData {
 
     /**
      * Summary of xssClean
-     * @param mixed $data
+     * @param mixed $value
      * @return array<array|string>|string
      */
     public function xssClean($value = null) {
@@ -52,7 +52,6 @@ class FormData {
 
     /**
      * Summary of sanitizeInput
-     * @param array $data
      * @param array $rules
      * @return array
      */

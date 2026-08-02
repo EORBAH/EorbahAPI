@@ -60,7 +60,7 @@ class OAuth2PasswordBearer extends OAuth2 implements DependencyInterface
         $payload = [
             'sub' => $user->getIdentifier(),
             'username' => $user->getUsername(),
-            'scopes' => $this->scopes,
+            'scopes' => $this->getScopes(),
             'iat' => time(),
         ];
 

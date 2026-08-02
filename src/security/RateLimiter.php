@@ -2,25 +2,19 @@
 
 namespace EorBah545\Eorbahapi\security;
 
+use Predis\Client as RedisClient;
+
 class RateLimiter
 {
-    private \Redis $redis;
+    private RedisClient $redis;
 
     /**
      * Constructeur : établit la connexion à Redis.
-     * @param string $host Adresse du serveur Redis (ex: '127.0.0.1')
-     * @param int $port Port du serveur Redis (ex: 6379)
-     * @param string|null $password Mot de passe Redis, si défini.
+     * @param mixed $redis_config
      */
-    public function __construct(string $host = '127.0.0.1', int $port = 6379, ?string $password = null)
+    public function __construct($redis_config = ['host'=> '127.0.0.1', 'port'=> 6379, 'password'=> null])
     {
-        $this->redis = new \Redis();
-        // Connexion au serveur Redis
-        $this->redis->connect($host, $port);
-        // Authentification si nécessaire
-        if ($password !== null) {
-            $this->redis->auth($password);
-        }
+        $this->redis = new RedisClient($redis_config);
     }
 
     /**

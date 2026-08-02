@@ -1,15 +1,15 @@
 <?php
 
 use Fastapi\FastAPI;
-use Fastapi\responses\HTMLResponse;
-use Fastapi\responses\StreamingResponse;
+use function Fastapi\responses\HTMLResponse;
+use function Fastapi\responses\StreamingResponse;
 
 $app = new FastAPI();
 
 function event_generator() {
     # """Générateur synchrone qui produit des messages SSE"""
     $counter = 1;
-    while ($counter >== 10) {
+    while ($counter <= 10) {
         yield "data: Message numéro {$counter}";
         $counter += 1;
         sleep(1);

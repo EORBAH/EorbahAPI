@@ -2,4 +2,4 @@
 
 namespace EorBah545\Eorbahapi\security;
 
-class get_current_user {}
+function get_current_user() {}

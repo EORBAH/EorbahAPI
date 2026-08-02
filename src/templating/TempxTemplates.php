@@ -246,7 +246,7 @@ class TempxTemplates {
                     $partialVersion = filemtime($partialFile);
                     return $this->processTemplate($partialData, $partialContent, $partialVersion);
                 } else {
-                    return "<!-- Partial non trouvé: {$partialPath} -->";
+                    return "{{ Partial non trouvé: {$partialPath} }}";
                 }
             },
             $content

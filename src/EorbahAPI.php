@@ -462,7 +462,10 @@ class EorbahAPI
         try {
             $routingCallback = function () use ($http, $handler) {
                 $method = $_SERVER['REQUEST_METHOD'];
-                $uri = $this->normalizeRoute(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH));
+                $request_uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+                $uri = $this->normalizeRoute($request_uri);
+                // juste un petit debug: pas touche
+                error_log("METHOD: $method - URL: $request_uri");
 
                 foreach ($this->mountedApps as $prefix => $app) {
                     if ($uri === $prefix || strpos($uri, $prefix . '/') === 0) {

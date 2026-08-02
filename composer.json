@@ -29,12 +29,17 @@
     "require": {
         "twig/twig": "^3.0",
         "firebase/php-jwt": "^7.0",
-        "hvatum/oauth2-openid-connect-client": "^0.2.2"
+        "hvatum/oauth2-openid-connect-client": "^0.2.2",
+        "predis/predis": "^3.4"
     },
     "autoload": {
         "psr-4": {
             "EorBah545\\Eorbahapi\\": "src/"
-        }
+        },
+        "files": [
+            "src/security/get_current_admin.php",
+            "src/security/get_current_user.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {

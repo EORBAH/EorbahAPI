@@ -17,11 +17,11 @@ class JsonRPC
     public function __construct(array $options = [])
     {
         $this->options = array_merge([
-            'name'        => 'JSON-RPC Server',
+            'name' => 'JSON-RPC Server',
             'description' => 'JSON-RPC server exposing local routes as tools',
         ], $options);
 
-        $this->request  = new Request();
+        $this->request = new Request();
         $this->response = new Response();
         $this->resolver = new DependencyResolver($this->request, $this->response);
     }
@@ -31,7 +31,7 @@ class JsonRPC
      */
     public function setRequestResponse(Request $request, Response $response): void
     {
-        $this->request  = $request;
+        $this->request = $request;
         $this->response = $response;
     }
 
@@ -52,7 +52,7 @@ class JsonRPC
             return;
         }
 
-        $id     = $data['id'] ?? null;
+        $id = $data['id'] ?? null;
         $method = $data['method'];
         $params = $data['params'] ?? [];
 
@@ -79,8 +79,8 @@ class JsonRPC
             // Envoi de la réponse de succès
             $this->response->json([
                 'jsonrpc' => '2.0',
-                'result'  => $result,
-                'id'      => $id,
+                'result' => $result,
+                'id' => $id,
             ]);
         } catch (\Throwable $e) {
             // Erreur interne du serveur ou lors de l'exécution
@@ -95,11 +95,11 @@ class JsonRPC
     {
         $this->response->json([
             'jsonrpc' => '2.0',
-            'error'   => [
-                'code'    => $code,
+            'error' => [
+                'code' => $code,
                 'message' => $message,
             ],
-            'id'      => $id,
+            'id' => $id,
         ]);
     }
 

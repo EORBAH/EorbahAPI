@@ -1,5 +1,3 @@
-# security
-```bash
-# generer des clé compatible avec HS256
-openssl rand -base64 32
-```
+# Security Policy
+
+Please report security vulnerabilities to `eor.bah545@gmail.com`

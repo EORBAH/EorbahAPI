@@ -1,4 +1,0 @@
-- [Accueil](README.md)
-- [Installation](installation.md)
-- [Utilisation](usage.md)
-- [API](api.md)
