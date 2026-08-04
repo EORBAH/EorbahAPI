@@ -1,6 +1,7 @@
 {
     "name": "eor_bah545/eorbahapi",
-    "description": "EORBAH API is a modern, fast and high-performance PHP web framework designed to build APIs with clean syntax, inspired by modern frameworks like Express.js and FastAPI.",
+    "version": "0.1.0",
+    "description": "EORBAH API est un framework web PHP moderne, rapide et haute performance, conçu pour construire des API avec une syntaxe épurée, inspiré de frameworks modernes comme Express.js et FastAPI.",
     "keywords": [
         "EorbahAPI",
         "sdk",
@@ -25,7 +26,6 @@
         "issues": "https://github.com/EORBAH/EorbahAPI/issues",
         "source": "https://github.com/EORBAH/EorbahAPI"
     },
-    "version": "0.1.0",
     "require": {
         "twig/twig": "^3.0",
         "firebase/php-jwt": "^7.0",
@@ -35,18 +35,19 @@
     "autoload": {
         "psr-4": {
             "EorBah545\\Eorbahapi\\": "src/"
-        },
-        "files": [
-            "src/security/get_current_admin.php",
-            "src/security/get_current_user.php"
-        ]
+        }
     },
     "autoload-dev": {
         "psr-4": {
-            "EorBah545\\Tests\\": "tests/",
-            "EorBah545\\Examples\\": "examples/"
+            "EorBah545\\Eorbahapi\\Tests\\": "tests/",
+            "EorBah545\\Eorbahapi\\Examples\\": "examples/"
         }
     },
-    "minimum-stability": "dev",
-    "prefer-stable": true
+    "scripts": {
+        "test": "phpunit --bootstrap vendor/autoload.php tests"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^13.1",
+        "vlucas/phpdotenv": "^5.6"
+    }
 }

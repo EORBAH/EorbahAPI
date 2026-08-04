@@ -39,9 +39,12 @@ class Request
         return $this->bodyCache[$key] ?? $default;
     }
 
-    public function query()
+    public function query(?string $key = null, $default = null)
     {
-        return $_GET;
+        if ($key === null) {
+            return $_GET;
+        }
+        return $_GET[$key] ?? $default;
     }
 
     public function query_string()

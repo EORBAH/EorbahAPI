@@ -53,7 +53,7 @@ class StaticFiles {
 
     /**
      * Permet à EorbahAPI d'injecter les instances Request/Response partagées.
-     * Appelé automatiquement par mount() si la méthode existe.
+     * Appelé automatiquement par mount().
      */
     public function setRequestResponse($request, $response): void {
         $this->request = $request;
@@ -86,20 +86,17 @@ class StaticFiles {
     }
 
     /**
-     * Compatibilité avec la signature run($http, $handler) de EorbahAPI.
+     * Compatibilité avec la signature run($http_code, $handler) de EorbahAPI.
      * Utilisé si l'application montée est appelée via run().
      */
-    public function run($http = "404", $handler = null): void {
-        // Si les objets ont déjà été injectés, on les utilise.
+    public function run($http_code = "404", $handler = null): void {
         if ($this->request && $this->response) {
             $this->handle($this->request, $this->response);
         } else {
-            // Fallback : création d'instances par défaut
             $this->handle(new Request(), new Response());
         }
     }
 
-    // ---------------------------------------------------------------------
 
     public function serve($path): bool{
         $cleanPath = $this->sanitizePath($path);
@@ -126,7 +123,6 @@ class StaticFiles {
         $path = preg_replace('#/+#', '/', $path);
         $path = preg_replace('#\\\\+#', '\\\\', $path);
 
-        // Supprimer les slashs initiaux et finaux
         $path = trim($path, '/\\');
 
         return $path;

@@ -453,19 +453,16 @@ class EorbahAPI
 
     /**
      * Summary of run
-     * @param mixed $http
+     * @param mixed $http_code
      * @param mixed $handler
      * @return void
      */
-    public function run($http = "404", $handler = null): void
-    {
+    public function run($http_code = "404", $handler = null): void {
         try {
-            $routingCallback = function () use ($http, $handler) {
+            $routingCallback = function () use ($http_code, $handler) {
                 $method = $_SERVER['REQUEST_METHOD'];
                 $request_uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
                 $uri = $this->normalizeRoute($request_uri);
-                // juste un petit debug: pas touche
-                error_log("METHOD: $method - URL: $request_uri");
 
                 foreach ($this->mountedApps as $prefix => $app) {
                     if ($uri === $prefix || strpos($uri, $prefix . '/') === 0) {
@@ -484,9 +481,9 @@ class EorbahAPI
 
                         try {
                             if ($app instanceof self) {
-                                $app->run($http, $handler);
+                                $app->run($http_code, $handler);
                             } elseif (method_exists($app, 'run')) {
-                                $app->run($http, $handler);
+                                $app->run($http_code, $handler);
                             } elseif (method_exists($app, 'handle')) {
                                 $app->handle($this->request, $this->response);
                             } elseif (is_callable($app)) {
@@ -541,7 +538,7 @@ class EorbahAPI
                     return true;
                 }
 
-                if ($http === '404') {
+                if ($http_code === '404') {
                     http_response_code(404);
                     if (is_callable($handler)) {
                         $handler($this->request, $this->response);
