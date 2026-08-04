@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./docs/images/logo.png" alt="Eor_bah545 logo" width="70%" />
+  <img src="./docs/_images/logo.png" alt="Eor_bah545 logo" width="70%" />
   <h1>EorbahAPI</h1>
   <p>Libraries pour la créeation d'applications web et API pour php</p>
   <img src="https://img.shields.io/badge/PHP-8.1%2B-blue" alt="PHP Version" />
