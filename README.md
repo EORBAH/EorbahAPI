@@ -38,7 +38,7 @@ La librairy EorbahAPI est rapide et intuitif cette version est propice au petit 
 
 ## License
 
-La librairy Asyncio est distribué sous la license Apache-2.0.
+La librairy est distribué sous la license Apache-2.0.
 
 ## Contributing
 
