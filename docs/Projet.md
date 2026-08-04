@@ -4,7 +4,7 @@
 mon_projet/
 ├── packages/        # Dépendances locales (si installation via GitHub)
 ├── vendor/          # Dépendances Composer
-├── public/
+├── public/index.php
 ├── src/             # Code source de l'application
 ├── main.php         # Point d'entrée de l'application
 └── .env             # Variables d'environnement
