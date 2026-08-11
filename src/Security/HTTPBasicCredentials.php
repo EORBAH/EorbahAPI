@@ -1,6 +1,6 @@
 <?php
 
-namespace EorBah545\Eorbahapi\Security;
+namespace Eorbahapi\Security;
 
 class HTTPBasicCredentials {
     private string $username;

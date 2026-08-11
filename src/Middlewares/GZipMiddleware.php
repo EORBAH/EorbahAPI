@@ -1,6 +1,6 @@
 <?php
 
-namespace EorBah545\Eorbahapi\Middlewares;
+namespace Eorbahapi\Middlewares;
 
 class GZipMiddleware {
     public function __construct() {}

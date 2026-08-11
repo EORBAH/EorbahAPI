@@ -1,6 +1,6 @@
 # EorbahAPI — Classe `Request`
 
-La classe `Request` (`EorBah545\Eorbahapi\Request`) représente la requête HTTP entrante. Elle est injectée automatiquement dans vos routes et middlewares, et donne accès aux paramètres de route, au corps de la requête, à la query string, aux en-têtes, aux cookies, aux fichiers uploadés et à la session.
+La classe `Request` (`Eorbahapi\Request`) représente la requête HTTP entrante. Elle est injectée automatiquement dans vos routes et middlewares, et donne accès aux paramètres de route, au corps de la requête, à la query string, aux en-têtes, aux cookies, aux fichiers uploadés et à la session.
 
 ## Sommaire
 

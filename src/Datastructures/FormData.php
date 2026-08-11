@@ -1,6 +1,6 @@
 <?php
 
-namespace EorBah545\Eorbahapi\Datastructures;
+namespace Eorbahapi\Datastructures;
 
 // (interne, pour multipart/form-data)
 class FormData {

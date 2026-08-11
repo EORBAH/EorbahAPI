@@ -1,6 +1,6 @@
 <?php
 
-namespace EorBah545\Eorbahapi\Security\APIKey;
+namespace Eorbahapi\Security\APIKey;
 
 class APIKeyQuery {
     private string $queryParamName;

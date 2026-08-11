@@ -31,7 +31,7 @@ EorbahAPI gère ce cas de figure avec deux mécanismes complémentaires : `mount
 `StaticFiles` est une classe montable (voir la documentation principale, section *Monter des sous-applications avec mount*) qui expose le contenu d'un répertoire sous un préfixe d'URL donné.
 
 ```php
-use EorBah545\Eorbahapi\StaticFiles;
+use Eorbahapi\StaticFiles;
 
 $app->mount("/static", new StaticFiles("frontend/dist/"), "frontend");
 ```
@@ -103,11 +103,11 @@ use Dotenv\Dotenv;
 $dotenv = Dotenv::createImmutable(__DIR__);
 $dotenv->load();
 
-use EorBah545\Eorbahapi\Request;
-use EorBah545\Eorbahapi\Response;
-use EorBah545\Eorbahapi\EorbahAPI;
-use EorBah545\Eorbahapi\StaticFiles;
-use EorBah545\Eorbahapi\ExceptionHandlers;
+use Eorbahapi\Request;
+use Eorbahapi\Response;
+use Eorbahapi\EorbahAPI;
+use Eorbahapi\StaticFiles;
+use Eorbahapi\ExceptionHandlers;
 
 $app = new EorbahAPI();
 

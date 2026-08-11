@@ -1,6 +1,6 @@
 <?php
 
-namespace EorBah545\Eorbahapi\Attributes;
+namespace Eorbahapi\Attributes;
 
 use Attribute;
 

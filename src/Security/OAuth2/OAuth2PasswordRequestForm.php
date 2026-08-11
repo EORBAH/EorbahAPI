@@ -1,6 +1,6 @@
 <?php
 
-namespace EorBah545\Eorbahapi\Security\OAuth2;
+namespace Eorbahapi\Security\OAuth2;
 
 class OAuth2PasswordRequestForm {
     private ?string $username;

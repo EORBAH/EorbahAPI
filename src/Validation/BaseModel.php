@@ -1,9 +1,9 @@
 <?php
 
-namespace EorBah545\Eorbahapi\Validation;
+namespace Eorbahapi\Validation;
 
-use EorBah545\Eorbahapi\Request;
-use EorBah545\Eorbahapi\Exceptions\ValidationException;
+use Eorbahapi\Request;
+use Eorbahapi\Exceptions\ValidationException;
 
 class BaseModel extends Request
 {

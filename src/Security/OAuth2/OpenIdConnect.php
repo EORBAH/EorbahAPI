@@ -1,11 +1,11 @@
 <?php
 
-namespace EorBah545\Eorbahapi\Security\OAuth2;
+namespace Eorbahapi\Security\OAuth2;
 
-use EorBah545\Eorbahapi\DependencyInterface;
-use EorBah545\Eorbahapi\Request;
-use EorBah545\Eorbahapi\Response;
-use EorBah545\Eorbahapi\Security\JWTAuth\JWT;
+use Eorbahapi\DependencyInterface;
+use Eorbahapi\Request;
+use Eorbahapi\Response;
+use Eorbahapi\Security\JWTAuth\JWT;
 use Hvatum\OpenIDConnect\Client\Provider\OpenIDConnectProvider;
 
 class OpenIdConnect implements DependencyInterface

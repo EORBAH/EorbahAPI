@@ -1,8 +1,8 @@
 <?php
 
-namespace EorBah545\Eorbahapi;
+namespace Eorbahapi;
 
-use EorBah545\Eorbahapi\ExceptionHandlers;
+use Eorbahapi\ExceptionHandlers;
 
 class EorbahAPI
 {

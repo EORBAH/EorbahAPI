@@ -1,7 +1,7 @@
 <?php
 
-namespace EorBah545\Eorbahapi\Security\APIKey;
-use Eor_bah545\Eorbahapi\Response;
+namespace Eorbahapi\Security\APIKey;
+use Eorbahapi\Response;
 
 class APIKeyCookie extends Response {
     private string $cookieName;

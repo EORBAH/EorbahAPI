@@ -1,6 +1,6 @@
 <?php
 
-namespace EorBah545\Eorbahapi;
+namespace Eorbahapi;
 
 
 class StaticFiles {

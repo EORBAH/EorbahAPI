@@ -1,6 +1,6 @@
 <?php
 
-namespace EorBah545\Eorbahapi\Exceptions;
+namespace Eorbahapi\Exceptions;
 
 class HTTPException extends \Exception {
     private int $statusCode;

@@ -1,6 +1,6 @@
 # EorbahAPI — Classe `Response`
 
-La classe `Response` (`EorBah545\Eorbahapi\Response`) représente la réponse HTTP renvoyée au client. Elle est injectée automatiquement dans vos routes et propose des méthodes pour répondre en JSON, en HTML, en fichier, en flux (streaming), en redirection, ainsi que pour gérer les en-têtes et les cookies.
+La classe `Response` (`Eorbahapi\Response`) représente la réponse HTTP renvoyée au client. Elle est injectée automatiquement dans vos routes et propose des méthodes pour répondre en JSON, en HTML, en fichier, en flux (streaming), en redirection, ainsi que pour gérer les en-têtes et les cookies.
 
 ## Sommaire
 

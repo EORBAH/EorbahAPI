@@ -1,6 +1,6 @@
 <?php
 
-namespace EorBah545\Eorbahapi\Security\JWTAuth;
+namespace Eorbahapi\Security\JWTAuth;
 
 class NotBeforeError extends JsonWebTokenError {
     public $message = 'NotBeforeError';

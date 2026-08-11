@@ -1,6 +1,6 @@
 <?php
 
-namespace EorBah545\Eorbahapi\Templating;
+namespace Eorbahapi\Templating;
 
 class TempxTemplates {
     private $templateDir;

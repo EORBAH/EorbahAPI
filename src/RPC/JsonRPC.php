@@ -1,10 +1,10 @@
 <?php
 
-namespace EorBah545\Eorbahapi\rpc;
+namespace Eorbahapi\rpc;
 
-use EorBah545\Eorbahapi\Request;
-use EorBah545\Eorbahapi\Response;
-use EorBah545\Eorbahapi\DependencyResolver;
+use Eorbahapi\Request;
+use Eorbahapi\Response;
+use Eorbahapi\DependencyResolver;
 
 class JsonRPC
 {

@@ -1,6 +1,6 @@
 <?php
 
-namespace EorBah545\Eorbahapi\Exceptions;
+namespace Eorbahapi\Exceptions;
 
 class ValidationException extends \Exception {
     private array $errors;

@@ -93,10 +93,10 @@ APP_ENV=development
 Créez un fichier `main.php` :
 
 ```php
-use EorBah545\Eorbahapi\Request;
-use EorBah545\Eorbahapi\Response;
-use EorBah545\Eorbahapi\EorbahAPI;
-use EorBah545\Eorbahapi\ExceptionHandlers; // Gestion structurée des erreurs (format JSON)
+use Eorbahapi\Request;
+use Eorbahapi\Response;
+use Eorbahapi\EorbahAPI;
+use Eorbahapi\ExceptionHandlers; // Gestion structurée des erreurs (format JSON)
 
 $app = new EorbahAPI();
 
@@ -148,11 +148,11 @@ Cette API met en place :
 ### 4.1 Définir un modèle et une route PUT
 
 ```php
-use EorBah545\Eorbahapi\Request;
-use EorBah545\Eorbahapi\Response;
-use EorBah545\Eorbahapi\EorbahAPI;
-use EorBah545\Eorbahapi\ExceptionHandlers;
-use EorBah545\Eorbahapi\Validation\BaseModel;
+use Eorbahapi\Request;
+use Eorbahapi\Response;
+use Eorbahapi\EorbahAPI;
+use Eorbahapi\ExceptionHandlers;
+use Eorbahapi\Validation\BaseModel;
 
 $app = new EorbahAPI();
 
@@ -265,7 +265,7 @@ $app->post('/protected', function (Response $res, OAuth2PasswordBearer $oauth) {
 Utile lorsque l'instance ne doit pas être enregistrée globalement, ou lorsque des arguments différents sont nécessaires pour un même type.
 
 ```php
-use EorBah545\Eorbahapi\Attributes\Depends;
+use Eorbahapi\Attributes\Depends;
 
 $app->post('/login', function (
     Response $res,
@@ -357,9 +357,9 @@ Les middlewares permettent d'exécuter du code avant (ou autour) du traitement d
 ### 7.1 Ajouter des middlewares globaux
 
 ```php
-use EorBah545\Eorbahapi\Middlewares\CORSMiddleware;
-use EorBah545\Eorbahapi\Middlewares\SessionMiddleware;
-use EorBah545\Eorbahapi\Middlewares\RateLimitingMiddleware;
+use Eorbahapi\Middlewares\CORSMiddleware;
+use Eorbahapi\Middlewares\SessionMiddleware;
+use Eorbahapi\Middlewares\RateLimitingMiddleware;
 
 // Gestion de session
 $app->addMiddleware(SessionMiddleware::class);
@@ -457,8 +457,8 @@ $app->mount("/static", new StaticFiles("frontend/dist"), "frontend");
 Toute classe destinée à être montée doit exposer une interface compatible avec `mount()` :
 
 ```php
-use EorBah545\Eorbahapi\Request;
-use EorBah545\Eorbahapi\Response;
+use Eorbahapi\Request;
+use Eorbahapi\Response;
 
 class MaClass
 {

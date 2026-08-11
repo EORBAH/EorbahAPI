@@ -1,6 +1,6 @@
 <?php
 
-namespace EorBah545\Eorbahapi\Security\JWTAuth;
+namespace Eorbahapi\Security\JWTAuth;
 
 use Exception;
 use Firebase\JWT\JWT as FirebaseJWT;

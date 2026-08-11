@@ -1,8 +1,8 @@
 <?php
 
-namespace EorBah545\Eorbahapi;
+namespace Eorbahapi;
 
-use EorBah545\Eorbahapi\Attributes\Depends;
+use Eorbahapi\Attributes\Depends;
 use ReflectionFunction;
 use ReflectionMethod;
 use ReflectionParameter;

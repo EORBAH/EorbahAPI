@@ -1,9 +1,9 @@
 <?php
 
-namespace EorBah545\Eorbahapi;
+namespace Eorbahapi;
 
-use EorBah545\Eorbahapi\Exceptions\HTTPException;
-use EorBah545\Eorbahapi\Exceptions\ValidationException;
+use Eorbahapi\Exceptions\HTTPException;
+use Eorbahapi\Exceptions\ValidationException;
 
 class ExceptionHandlers
 {

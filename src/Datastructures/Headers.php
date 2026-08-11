@@ -1,5 +1,5 @@
 <?php
-namespace EorBah545\Eorbahapi\Datastructures;
+namespace Eorbahapi\Datastructures;
 
 /**
  * Classe Headers - Représentation immuable des en-têtes HTTP

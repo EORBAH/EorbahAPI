@@ -2,7 +2,7 @@
 
 NB: pour automatiser et rendre les logging plus intelligent un logging middleware sera mis en place et gereras automatioquement la journalisation au niveau global.
 
-La classe `Logger` (`EorBah545\Eorbahapi\Logger`) fournit un système de journalisation (logging) simple, avec niveaux de sévérité, écriture au format JSON dans des fichiers quotidiens, et enrichissement automatique du contexte (IP, user-agent).
+La classe `Logger` (`Eorbahapi\Logger`) fournit un système de journalisation (logging) simple, avec niveaux de sévérité, écriture au format JSON dans des fichiers quotidiens, et enrichissement automatique du contexte (IP, user-agent).
 
 ## Sommaire
 
@@ -23,7 +23,7 @@ La classe `Logger` (`EorBah545\Eorbahapi\Logger`) fournit un système de journal
 - `$logLevel` : niveau minimal de sévérité à partir duquel un message est effectivement écrit (`'info'` par défaut). Insensible à la casse.
 
 ```php
-use EorBah545\Eorbahapi\Logger;
+use Eorbahapi\Logger;
 
 $logger = new Logger(__DIR__ . '/storage/logs', 'debug');
 ```
@@ -119,10 +119,10 @@ L'écriture utilise `FILE_APPEND | LOCK_EX`, ce qui garantit un ajout atomique e
 ## 6. Exemple d'intégration avec EorbahAPI
 
 ```php
-use EorBah545\Eorbahapi\EorbahAPI;
-use EorBah545\Eorbahapi\Logger;
-use EorBah545\Eorbahapi\Request;
-use EorBah545\Eorbahapi\Response;
+use Eorbahapi\EorbahAPI;
+use Eorbahapi\Logger;
+use Eorbahapi\Request;
+use Eorbahapi\Response;
 
 $app = new EorbahAPI();
 $logger = new Logger(__DIR__ . '/storage/logs', 'info');

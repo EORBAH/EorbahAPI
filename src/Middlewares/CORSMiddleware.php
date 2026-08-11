@@ -1,6 +1,6 @@
 <?php
 
-namespace EorBah545\Eorbahapi\Middlewares;
+namespace Eorbahapi\Middlewares;
 
 class CORSMiddleware {
     private $allowOrigins;

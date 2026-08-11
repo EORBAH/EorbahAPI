@@ -1,13 +1,13 @@
 <?php
 
-namespace EorBah545\Eorbahapi\Security\OAuth2;
+namespace Eorbahapi\Security\OAuth2;
 
-use EorBah545\Eorbahapi\DependencyInterface;
-use EorBah545\Eorbahapi\Request;
-use EorBah545\Eorbahapi\Response;
-use EorBah545\Eorbahapi\Security\JWTAuth\JWT;
-use EorBah545\Eorbahapi\Security\JWTAuth\JsonWebTokenError;
-use EorBah545\Eorbahapi\Security\JWTAuth\TokenExpiredError;
+use Eorbahapi\DependencyInterface;
+use Eorbahapi\Request;
+use Eorbahapi\Response;
+use Eorbahapi\Security\JWTAuth\JWT;
+use Eorbahapi\Security\JWTAuth\JsonWebTokenError;
+use Eorbahapi\Security\JWTAuth\TokenExpiredError;
 
 class OAuth2PasswordBearer extends OAuth2 implements DependencyInterface
 {

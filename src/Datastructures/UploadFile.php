@@ -1,6 +1,6 @@
 <?php
 
-namespace EorBah545\Eorbahapi\Datastructures;
+namespace Eorbahapi\Datastructures;
 
 // Représente un fichier uploadé (filename, content_type, file, write, read, seek, close)
 class UploadFile {

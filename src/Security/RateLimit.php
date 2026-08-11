@@ -1,10 +1,10 @@
 <?php
 
-namespace EorBah545\Eorbahapi\Security;
+namespace Eorbahapi\Security;
 
-use EorBah545\Eorbahapi\Security\RateLimiter;
-use EorBah545\Eorbahapi\Request;
-use EorBah545\Eorbahapi\Response;
+use Eorbahapi\Security\RateLimiter;
+use Eorbahapi\Request;
+use Eorbahapi\Response;
 
 class RateLimit
 {

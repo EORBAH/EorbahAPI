@@ -1,6 +1,6 @@
 <?php
 
-namespace EorBah545\Eorbahapi\MCP;
+namespace Eorbahapi\MCP;
 
 
 class EorbahApiMCP  {}

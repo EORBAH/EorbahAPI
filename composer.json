@@ -34,13 +34,13 @@
     },
     "autoload": {
         "psr-4": {
-            "EorBah545\\Eorbahapi\\": "src/"
+            "Eorbahapi\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "EorBah545\\Eorbahapi\\Tests\\": "tests/",
-            "EorBah545\\Eorbahapi\\Examples\\": "examples/"
+            "Eorbahapi\\Tests\\": "tests/",
+            "Eorbahapi\\Examples\\": "examples/"
         }
     },
     "scripts": {

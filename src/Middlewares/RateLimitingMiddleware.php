@@ -1,9 +1,9 @@
 <?php
 
-namespace EorBah545\Eorbahapi\Middlewares;
+namespace Eorbahapi\Middlewares;
 
-use EorBah545\Eorbahapi\security\RateLimiter;
-use EorBah545\Eorbahapi\Request;
+use Eorbahapi\security\RateLimiter;
+use Eorbahapi\Request;
 
 class RateLimitingMiddleware {
     private $rate_limiter;
