@@ -120,9 +120,6 @@ class EorbahAPI
         } else {
             $this->routes[$method][$route] = $callback;
         }
-
-        $this->currentRoute = '';
-        $this->currentMethod = '';
     }
 
     /**
@@ -150,16 +147,18 @@ class EorbahAPI
         if (!isset($this->routes[$this->currentMethod][$this->currentRoute])) {
             $this->addDynamicRouteMiddleware($this->currentMethod, $this->currentRoute, $middlewareConfig);
         } else {
-            if (!isset($this->routes[$this->currentMethod][$this->currentRoute]['middlewares'])) {
-                $this->routes[$this->currentMethod][$this->currentRoute] = [
-                    'callback' => $this->routes[$this->currentMethod][$this->currentRoute],
+            $routeConfig = $this->routes[$this->currentMethod][$this->currentRoute];
+            if (!is_array($routeConfig) || !isset($routeConfig['middlewares'])) {
+                $routeConfig = [
+                    'callback' => $routeConfig,
                     'middlewares' => []
                 ];
             }
-            $this->routes[$this->currentMethod][$this->currentRoute]['middlewares'][] = [
+            $routeConfig['middlewares'][] = [
                 'class' => $middlewareConfig[0],
                 'options' => array_slice($middlewareConfig, 1)
             ];
+            $this->routes[$this->currentMethod][$this->currentRoute] = $routeConfig;
         }
         return $this;
     }

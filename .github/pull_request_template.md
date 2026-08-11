@@ -1,42 +1,39 @@
-## Summary
+## Résumé
 
-<!-- Concisely describe what this PR changes and why. Focus on impact and
-urgency. -->
+<!-- Décrivez brièvement ce que change cette PR et pourquoi. Concentrez-vous sur l'impact et la raison. -->
 
-## Details
+## Détails
 
-<!-- Add any extra context and design decisions. Keep it brief but complete. -->
+<!-- Ajoutez le contexte ou les décisions de conception supplémentaires. Soyez bref mais complet. -->
 
-## Related Issues
+## Problèmes associés
 
-<!-- Use keywords to auto-close issues (Closes #123, Fixes #456). If this PR is
-only related to an issue or is a partial fix, simply reference the issue number
-without a keyword (Related to #123). -->
+<!-- Utilisez les mots-clés pour fermer automatiquement les issues (Closes #123, Fixes #456). Si c'est seulement lié ou partiel, mentionnez simplement le numéro d'issue (Related to #123). -->
 
-## How to Validate
+## Validation
 
-<!-- List exact steps for reviewers to validate the change. Include commands,
-expected results, and edge cases. -->
+<!-- Listez les étapes exactes pour que le relecteur puisse valider les changements. Incluez les commandes, les résultats attendus et les cas limites. -->
 
-## Pre-Merge Checklist
+## Checklist avant fusion
 
-<!-- Check all that apply before requesting review or merging. -->
+<!-- Cochez tout ce qui s'applique avant de demander une revue ou de fusionner. -->
 
-- [ ] Updated relevant documentation and README (if needed)
-- [ ] Added/updated tests (if needed)
-- [ ] Noted breaking changes (if any)
-- [ ] Validated on required platforms/methods:
+- [ ] Documentation ou README mis à jour si nécessaire
+- [ ] Tests ajoutés ou mis à jour si nécessaire
+- [ ] Changements incompatibles (breaking changes) identifiés si besoin
+- [ ] Validation effectuée sur les plateformes requises :
   - [ ] MacOS
-    - [ ] npm run
-    - [ ] npx
-    - [ ] Docker
-    - [ ] Podman
-    - [ ] Seatbelt
+    - [ ] composer install
+    - [ ] ./vendor/bin/phpunit
+    - [ ] php -l src/ && php -l tests/
+    - [ ] Docker (si applicable)
   - [ ] Windows
-    - [ ] npm run
-    - [ ] npx
-    - [ ] Docker
+    - [ ] composer install
+    - [ ] .\vendor\bin\phpunit
+    - [ ] php -l src/ && php -l tests/
+    - [ ] Docker (si applicable)
   - [ ] Linux
-    - [ ] npm run
-    - [ ] npx
-    - [ ] Docker
+    - [ ] composer install
+    - [ ] ./vendor/bin/phpunit
+    - [ ] php -l src/ && php -l tests/
+    - [ ] Docker (si applicable)
