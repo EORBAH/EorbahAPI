@@ -2,9 +2,9 @@
 
 require __DIR__ . '/vendor/autoload.php';
 
-use EorBah545\Eorbahapi\Response;
-use EorBah545\Eorbahapi\EorbahAPI;
-use EorBah545\Eorbahapi\Security\RateLimit;
+use Eorbahapi\Response;
+use Eorbahapi\EorbahAPI;
+use Eorbahapi\Security\RateLimit;
 
 $app = new EorbahAPI();
 
