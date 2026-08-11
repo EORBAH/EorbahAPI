@@ -7,11 +7,13 @@
 
 <br>
 
+> Note: For an English specification, please refer to `README-EN.md`.
+
 **EorbahAPI** est un framework web PHP moderne, rapide et haute performance, conçu pour construire des API avec une syntaxe épurée, inspiré de frameworks modernes comme Express.js et FastAPI.
 
 ## Documentation
 
-Une documentation complète est disponible au [dossier docs](/docs/Index.md). Explorez des guides détaillés, des exemples et des tutoriels pour tirer le meilleur parti de la library.
+Une documentation complète est disponible au [dossier docs](/docs/fr/Index.md). Explorez des guides détaillés, des exemples et des tutoriels pour tirer le meilleur parti de la library.
 
 ## Installation
 
