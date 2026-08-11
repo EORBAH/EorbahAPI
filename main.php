@@ -2,31 +2,22 @@
 
 require __DIR__ . '/vendor/autoload.php';
 
-use Dotenv\Dotenv;
-
-$dotenv = Dotenv::createImmutable(__DIR__);
-$dotenv->load();
-
-use EorBah545\Eorbahapi\Request;
 use EorBah545\Eorbahapi\Response;
 use EorBah545\Eorbahapi\EorbahAPI;
-use EorBah545\Eorbahapi\ExceptionHandlers;
+use EorBah545\Eorbahapi\Security\RateLimit;
 
 $app = new EorbahAPI();
 
-$exceptionHandlers = new ExceptionHandlers();
-$exceptionHandlers->overrideExceptionHandlers($app);
+$app->disable('X-Powered-By');
 
+$app->get('/me', function (Response $response, RateLimit $rateLimit) {
+     $rateLimit->checkRateLimit(
+         suffix: '/me',
+         maxRequests: 5,
+         timeWindow: 60
+     );
 
-$app->get("{full_path:path}", function (Request $req, Response $res) {
-    $res->HTMLResponse('
-    <!DOCTYPE html>
-    <html>
-    <body>
-        <h1>Hello world</h1>
-    </body>
-    </html>
-    ');
+     $response->json(["message" => "Ceci est une reponse avec des headers"]);
 });
 
 $app->run();

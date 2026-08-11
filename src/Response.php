@@ -10,6 +10,7 @@ class Response {
         echo json_encode($data);
     }
 
+
     public function json($data, $header = true) {
         $this->JSONResponse($data, $header);
     }
@@ -162,6 +163,10 @@ class Response {
 
     public function setHeader($name, $value) {
         header("$name: $value");
+    }
+
+    public function removeHeader($name) {
+        header_remove($name);
     }
 
     public function cookie(string $name, $value, array $options = []): void {

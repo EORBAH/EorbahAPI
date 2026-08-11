@@ -2,6 +2,8 @@
 
 namespace EorBah545\Eorbahapi;
 
+use EorBah545\Eorbahapi\ExceptionHandlers;
+
 class EorbahAPI
 {
     private string $title;
@@ -26,6 +28,26 @@ class EorbahAPI
         $this->request = new Request();
         $this->response = new Response();
         $this->resolver = new DependencyResolver($this->request, $this->response);
+        $this->registerDefaultExceptionHandlers();
+    }
+
+    private function registerDefaultExceptionHandlers(): void {
+        $handlers = new ExceptionHandlers();
+        $handlers->overrideExceptionHandlers($this);
+    }
+
+    /** */
+    public function disable($name) {
+        switch ($name) {
+            case 'X-Powered-By':
+                $this->response->removeHeader('X-Powered-By');
+                # code...
+                break;
+            
+            default:
+                # code...
+                break;
+        }
     }
 
     /**
@@ -457,7 +479,8 @@ class EorbahAPI
      * @param mixed $handler
      * @return void
      */
-    public function run($http_code = "404", $handler = null): void {
+    public function run($http_code = "404", $handler = null): void
+    {
         try {
             $routingCallback = function () use ($http_code, $handler) {
                 $method = $_SERVER['REQUEST_METHOD'];

@@ -3,11 +3,11 @@
 namespace EorBah545\Eorbahapi\Middlewares;
 
 use EorBah545\Eorbahapi\security\RateLimiter;
-use EorBah545\Eorbahapi\security\SecurityBase;
+use EorBah545\Eorbahapi\Request;
 
 class RateLimitingMiddleware {
     private $rate_limiter;
-    private $security_base;
+    private $request;
     private $max_request;
     private $timeWindow;
     private $key;
@@ -19,10 +19,10 @@ class RateLimitingMiddleware {
         string $key
     ) {
         $this->rate_limiter = new RateLimiter($redis_config);
-        $this->security_base = new SecurityBase();
+        $this->request = new Request();
         $this->max_request = $max_request;
         $this->timeWindow = $timeWindow;
-        $this->key = $key ?? $this->security_base->getClientIP();
+        $this->key = $key ?? $this->request->getClientIP();
     }
 
     public function process($request, $response, $next) {

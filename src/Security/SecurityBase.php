@@ -4,46 +4,6 @@ namespace EorBah545\Eorbahapi\Security;
 
 class SecurityBase {
     /**
-     * Summary of isSocialBot
-     * @return bool|int
-     */
-    public static function isSocialBot() {
-        $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
-        $isSocialBot = preg_match('/(facebook|twitter|linkedin|whatsapp|telegram)/i', $userAgent);
-        return $isSocialBot;
-    }
-    
-    /**
-     * Summary of checkRequestOrigin
-     * @param mixed $allowedDomains
-     * @return bool
-     */
-    public function checkRequestOrigin($allowedDomains = null): bool
-    {
-        if (empty($allowedDomains))
-            return true;
-
-        $origin = $_SERVER['HTTP_ORIGIN'] ?? $_SERVER['HTTP_REFERER'] ?? null;
-        if (!$origin)
-            return false;
-
-        $domain = parse_url($origin, PHP_URL_HOST);
-        return in_array($domain, $allowedDomains, true);
-    }
-    /**
-     * Summary of getClientIP
-     */
-    public function getClientIP()
-    {
-        if (!empty($_SERVER["HTTP_CLIENT_IP"])) {
-            return $_SERVER["HTTP_CLIENT_IP"];
-        } elseif (!empty($_SERVER["HTTP_X_FORWARDED_FOR"])) {
-            return $_SERVER["HTTP_X_FORWARDED_FOR"];
-        } else {
-            return $_SERVER["REMOTE_ADDR"];
-        }
-    }
-    /**
      * Summary of setNonceClient
      * @return string
      */

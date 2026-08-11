@@ -17,7 +17,7 @@ class Request
         if (is_array($value)) {
             $this->segments = $value;
         } elseif (is_string($value)) {
-            return $this->segments[$value];
+            return $this->segments[$value] ?? null;
         }
         return $this->segments;
     }
@@ -151,5 +151,50 @@ class Request
     public function setSessionValue(string $key, $value): void
     {
         $_SESSION[$key] = $value;
+    }
+
+    /**
+     * Summary of isSocialBot
+     * @return bool|int
+     */
+    public function isSocialBot() {
+        $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+        $isSocialBot = preg_match('/(facebook|twitter|linkedin|whatsapp|telegram)/i', $userAgent);
+        return $isSocialBot;
+    }
+
+    public function userAgent() {
+        return $_SERVER['HTTP_USER_AGENT'] ?? '';
+    }
+
+    /**
+     * Summary of getClientIP
+     */
+    public function getClientIP() {
+        if (!empty($_SERVER["HTTP_CLIENT_IP"])) {
+            return $_SERVER["HTTP_CLIENT_IP"];
+        } elseif (!empty($_SERVER["HTTP_X_FORWARDED_FOR"])) {
+            return $_SERVER["HTTP_X_FORWARDED_FOR"];
+        } else {
+            return $_SERVER["REMOTE_ADDR"];
+        }
+    }
+
+    /**
+     * Summary of checkRequestOrigin
+     * @param mixed $allowedDomains
+     * @return bool
+     */
+    public function checkRequestOrigin($allowedDomains = null): bool
+    {
+        if (empty($allowedDomains))
+            return true;
+
+        $origin = $_SERVER['HTTP_ORIGIN'] ?? $_SERVER['HTTP_REFERER'] ?? null;
+        if (!$origin)
+            return false;
+
+        $domain = parse_url($origin, PHP_URL_HOST);
+        return in_array($domain, $allowedDomains, true);
     }
 }
