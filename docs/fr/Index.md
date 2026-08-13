@@ -8,10 +8,11 @@ EorbahAPI est un micro-framework PHP permettant de construire rapidement des API
 2. [Structure du projet](#2-structure-du-projet)
 3. [Prise en main rapide](#3-prise-en-main-rapide)
 4. [Validation des données avec BaseModel](#4-validation-des-données-avec-basemodel)
-5. [Injection de dépendances avec Depends](#5-injection-de-dépendances-avec-depends)
-6. [Organisation des routes : IncludeRoutes et IncludeRoute](#6-organisation-des-routes--includeroutes-et-includeroute)
-7. [Middlewares](#7-middlewares)
-8. [Monter des sous-applications avec mount](#8-monter-des-sous-applications-avec-mount)
+5. [Réponses HTTP modulaires](#5-réponses-http-modulaires)
+6. [Injection de dépendances avec Depends](#6-injection-de-dépendances-avec-depends)
+7. [Organisation des routes : IncludeRoutes et IncludeRoute](#7-organisation-des-routes--includeroutes-et-includeroute)
+8. [Middlewares](#8-middlewares)
+9. [Monter des sous-applications avec mount](#9-monter-des-sous-applications-avec-mount)
 
 ---
 

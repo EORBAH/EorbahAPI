@@ -1,264 +1,159 @@
-# EorbahAPI — Classe `Response`
+# EorbahAPI — Réponses HTTP modulaires
 
-La classe `Response` (`Eorbahapi\Response`) représente la réponse HTTP renvoyée au client. Elle est injectée automatiquement dans vos routes et propose des méthodes pour répondre en JSON, en HTML, en fichier, en flux (streaming), en redirection, ainsi que pour gérer les en-têtes et les cookies.
+Le framework expose désormais des fonctions de réponse dans le module `Eorbahapi\Responses`, inspirées du style FastAPI et compatibles avec la logique de retour du core dans `EorbahAPI`.
 
 ## Sommaire
 
-1. [Réponses JSON](#1-réponses-json)
-2. [Réponse générique — send()](#2-réponse-générique--send)
-3. [Code de statut HTTP — status()](#3-code-de-statut-http--status)
-4. [Réponse HTML — HTMLResponse()](#4-réponse-html--htmlresponse)
-5. [Réponse fichier — FileResponse()](#5-réponse-fichier--fileresponse)
-6. [Réponse en flux — StreamingResponse()](#6-réponse-en-flux--streamingresponse)
-7. [Type de contenu et en-têtes — set_content_type()](#7-type-de-contenu-et-en-têtes--set_content_type)
-8. [Redirections — RedirectResponse() / redirect()](#8-redirections--redirectresponse--redirect)
-9. [En-têtes personnalisés — setHeader()](#9-en-têtes-personnalisés--setheader)
-10. [Cookies — cookie() / clearCookie()](#10-cookies--cookie--clearcookie)
+1. [JSONResponse](#1-jsonresponse)
+2. [HTMLResponse](#2-htmlresponse)
+3. [FileResponse](#3-fileresponse)
+4. [StreamingResponse](#4-streamingresponse)
+5. [RedirectResponse](#5-redirectresponse)
+6. [Compatibilité avec le core](#6-compatibilite-avec-le-core)
 
 ---
 
-## 1. Réponses JSON
+## 1. JSONResponse
 
-### `JSONResponse($data, $header = true): void`
-### `json($data, $header = true): void`
+### `JSONResponse(mixed $content, int $statusCode = 200, array $headers = [], bool $setContentType = true): string`
 
-Envoie `$data` encodé en JSON. `json()` est un simple alias de `JSONResponse()`.
-
-- `$data` : valeur PHP à encoder (tableau, objet, scalaire…).
-- `$header` : si `true` (par défaut), envoie l'en-tête `Content-Type: application/json`. Passez `false` si l'en-tête a déjà été défini ailleurs.
+Retourne une chaîne JSON encodée avec les bons en-têtes et le bon code HTTP.
 
 ```php
-$app->get('/', function (Response $res) {
-    $res->json(["hello" => "world"]);
-});
-```
+use function Eorbahapi\Responses\JSONResponse;
 
----
-
-## 2. Réponse générique — `send()`
-
-### `send($message = null, $type = null): void`
-
-Envoie une réponse brute au client.
-
-- Si `$message` est une chaîne, elle est d'abord passée à `trim()`.
-- Si `$type === "json"`, le message est envoyé via `JSONResponse()`.
-- Si `$message` est `null`, une chaîne vide est envoyée.
-- Sinon, `$message` est affiché tel quel (`echo`).
-
-```php
-$res->send("Opération réussie");
-$res->send(["ok" => true], "json");
-```
-
-> Utilisée en interne par `status()->send(...)`, notamment dans les middlewares (voir la documentation principale du framework, section *Middlewares*).
-
----
-
-## 3. Code de statut HTTP — `status()`
-
-### `status(int $code): self`
-
-Définit le code de statut HTTP de la réponse, uniquement si les en-têtes n'ont pas déjà été envoyés (`headers_sent()`). Retourne `$this`, ce qui permet de chaîner les appels.
-
-```php
-$res->status(401)->send('Non autorisé');
-$res->status(201)->json(['id' => 42]);
-```
-
----
-
-## 4. Réponse HTML — `HTMLResponse()`
-
-### `HTMLResponse(string $content, int $statusCode = 200, array $headers = []): void`
-
-Envoie une réponse HTML.
-
-- `$content` : le contenu HTML à envoyer.
-- `$statusCode` : code de statut HTTP (`200` par défaut).
-- `$headers` : en-têtes additionnels sous forme `['Nom-En-Tête' => 'valeur']`.
-
-Comportement :
-- Si les en-têtes ont déjà été envoyés, la méthode se contente d'appliquer le statut `200` et d'afficher le contenu (sans pouvoir modifier les en-têtes).
-- Sinon, elle applique `$statusCode`, définit `Content-Type: text/html; charset=utf-8`, ajoute les en-têtes personnalisés fournis, puis envoie le contenu.
-
-```php
-$app->get('/', function (Response $res) {
-    $res->HTMLResponse('
-        <!DOCTYPE html>
-        <html>
-            <body><h1>Bonjour</h1></body>
-        </html>
-    ');
-});
-```
-
----
-
-## 5. Réponse fichier — `FileResponse()`
-
-### `FileResponse(string $filePath, array $options = []): void`
-
-Envoie le contenu d'un fichier au client, avec détection automatique du type MIME selon l'extension.
-
-- `$filePath` : chemin du fichier sur le serveur. Si le fichier est introuvable ou illisible, une réponse `404 File not found` est renvoyée.
-- `$options` :
-  - `disposition` : `'inline'` (par défaut) ou `'attachment'`.
-  - `filename` : nom de fichier proposé au téléchargement (par défaut, le nom du fichier source).
-  - `custom_headers` : en-têtes additionnels sous forme de tableau associatif.
-
-Extensions reconnues et types associés : `json`, `html`, `jpg`/`jpeg`, `png`, `gif`, `css`, `js`, `pdf`, `mp4`, `mp3`. Toute autre extension est envoyée en `application/octet-stream`.
-
-```php
-$app->get('/download/{name}', function (Response $res, $name) {
-    $res->FileResponse("storage/files/{$name}", [
-        'disposition' => 'attachment',
-        'filename'    => $name
+$app->get('/users', function () {
+    return JSONResponse([
+        'users' => ['alice', 'bob'],
     ]);
 });
 ```
 
+Comportement :
+- encode en JSON UTF-8 sans échappement excessif ;
+- pose `Content-Type: application/json; charset=UTF-8` par défaut ;
+- accepte des en-têtes supplémentaires au format `['X-Trace' => 'abc']` ;
+- est compatible avec le noyau qui détecte automatiquement les tableaux et objets renvoyés par la route.
+
 ---
 
-## 6. Réponse en flux — `StreamingResponse()`
+## 2. HTMLResponse
 
-### `StreamingResponse($gen, $ContentType = 'text/event-stream'): void`
+### `HTMLResponse(string $content, int $statusCode = 200, array $headers = []): string`
 
-Envoie une réponse progressive (streaming), typiquement pour du **Server-Sent Events (SSE)**. `$gen` doit être itérable — un générateur PHP (`yield`) est l'usage recommandé.
-
-- Définit l'en-tête `Content-Type` (par défaut `text/event-stream`) et `Cache-Control: no-cache`.
-- Parcourt `$gen` et, pour chaque élément, l'affiche puis force l'envoi immédiat au client via `ob_flush()` et `flush()`.
-
-### Exemple complet — flux SSE consommé par une page HTML
+Retourne un document HTML prêt à être affiché.
 
 ```php
-function event_generator() {
-    // Générateur synchrone qui produit des messages SSE
-    $counter = 1;
-    while ($counter <= 10) {
-        yield "data: Message numéro {$counter}";
-        $counter += 1;
-        sleep(1);
-    }
-}
+use function Eorbahapi\Responses\HTMLResponse;
 
-$app->get("/events", function (Response $res) {
-    $res->StreamingResponse(
-        event_generator(),
-        "text/event-stream"
-    );
-});
-
-$app->get("/", function (Response $res) {
-    $res->HTMLResponse('
-    <!DOCTYPE html>
-    <html>
-    <body>
-        <h1>Test SSE</h1>
-        <ul id="messages"></ul>
-        <script>
-            const source = new EventSource("/events");
-            const messages = document.getElementById("messages");
-            source.onmessage = function(event) {
-                const li = document.createElement("li");
-                li.textContent = event.data;
-                messages.appendChild(li);
-            };
-        </script>
-    </body>
-    </html>
-    ');
+$app->get('/', function () {
+    return HTMLResponse('<h1>Bonjour</h1>');
 });
 ```
 
-> **Note :** chaque message émis par le générateur doit respecter le format attendu par le protocole SSE (préfixe `data: `, terminé par une fin de ligne).
+Le helper applique le code de statut et le type MIME HTML, puis renvoie le contenu brut. La stricte compatibilité avec le mécanisme de retour du framework permet de retourner directement la chaîne depuis la route.
 
 ---
 
-## 7. Type de contenu et en-têtes — `set_content_type()`
+## 3. FileResponse
 
-### `set_content_type(string $contentType = 'html', ?int $cacheMaxAge = null, array $options = []): void`
+### `FileResponse(string $filePath, array $options = []): string`
 
-Définit le type de contenu de la réponse ainsi que les en-têtes de cache et de disposition associés. Utilisée en interne par `FileResponse()`, mais peut aussi être appelée directement.
-
-- `$contentType` : alias reconnu (`json`, `manifest`, `html`, `image`, `javascript`, `css`, `woff2`, `text`, `video`, `pdf`, `xml`, `png`, `gif`, `svg`, `mp3`) ou type MIME arbitraire. Un `charset` est ajouté automatiquement pour `html`, `json`, `text`, `css`, `javascript` et `xml`.
-- `$cacheMaxAge` :
-  - si fourni, envoie `Cache-Control: public, max-age=...` et un en-tête `Expires` calculé en conséquence ;
-  - si `null` (par défaut), désactive explicitement le cache (`no-store, no-cache, must-revalidate`).
-- `$options` :
-  - `charset` : jeu de caractères (`UTF-8` par défaut).
-  - `disposition` : `'inline'` ou `'attachment'` (combiné à `filename` pour l'en-tête `Content-Disposition`).
-  - `filename` : nom de fichier utilisé si `disposition` vaut `'attachment'`.
-  - `custom_headers` : tableau associatif d'en-têtes supplémentaires.
+Serre un fichier sur le client avec une gestion de type MIME et de téléchargement.
 
 ```php
-$res->set_content_type('pdf', 3600, [
-    'disposition' => 'attachment',
-    'filename'    => 'rapport.pdf'
-]);
-```
+use function Eorbahapi\Responses\FileResponse;
 
----
-
-## 8. Redirections — `RedirectResponse()` / `redirect()`
-
-### `RedirectResponse(string $url, int $statusCode = 302): void`
-### `redirect(string $url, int $statusCode = 302): void`
-
-Redirige le client vers `$url` avec le code de statut `$statusCode` (`302` par défaut). `redirect()` est un alias de `RedirectResponse()`.
-
-> **Attention :** cette méthode appelle `exit` après l'envoi de l'en-tête `Location`, ce qui interrompt immédiatement l'exécution du script — aucun code placé après ne sera exécuté.
-
-```php
-$app->get('/ancienne-route', function (Response $res) {
-    $res->redirect('/nouvelle-route', 301);
+$app->get('/download', function () {
+    return FileResponse(__DIR__ . '/files/report.pdf', [
+        'disposition' => 'attachment',
+        'filename' => 'report.pdf',
+    ]);
 });
 ```
 
----
-
-## 9. En-têtes personnalisés — `setHeader()`
-
-### `setHeader($name, $value): void`
-
-Envoie un en-tête HTTP arbitraire (`header("$name: $value")`).
-
-```php
-$res->setHeader('X-Powered-By', 'EorbahAPI');
-```
+Options principales :
+- `disposition` : `inline` ou `attachment`
+- `filename` : nom optionnel proposé au navigateur
+- `custom_headers` : en-têtes HTTP additionnels
 
 ---
 
-## 10. Cookies — `cookie()` / `clearCookie()`
+## 4. StreamingResponse
 
-### `cookie(string $name, $value, array $options = []): void`
+### `StreamingResponse(iterable $generator, string $contentType = 'text/event-stream'): string`
 
-Définit un cookie côté client.
-
-Options disponibles (fusionnées avec les valeurs par défaut) :
-
-| Option     | Valeur par défaut |
-|------------|--------------------|
-| `expires`  | `0` (cookie de session) |
-| `path`     | `/` |
-| `domain`   | `''` |
-| `secure`   | `true` |
-| `httponly` | `true` |
-| `samesite` | `'Strict'` |
+Permet d’émettre un flux d’informations progressivement.
 
 ```php
-$res->cookie('session_token', $token, [
-    'expires' => time() + 3600,
-    'samesite' => 'Lax'
-]);
+use function Eorbahapi\Responses\StreamingResponse;
+
+$app->get('/events', function () {
+    $generator = function () {
+        foreach (['bonjour', 'monde'] as $message) {
+            yield "data: {$message}\n\n";
+        }
+    };
+
+    return StreamingResponse($generator(), 'text/event-stream');
+});
 ```
 
-> **Point d'attention :** l'implémentation actuelle assigne `$_COOKIE[$name] = $name` après l'appel à `setcookie()`, plutôt que `$value`. Le cookie envoyé au navigateur contient bien la bonne valeur, mais la variable superglobale `$_COOKIE` en mémoire pour la requête en cours ne reflète pas cette valeur avant le prochain rechargement de page — à garder en tête si vous relisez `$_COOKIE[$name]` immédiatement après l'avoir défini dans le même script.
+Le helper active le bon `Content-Type`, envoie le flux itératif et force le flush côté serveur pour que le client reçoive les données au fur et à mesure.
 
-### `clearCookie($name): void`
+---
 
-Supprime un cookie existant en le faisant expirer dans le passé (`time() - 3600`), avec les mêmes attributs de sécurité que `cookie()` (`path: /`, `secure: true`, `httponly: true`, `samesite: 'Strict'`). N'agit que si le cookie est présent dans `$_COOKIE`.
+## 5. RedirectResponse
+
+### `RedirectResponse(string $url, int $statusCode = 302): string`
+
+Crée une redirection compatible avec le pipeline principal du framework.
 
 ```php
-$res->clearCookie('session_token');
+use function Eorbahapi\Responses\RedirectResponse;
+
+$app->get('/old', function () {
+    return RedirectResponse('/new', 301);
+});
 ```
+
+Important : la fonction ne fait pas `exit()`. Elle retourne une chaîne spéciale de la forme `redirect:<code>:<url>`, que le core interprète et transforme en en-tête HTTP `Location`.
+
+---
+
+## 6. Compatibilité avec le core
+
+Le cœur du framework détecte automatiquement les types de retour suivant :
+- tableau PHP → JSON encodé avec `JSONResponse()`
+- objet PHP → JSON encodé avec `JSONResponse()`
+- chaîne commençant par `redirect:` → redirection HTTP
+- chaîne HTML / texte brut → sortie directe
+- fichier / flux / réponse structurée → selon le helper appelé
+
+Cela permet d’écrire des routes de cette forme :
+
+```php
+$app->get('/ping', function () {
+    return ['ok' => true];
+});
+
+$app->get('/go', function () {
+    return \Eorbahapi\Responses\RedirectResponse('/home');
+});
+```
+
+Cette approche est compatible avec la logique de `EorbahAPI::applyReturn()` et évite de mélanger la logique de réponse directement dans la classe `Response`.
+
+---
+
+## API complémentaire du core
+
+La classe `Response` reste utile pour les réglages HTTP de bas niveau :
+- `status()`
+- `setHeader()`
+- `header()`
+- `set_content_type()`
+- `cookie()`
+- `clearCookie()`
+
+Les fonctions du module `Responses` sont conçues pour être plus lisibles, plus modulaires et plus proches d’un style `FastAPI` ou `Starlette`.

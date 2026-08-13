@@ -7,49 +7,68 @@ use Eorbahapi\Exceptions\ValidationException;
 
 class BaseModel extends Request
 {
+    /**
+     * Définit les règles de validation du modèle.
+     * Exemple :
+     * return [
+     *   'name' => Field::required()->minLength(3),
+     *   'age' => Field::required()->min(18),
+     * ];
+     */
+    public static function fields(): array
+    {
+        return [];
+    }
+
     public function __construct()
     {
         $reflection = new \ReflectionClass($this);
         $properties = $reflection->getProperties(\ReflectionProperty::IS_PUBLIC);
-        $body = $this->json(); // tableau complet du JSON
-
+        $body = $this->json();
         $errors = [];
+
+        $declaredFields = static::fields();
 
         foreach ($properties as $property) {
             if ($property->isStatic()) {
                 continue;
             }
 
-            // Ignore les propriétés déclarées dans une classe parente (Request, BaseModel, etc.)
             if ($property->getDeclaringClass()->getName() !== get_class($this)) {
                 continue;
             }
 
             $name = $property->getName();
+            $field = $declaredFields[$name] ?? null;
+            $sourceName = $field?->getSourceName() ?? $name;
 
-            // Vérification de la présence dans le body
-            if (array_key_exists($name, $body)) {
-                $value = $body[$name];
+            if (array_key_exists($sourceName, $body)) {
+                $value = $body[$sourceName];
                 $type = $property->getType();
 
-                if ($type !== null) {
-                    try {
-                        $value = $this->validateAndCast($name, $value, $type);
-                    } catch (\InvalidArgumentException $e) {
-                        $errors[$name] = $e->getMessage();
-                        continue; // on n'affecte pas la valeur invalide
-                    }
+                try {
+                    $value = $this->validateAndCast($name, $value, $type, $field);
+                } catch (\InvalidArgumentException $e) {
+                    $errors[$name] = $e->getMessage();
+                    continue;
                 }
 
                 $this->$name = $value;
-            } else {
-                // Clé absente → champ obligatoire si pas de valeur par défaut
-                if ($property->hasDefaultValue()) {
-                    // On laisse la valeur par défaut déjà définie dans la classe enfant
-                    continue;
-                } else {
-                    $errors[$name] = "Le champ '$name' est requis.";
-                }
+                continue;
+            }
+
+            if ($field !== null && $field->isRequired() && !$property->hasDefaultValue()) {
+                $errors[$name] = "Le champ '$name' est requis.";
+                continue;
+            }
+
+            if ($field !== null && $field->hasDefaultValue() && !$property->hasDefaultValue()) {
+                $this->$name = $field->getDefaultValue();
+                continue;
+            }
+
+            if (!$property->hasDefaultValue()) {
+                $errors[$name] = "Le champ '$name' est requis.";
             }
         }
 
@@ -58,15 +77,13 @@ class BaseModel extends Request
         }
     }
 
-    /**
-     * Valide et transtype la valeur selon le type PHP déclaré.
-     * Lève une InvalidArgumentException avec un message clair en cas d'erreur.
-     */
-    private function validateAndCast(string $fieldName, mixed $value, \ReflectionType $type): mixed
+    private function validateAndCast(string $fieldName, mixed $value, ?\ReflectionType $type, ?Field $field = null): mixed
     {
-        // Si le type est une union (ex: int|string), on laisse passer sans validation stricte
+        if ($field !== null) {
+            $value = $field->validate($value, $fieldName);
+        }
+
         if ($type instanceof \ReflectionUnionType) {
-            // On pourrait valider chaque type, mais pour l'instant on retourne la valeur brute
             return $value;
         }
 
@@ -74,7 +91,6 @@ class BaseModel extends Request
             return $this->validateNamedType($fieldName, $value, $type);
         }
 
-        // Autres types exotiques (intersection, etc.) : on ne valide pas
         return $value;
     }
 
@@ -83,7 +99,6 @@ class BaseModel extends Request
         $typeName = $type->getName();
         $allowsNull = $type->allowsNull();
 
-        // Gestion du null
         if ($value === null) {
             if ($allowsNull) {
                 return null;
@@ -102,7 +117,6 @@ class BaseModel extends Request
                 if (is_int($value)) {
                     return $value;
                 }
-                // Conversion depuis une chaîne si possible
                 if (is_string($value) || is_float($value)) {
                     $intValue = filter_var($value, FILTER_VALIDATE_INT, FILTER_NULL_ON_FAILURE);
                     if ($intValue !== null) {
@@ -113,7 +127,7 @@ class BaseModel extends Request
 
             case 'float':
                 if (is_float($value) || is_int($value)) {
-                    return (float)$value;
+                    return (float) $value;
                 }
                 if (is_string($value)) {
                     $floatValue = filter_var($value, FILTER_VALIDATE_FLOAT, FILTER_NULL_ON_FAILURE);
@@ -127,8 +141,6 @@ class BaseModel extends Request
                 return $this->castToBool($fieldName, $value);
 
             default:
-                // Types complexes (objets, tableaux) : on pourrait instancier un autre BaseModel, etc.
-                // Pour l'instant on laisse la valeur telle quelle.
                 return $value;
         }
     }
@@ -140,7 +152,7 @@ class BaseModel extends Request
         }
 
         if (is_int($value) && ($value === 0 || $value === 1)) {
-            return (bool)$value;
+            return (bool) $value;
         }
 
         if (is_string($value)) {
@@ -153,6 +165,6 @@ class BaseModel extends Request
             }
         }
 
-        throw new \InvalidArgumentException("Le champ '$fieldName' doit être un booléen (true/false, 1/0, 'true'/'false', etc.).");
+        throw new \InvalidArgumentException("Le champ '$fieldName' doit être un booléen valide.");
     }
 }
