@@ -50,7 +50,7 @@ Ajoutez ensuite la dépendance locale dans votre `composer.json` :
     }
   ],
   "require": {
-    "eor_bah545/eorbahapi": "0.1.0"
+    "eor_bah545/eorbahapi": "dev-main"
   }
 }
 ```
@@ -99,23 +99,20 @@ $app = new EorbahAPI(dev: true);
 Créez un fichier `main.php` :
 
 ```php
-use Eorbahapi\Request;
-use Eorbahapi\Response;
 use Eorbahapi\EorbahAPI;
-use Eorbahapi\ExceptionHandlers; // Gestion structurée des erreurs (format JSON)
 
 $app = new EorbahAPI(dev: true); // pour recevoir les debug
 
-$app->get('/', function (Response $res) {
-    $res->JSONResponse(["hello" => "world"]);
+$app->get('/', function () {
+    return ["hello" => "world"];
 });
 
-$app->get('/items/{item_id}', function (Request $req, Response $res, $item_id) {
-    $q = $req->query('q');
-    $res->json(["item_id" => $item_id, "q" => $q]);
+$app->get('/items/{item_id}', function ($item_id, $q) {
+    return ["item_id" => $item_id, "q" => $q];
 });
 
-$app->run(); // Accepte aussi ->run(http_code, handler) — 404 par défaut
+$app->run(); // Accepte aussi ->run(http_code, handler) — 404 par défaut 
+// handler un callback pour matcher les requête non rooter
 ```
 
 ### 3.2 Lancer le serveur
@@ -139,7 +136,7 @@ Réponse attendue :
 Cette API met en place :
 - deux routes, `/` et `/items/{item_id}`, toutes deux en méthode `GET` ;
 - un paramètre de chemin (`item_id`) sur la seconde route ;
-- un paramètre de requête optionnel `q`, accessible via `$req->query()`.
+- un paramètre de requête optionnel `q`.
 
 ---
 
@@ -150,10 +147,7 @@ Cette API met en place :
 ### 4.1 Définir un modèle et une route PUT
 
 ```php
-use Eorbahapi\Request;
-use Eorbahapi\Response;
 use Eorbahapi\EorbahAPI;
-use Eorbahapi\ExceptionHandlers;
 use Eorbahapi\Validatior\BaseModel;
 
 $app = new EorbahAPI(dev: true);
@@ -169,13 +163,12 @@ $app->get('/', function (Response $res) {
     $res->JSONResponse(["hello" => "world"]);
 });
 
-$app->get('/items/{item_id}', function (Request $req, Response $res, $item_id) {
-    $q = $req->query('q');
-    $res->json(["item_id" => $item_id, "q" => $q]);
+$app->get('/items/{item_id}', function ($item_id, $q) {
+    return ["item_id" => $item_id, "q" => $q];
 });
 
-$app->put('/items/{item_id}', function (Response $res, Item $item, $item_id) {
-    $res->json(["item_name" => $item->name, "item_id" => $item_id]);
+$app->put('/items/{item_id}', function (Item $item, $item_id) {
+    return ["item_name" => $item->name, "item_id" => $item_id];
 });
 
 $app->run();
@@ -248,9 +241,9 @@ $app->register(OAuth2PasswordBearer::class, new OAuth2PasswordBearer(
 ));
 
 // Route utilisant l'instance enregistrée
-$app->post('/protected', function (Response $res, OAuth2PasswordBearer $oauth) {
+$app->post('/protected', function (OAuth2PasswordBearer $oauth) {
     $token = $oauth->validatePasswordGrant('user', 'pass');
-    $res->json($token);
+    return $token;
 });
 ```
 
@@ -270,7 +263,7 @@ $app->post('/login', function (
     OAuth2PasswordBearer $oauth
 ) {
     $token = $oauth->validatePasswordGrant('admin', 'secret');
-    $res->json($token);
+    return $token;
 });
 ```
 
@@ -297,19 +290,19 @@ class AuthRouteur
         $router->post('/health', [$this, 'health']);
     }
 
-    public function health(Response $res)
+    public function health()
     {
-        $res->JSONResponse([
+        return [
             'status'    => 'ok',
             'version'   => '1.0.0',
             'timestamp' => '2026-07-08T12:00:00Z',
             'uptime'    => 123456.78
-        ]);
+        ];
     }
 
-    public function me(Response $res)
+    public function me()
     {
-        $res->JSONResponse(['status' => 'ok']);
+        return ['status' => 'ok'];
     }
 }
 ```
@@ -329,9 +322,9 @@ class Login
         ];
     }
 
-    public function __invoke($req, $res)
+    public function __invoke()
     {
-        $res->JSONResponse(['status' => 'ok']);
+        return ['status' => 'ok'];
     }
 }
 ```
@@ -390,7 +383,7 @@ $app->addMiddleware(
 
 ```php
 $app->get('/', function (Response $res) {
-    $res->JSONResponse(["hello" => "world"]);
+    return ["hello" => "world"];
 })->middleware([VerifierAuthentification::class, 'role' => 'admin']);
 ```
 
@@ -429,7 +422,7 @@ $app->addMiddleware(SessionMiddleware::class);
 
 // 2. Route avec middleware spécifique
 $app->get('/profil/{id}', function ($id) {
-    return $this->response->json(['id' => $id]);
+    return ['id' => $id];
 })->middleware([VerifierAuthentification::class, 'scope' => 'profil']);
 
 // 3. Lancement
