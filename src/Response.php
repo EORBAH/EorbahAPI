@@ -3,6 +3,8 @@
 namespace Eorbahapi;
 
 class Response {
+    public $headers = [];
+    
     public function JSONResponse($data, $header = true) {
         if ($header) {
             header("Content-Type: application/json");

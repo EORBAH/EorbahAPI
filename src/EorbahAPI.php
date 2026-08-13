@@ -20,30 +20,34 @@ class EorbahAPI
     public $request;
     public $response;
 
+    private $dev;
+
     private DependencyResolver $resolver;
 
-    public function __construct(string $title = "EorbahAPI application")
+    public function __construct(string $title = "EorbahAPI application", bool $dev = false)
     {
         $this->title = $title;
+        $this->dev = $dev;
         $this->request = new Request();
         $this->response = new Response();
         $this->resolver = new DependencyResolver($this->request, $this->response);
         $this->registerDefaultExceptionHandlers();
     }
 
-    private function registerDefaultExceptionHandlers(): void {
-        $handlers = new ExceptionHandlers();
+    private function registerDefaultExceptionHandlers(): void
+    {
+        $handlers = new ExceptionHandlers($this->dev);
         $handlers->overrideExceptionHandlers($this);
     }
 
     /** */
-    public function disable($name) {
+    public function disable($name)
+    {
         switch ($name) {
             case 'X-Powered-By':
                 $this->response->removeHeader('X-Powered-By');
-                # code...
                 break;
-            
+
             default:
                 # code...
                 break;
@@ -386,7 +390,7 @@ class EorbahAPI
                         return true;
                     }
                 } else {
-                    $routeCallback();
+                    $this->applyReturn($routeCallback);
                 }
                 return true;
             }
@@ -482,9 +486,8 @@ class EorbahAPI
     {
         try {
             $routingCallback = function () use ($http_code, $handler) {
-                $method = $_SERVER['REQUEST_METHOD'];
-                $request_uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-                $uri = $this->normalizeRoute($request_uri);
+                $uri = $this->request->path();
+                $method = $this->request->method();
 
                 foreach ($this->mountedApps as $prefix => $app) {
                     if ($uri === $prefix || strpos($uri, $prefix . '/') === 0) {
@@ -551,7 +554,7 @@ class EorbahAPI
                             return false;
                         }
                     } else {
-                        $routeCallback();
+                        $this->applyReturn($routeCallback);
                     }
                     return true;
                 }
@@ -579,6 +582,22 @@ class EorbahAPI
             $this->executeMiddlewares($routingCallback);
         } catch (\Throwable $e) {
             $this->handleException($e);
+        }
+    }
+
+    private function applyReturn($routeCallback)
+    {
+        $result = call_user_func_array($routeCallback, [$this->response]);
+        $headers = $this->response->headers;
+
+        foreach ($headers as $headerName => $headerValue) {
+            $this->response->setHeader($headerName, $headerValue);
+        }
+
+        if (is_array($result) || is_object($result)) {
+            $this->response->json($result);
+        } else {
+            echo $result;
         }
     }
 }

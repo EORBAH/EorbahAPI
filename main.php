@@ -2,22 +2,25 @@
 
 require __DIR__ . '/vendor/autoload.php';
 
-use Eorbahapi\Response;
+
 use Eorbahapi\EorbahAPI;
-use Eorbahapi\Security\RateLimit;
+use Eorbahapi\Validator\BaseModel;
+use Eorbahapi\Middlewares\SessionMiddleware;
+use function Eorbahapi\Responses\JSONResponse;
 
-$app = new EorbahAPI();
+$app = new EorbahAPI(dev: true);
 
-$app->disable('X-Powered-By');
+$app->addMiddleware(SessionMiddleware::class);
 
-$app->get('/me', function (Response $response, RateLimit $rateLimit) {
-     $rateLimit->checkRateLimit(
-         suffix: '/me',
-         maxRequests: 5,
-         timeWindow: 60
-     );
+class User extends BaseModel {
+     public string $name;
+     public int $age;
+}
 
-     $response->json(["message" => "Ceci est une reponse avec des headers"]);
+$app->put('/users/{userId}', function (User $user, $userId, $q) {
+     //return JSONResponse(['id' => $userId, 'name' => $user->name, 'age' => $user->age]);
+     return ['id' => $userId, 'name' => $user->name, 'age' => $user->age, "query" => $q];
+     //return "Hello world";
 });
 
 $app->run();

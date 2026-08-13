@@ -7,6 +7,10 @@ use Eorbahapi\Exceptions\ValidationException;
 
 class ExceptionHandlers
 {
+    private $dev;
+    public function __construct($dev) {
+        $this->dev = $dev;
+    }
     /**
      * Gère les HTTPException (404, 403, 500, etc.)
      */
@@ -55,7 +59,8 @@ class ExceptionHandlers
             'error' => true,
             'status' => 500,
             'message' => 'Internal Server Error',
-            'debug' => ($_ENV['APP_DEBUG'] ?? '') || ($_ENV['APP_ENV'] ?? '') === 'dev' || ($_ENV['APP_ENV'] ?? '') === 'devlopment' ? $e->getMessage() : null
+            //'debug' => ($_ENV['APP_DEBUG'] ?? '') || ($_ENV['APP_ENV'] ?? '') === 'dev' || ($_ENV['APP_ENV'] ?? '') === 'devlopment' ? $e->getMessage() : null
+            'debug' => $this->dev ? $e->getMessage() : null
         ]);
         return $response;
     }

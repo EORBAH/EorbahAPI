@@ -35,7 +35,10 @@
     "autoload": {
         "psr-4": {
             "Eorbahapi\\": "src/"
-        }
+        },
+        "files": [
+            "src/Responses/JSONResponse.php" 
+        ]
     },
     "autoload-dev": {
         "psr-4": {

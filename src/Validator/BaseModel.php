@@ -1,6 +1,6 @@
 <?php
 
-namespace Eorbahapi\Validation;
+namespace Eorbahapi\Validator;
 
 use Eorbahapi\Request;
 use Eorbahapi\Exceptions\ValidationException;
@@ -11,7 +11,7 @@ class BaseModel extends Request
     {
         $reflection = new \ReflectionClass($this);
         $properties = $reflection->getProperties(\ReflectionProperty::IS_PUBLIC);
-        $body = $this->body(); // tableau complet du JSON
+        $body = $this->json(); // tableau complet du JSON
 
         $errors = [];
 

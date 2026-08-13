@@ -14,11 +14,20 @@ class Request
 
     public function params($value = null)
     {
+        $query = $this->query();
+
         if (is_array($value)) {
             $this->segments = $value;
         } elseif (is_string($value)) {
             return $this->segments[$value] ?? null;
         }
+
+        foreach ($query as $queryName => $queryValue) {
+            if (!in_array($queryName, $this->segments, true)) {
+                $this->segments[$queryName] = $queryValue;
+            }
+        }
+
         return $this->segments;
     }
 
@@ -37,6 +46,11 @@ class Request
         }
 
         return $this->bodyCache[$key] ?? $default;
+    }
+
+    public function json()
+    {
+        return $this->body();
     }
 
     public function query(?string $key = null, $default = null)
@@ -157,20 +171,23 @@ class Request
      * Summary of isSocialBot
      * @return bool|int
      */
-    public function isSocialBot() {
+    public function isSocialBot()
+    {
         $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
         $isSocialBot = preg_match('/(facebook|twitter|linkedin|whatsapp|telegram)/i', $userAgent);
         return $isSocialBot;
     }
 
-    public function userAgent() {
+    public function userAgent()
+    {
         return $_SERVER['HTTP_USER_AGENT'] ?? '';
     }
 
     /**
      * Summary of getClientIP
      */
-    public function getClientIP() {
+    public function getClientIP()
+    {
         if (!empty($_SERVER["HTTP_CLIENT_IP"])) {
             return $_SERVER["HTTP_CLIENT_IP"];
         } elseif (!empty($_SERVER["HTTP_X_FORWARDED_FOR"])) {

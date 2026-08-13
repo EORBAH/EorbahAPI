@@ -77,13 +77,19 @@ mon_projet/
 └── .env             # Variables d'environnement
 ```
 
+Pour le debugage utiliser `APP_DEBUG` dans .env ou directement dans `main.php`:
+
 Exemple de fichier `.env` :
 
 ```
 APP_DEBUG=true
 APP_ENV=development
 ```
+Exemple dans `main.php`:
 
+```php
+$app = new EorbahAPI(dev: true);
+```
 ---
 
 ## 3. Prise en main rapide
@@ -98,11 +104,7 @@ use Eorbahapi\Response;
 use Eorbahapi\EorbahAPI;
 use Eorbahapi\ExceptionHandlers; // Gestion structurée des erreurs (format JSON)
 
-$app = new EorbahAPI();
-
-// Active la gestion structurée des exceptions
-$exceptionHandlers = new ExceptionHandlers();
-$exceptionHandlers->overrideExceptionHandlers($app);
+$app = new EorbahAPI(dev: true); // pour recevoir les debug
 
 $app->get('/', function (Response $res) {
     $res->JSONResponse(["hello" => "world"]);
@@ -152,12 +154,9 @@ use Eorbahapi\Request;
 use Eorbahapi\Response;
 use Eorbahapi\EorbahAPI;
 use Eorbahapi\ExceptionHandlers;
-use Eorbahapi\Validation\BaseModel;
+use Eorbahapi\Validatior\BaseModel;
 
-$app = new EorbahAPI();
-
-$exceptionHandlers = new ExceptionHandlers();
-$exceptionHandlers->overrideExceptionHandlers($app);
+$app = new EorbahAPI(dev: true);
 
 class Item extends BaseModel
 {
@@ -509,11 +508,6 @@ $app->mount("/static", new MaClass(/* ...args */), "frontend");
 ```php
 $app = new EorbahAPI("Application principale");
 $api = new EorbahAPI("Application secondaire");
-
-// Gestion structurée des exceptions sur les deux applications
-$exceptionHandlers = new ExceptionHandlers();
-$exceptionHandlers->overrideExceptionHandlers($api);
-$exceptionHandlers->overrideExceptionHandlers($app);
 
 // ... déclaration des routes ici
 
