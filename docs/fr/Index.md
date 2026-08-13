@@ -2,7 +2,9 @@
 
 EorbahAPI est un micro-framework PHP permettant de construire rapidement des API REST, avec injection de dépendances, validation de données, middlewares et système de montage d'applications.
 
-## Sommaire
+## Table des matières
+
+### Guide principal
 
 1. [Installation](#1-installation)
 2. [Structure du projet](#2-structure-du-projet)
@@ -13,6 +15,58 @@ EorbahAPI est un micro-framework PHP permettant de construire rapidement des API
 7. [Organisation des routes : IncludeRoutes et IncludeRoute](#7-organisation-des-routes--includeroutes-et-includeroute)
 8. [Middlewares](#8-middlewares)
 9. [Monter des sous-applications avec mount](#9-monter-des-sous-applications-avec-mount)
+
+### Modules et composants
+
+#### Classe principale
+- [EorbahAPI](./EorbahAPI.md) — Classe cœur du framework
+- [Request](./Request.md) — Accès aux données de requête
+- [Response](./Response.md) — Construction des réponses HTTP
+- [DependencyResolver](./DependencyResolver.md) — Injection de dépendances
+- [ExceptionHandlers](./ExceptionHandlers.md) — Gestion des exceptions
+
+#### Réponses HTTP
+- [Response (Helpers)](./Response.md) — Helpers FastAPI-style
+- [Validation](./Validator.md) — Validation avec BaseModel
+
+#### Structures de données
+- [Address](./datastructures/Address.md)
+- [Headers](./datastructures/Headers.md)
+- [FormData](./datastructures/FormData.md)
+- [UploadFile](./datastructures/UploadFile.md)
+
+#### Middlewares
+- [BaseHTTPMiddleware](./middlewares/BaseHTTPMiddleware.md)
+- [AuthMiddleware](./middlewares/AuthMiddleware.md)
+- [CORSMiddleware](./middlewares/CORSMiddleware.md)
+- [GZipMiddleware](./middlewares/GZipMiddleware.md)
+- [HTTPSRedirectMiddleware](./middlewares/HTTPSRedirectMiddleware.md)
+- [RateLimitingMiddleware](./middlewares/RateLimitingMiddleware.md)
+- [SessionMiddleware](./middlewares/SessionMiddleware.md)
+- [TrustedHostMiddleware](./middlewares/TrustedHostMiddleware.md)
+
+#### Sécurité
+- [Sécurité (Index)](./security/Index.md)
+- [HTTPBasic](./security/HTTPBasic.md)
+- [HTTPBasicCredentials](./security/HTTPBasicCredentials.md)
+- [HTTPBearer](./security/HTTPBearer.md)
+- [HTTPAuthorizationCredentials](./security/HTTPAuthorizationCredentials.md)
+- [RateLimiter](./security/Ratelimiting.md)
+- [APIKey](./security/APIKey/) — APIKeyHeader, APIKeyQuery, APIKeyCookie
+- [JWT](./security/JWTAuth/JWT.md)
+- [OAuth2](./security/OAuth2/) — OAuth2PasswordBearer, OAuth2AuthorizationCodeBearer, OpenIdConnect
+
+#### RPC
+- [JsonRPC](./rpc/JsonRpc.md)
+
+#### Templating
+- [Twig](./templating/TwigTemplates.md)
+- [Tempx](./templating/TempxTemplates.md)
+
+#### Autres
+- [Logger](./Logger.md)
+- [StaticFiles](./StaticFiles.md)
+- [SinglePageApplication](./SinglepageApplication.md)
 
 ---
 
@@ -97,23 +151,20 @@ $app = new EorbahAPI(dev: true);
 
 ### 3.1 Créer une API minimale
 
-Créez un fichier `main.php` :
-
 ```php
 use Eorbahapi\EorbahAPI;
 
-$app = new EorbahAPI(dev: true); // pour recevoir les debug
+$app = new EorbahAPI('Demo');
 
 $app->get('/', function () {
-    return ["hello" => "world"];
+    return ['hello' => 'world'];
 });
 
-$app->get('/items/{item_id}', function ($item_id, $q) {
-    return ["item_id" => $item_id, "q" => $q];
+$app->get('/items/{item_id}', function ($item_id, $q = null) {
+    return ['item_id' => $item_id, 'q' => $q];
 });
 
-$app->run(); // Accepte aussi ->run(http_code, handler) — 404 par défaut 
-// handler un callback pour matcher les requête non rooter
+$app->run();
 ```
 
 ### 3.2 Lancer le serveur
@@ -131,45 +182,47 @@ curl "http://localhost:3000/items/5?q=somequery"
 Réponse attendue :
 
 ```json
-{"item_id": 5, "q": "somequery"}
+{"item_id":"5","q":"somequery"}
 ```
 
 Cette API met en place :
-- deux routes, `/` et `/items/{item_id}`, toutes deux en méthode `GET` ;
-- un paramètre de chemin (`item_id`) sur la seconde route ;
+- deux routes, `/` et `/items/{item_id}` ;
+- un paramètre de chemin (`item_id`) ;
 - un paramètre de requête optionnel `q`.
 
 ---
 
 ## 4. Validation des données avec BaseModel
 
-`BaseModel` permet de valider automatiquement le corps JSON d'une requête (typage et valeurs par défaut).
+`BaseModel` permet de valider automatiquement le corps JSON d'une requête avec des règles de type et de valeur.
 
 ### 4.1 Définir un modèle et une route PUT
 
 ```php
 use Eorbahapi\EorbahAPI;
-use Eorbahapi\Validatior\BaseModel;
+use Eorbahapi\Validator\BaseModel;
+use Eorbahapi\Validator\Field;
 
-$app = new EorbahAPI(dev: true);
+$app = new EorbahAPI('Demo');
 
 class Item extends BaseModel
 {
     public string $name;
     public float $price = 0.0;
     public bool $is_offer = false;
+
+    public static function fields(): array
+    {
+        return [
+            'name' => Field::required()->minLength(2),
+            'price' => Field::required()->min(0),
+            'is_offer' => Field::optional(),
+        ];
+    }
 }
 
-$app->get('/', function (Response $res) {
-    $res->JSONResponse(["hello" => "world"]);
-});
-
-$app->get('/items/{item_id}', function ($item_id, $q) {
-    return ["item_id" => $item_id, "q" => $q];
-});
-
 $app->put('/items/{item_id}', function (Item $item, $item_id) {
-    return ["item_name" => $item->name, "item_id" => $item_id];
+    return ['item_name' => $item->name, 'item_id' => $item_id];
 });
 
 $app->run();
@@ -177,40 +230,40 @@ $app->run();
 
 ### 4.2 Tester la validation
 
-**Champ obligatoire manquant :**
-
 ```bash
 curl -X PUT "http://localhost:3000/items/1" \
   -H "Content-Type: application/json" \
   -d '{"price": 29.99, "is_offer": true}'
 ```
 
-Réponse :
+Réponse typique :
 
 ```json
-{
-  "error": true,
-  "status": 422,
-  "message": "Validation error",
-  "details": {"name": "Le champ 'name' est requis."}
-}
+{"error":true,"status":422,"message":"Validation error","details":{"name":"Le champ 'name' est requis."}}
 ```
 
-**Requête valide :**
+> `BaseModel` accepte aussi les alias via `Field::alias()` et supporte les règles `min()`, `max()`, `minLength()`, `maxLength()`, `email()`, `regex()` et `oneOf()`.
 
-```bash
-curl -X PUT "http://localhost:3000/items/1" \
-  -H "Content-Type: application/json" \
-  -d '{"name": "chaussure", "price": 29.99, "is_offer": true}'
+---
+
+## 5. Réponses HTTP modulaires
+
+Le framework supporte les helpers suivants dans le module `Eorbahapi\Responses` :
+
+```php
+use function Eorbahapi\Responses\JSONResponse;
+use function Eorbahapi\Responses\RedirectResponse;
+
+$app->get('/hello', function () {
+    return JSONResponse(['hello' => 'world']);
+});
+
+$app->get('/old', function () {
+    return RedirectResponse('/new', 301);
+});
 ```
 
-Réponse :
-
-```json
-{"item_name": "chaussure", "item_id": "1"}
-```
-
-> **Limite actuelle :** `BaseModel` ne gère pour l'instant que la validation de type et les valeurs par défaut.
+Les valeurs retournées directement sont encore acceptées, mais les helpers rendent le code plus lisible et plus conforme à un style FastAPI.
 
 ---
 
