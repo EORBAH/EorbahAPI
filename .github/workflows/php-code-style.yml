@@ -1,0 +1,33 @@
+name: PHP Code Style
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  code-style:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.4'
+        extensions: json, mbstring
+        tools: php-cs-fixer:3.51
+    
+    - name: Run PHP-CS-Fixer
+      run: php-cs-fixer fix src --dry-run --diff --using-cache=no
+    
+    - name: Run PHP-CS-Fixer on tests
+      run: php-cs-fixer fix tests --dry-run --diff --using-cache=no
+    
+    - name: Report findings
+      if: failure()
+      run: |
+        echo "Code style issues found! Run 'php-cs-fixer fix' locally to fix them."
+        exit 1
