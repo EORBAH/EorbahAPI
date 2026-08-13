@@ -1,27 +1,21 @@
 <div align="center">
   <img src="./docs/_images/logo.png" alt="Eor_bah545 logo" width="70%" />
   <h1>EorbahAPI</h1>
-  <p>Library for building PHP web applications and APIs.</p>
-  <img src="https://img.shields.io/badge/license/Apache-2.0%2B-green" alt="License" />
+  <p>PHP framework for building APIs and web applications with a clean, modern syntax.</p>
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="License" />
 </div>
 
 <br>
 
-**EorbahAPI** is a modern, fast, high-performance PHP web framework designed to build APIs with clean syntax, inspired by modern frameworks like Express.js and FastAPI.
+**EorbahAPI** is a lightweight PHP framework inspired by modern API tools such as FastAPI and Express.js.
 
 ## Documentation
 
-Complete documentation is available in the [docs folder](/docs/en/Index.md). Explore detailed guides, examples, and tutorials to get the most out of the library.
+The full documentation is available in [docs/fr/Index.md](docs/fr/Index.md) and in the code examples under [examples](examples).
 
 ## Installation
 
-Install from Packagist with Composer.
-
-```bash
-composer require eor_bah545/eorbahapi # not yet available via Packagist
-```
-
-You can also use GitHub:
+From GitHub:
 
 ```bash
 git clone https://github.com/EORBAH/EorbahAPI.git
@@ -29,14 +23,62 @@ cd EorbahAPI
 composer install
 ```
 
-## Usage
+## Quick example
 
-EorbahAPI is fast and intuitive, and this version is ideal for small projects. For a full set of examples showing the framework's features, API usage, app design, and more, see the [examples folder](/examples).
+```php
+<?php
+
+require __DIR__ . '/vendor/autoload.php';
+
+use Eorbahapi\EorbahAPI;
+use function Eorbahapi\Responses\JSONResponse;
+
+$app = new EorbahAPI('Demo');
+
+$app->get('/', function () {
+    return JSONResponse(['message' => 'Hello']);
+});
+
+$app->get('/items/{id}', function ($id) {
+    return ['id' => (int) $id, 'ok' => true];
+});
+
+$app->run();
+```
+
+## Response helpers
+
+Routes can return plain values directly:
+
+- arrays and objects are converted to JSON
+- `RedirectResponse('/login', 302)` triggers an HTTP redirect
+- `JSONResponse`, `HTMLResponse`, `FileResponse`, and `StreamingResponse` are available in the `Eorbahapi\Responses` namespace
+
+## Validation
+
+```php
+use Eorbahapi\Validator\BaseModel;
+use Eorbahapi\Validator\Field;
+
+class UserCreate extends BaseModel
+{
+    public string $name;
+    public int $age;
+
+    public static function fields(): array
+    {
+        return [
+            'name' => Field::required()->minLength(2),
+            'age' => Field::required()->min(18),
+        ];
+    }
+}
+```
 
 ## License
 
-The library is distributed under the Apache-2.0 license.
+The project is distributed under the MIT license.
 
 ## Contributing
 
-See the [contributing guide](/CONTRIBUTING.md) for information on how to contribute to this project.
+Please consult [CONTRIBUTING.md](CONTRIBUTING.md) to contribute to the project.
