@@ -2,7 +2,7 @@
   <img src="./docs/_images/logo.png" alt="Eor_bah545 logo" width="70%" />
   <h1>EorbahAPI</h1>
   <p>PHP framework for building APIs and web applications with a clean, modern syntax.</p>
-  <img src="https://img.shields.io/badge/license-Apache-2.0-green" alt="License" />
+  <img src="https://img.shields.io/badge/license/Apache-2.0%2B-green" alt="License" />
 </div>
 
 <br>
