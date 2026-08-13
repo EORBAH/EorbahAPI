@@ -37,7 +37,11 @@
             "Eorbahapi\\": "src/"
         },
         "files": [
-            "src/Responses/JSONResponse.php" 
+            "src/Responses/JSONResponse.php",
+            "src/Responses/HTMLResponse.php",
+            "src/Responses/FileResponse.php",
+            "src/Responses/StreamingResponse.php",
+            "src/Responses/RedirectResponse.php"
         ]
     },
     "autoload-dev": {
