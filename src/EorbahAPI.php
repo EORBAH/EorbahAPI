@@ -467,11 +467,13 @@ class EorbahAPI
 
         if ($handler) {
             $result = $handler($e, $this->request, $this->response);
-            if ($result instanceof Response) {
-                $result->send();
+            if (is_array($result) || is_object($result)) {
+                echo \Eorbahapi\Responses\JSONResponse($result);
+            } elseif ($result !== null) {
+                echo $result;
             }
         } else {
-            $this->response->status(500)->send('Internal Server Error');
+            echo \Eorbahapi\Responses\JSONResponse(['error' => true, 'status' => 500, 'message' => 'Internal Server Error'], 500, ['Content-Type' => 'application/json; charset=UTF-8']);
         }
         exit;
     }
@@ -594,9 +596,16 @@ class EorbahAPI
             $this->response->setHeader($headerName, $headerValue);
         }
 
+        if (is_string($result) && str_starts_with($result, 'redirect:')) {
+            [$prefix, $statusCode, $url] = explode(':', $result, 3);
+            http_response_code((int) $statusCode);
+            header('Location: ' . $url);
+            return;
+        }
+
         if (is_array($result) || is_object($result)) {
-            $this->response->json($result);
-        } else {
+            echo \Eorbahapi\Responses\JSONResponse($result);
+        } elseif ($result !== null) {
             echo $result;
         }
     }

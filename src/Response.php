@@ -4,32 +4,6 @@ namespace Eorbahapi;
 
 class Response {
     public $headers = [];
-    
-    public function JSONResponse($data, $header = true) {
-        if ($header) {
-            header("Content-Type: application/json");
-        }
-        echo json_encode($data);
-    }
-
-
-    public function json($data, $header = true) {
-        $this->JSONResponse($data, $header);
-    }
- 
-    public function send($message = null, $type = null) {
-        if (is_string($message)) {
-            $message = trim($message);
-        }
-        
-        if ($type == "json") {
-            $this->JSONResponse($message);
-        } elseif ($message === null) {
-            echo "";
-        } else {
-            echo $message;
-        }
-    }
 
     public function status(int $code) {
         if (!headers_sent()) {
@@ -37,66 +11,6 @@ class Response {
         }
 
         return $this;
-    }
-
-   
-    function HTMLResponse(string $content, int $statusCode = 200, array $headers = []): void {
-        if (headers_sent()) {
-            $this->status(200)->send($content);
-            return;
-        }
-
-        $this->status($statusCode)->setHeader('Content-Type', 'text/html; charset=utf-8');
-
-        foreach ($headers as $name => $value) {
-            $this->setHeader($name, $value);
-        }
-
-        $this->send($content);
-    }
-
-    public function FileResponse(string $filePath, array $options = []): void {
-        if (!file_exists($filePath) || !is_readable($filePath)) {
-            $this->status(404)->send("File not found");
-            return;
-        }
-
-        $fileInfo = pathinfo($filePath);
-        $extension = strtolower($fileInfo['extension'] ?? '');
-        $contentTypeMap = [
-            'json' => 'json',
-            'html' => 'html',
-            'jpg' => 'image',
-            'jpeg' => 'image',
-            'png' => 'png',
-            'gif' => 'gif',
-            'css' => 'css',
-            'js' => 'javascript',
-            'pdf' => 'pdf',
-            'mp4' => 'video',
-            'mp3' => 'mp3',
-        ];
-
-        $contentType = $contentTypeMap[$extension] ?? 'application/octet-stream';
-
-        $this->set_content_type($contentType, null, [
-            'disposition' => $options['disposition'] ?? 'inline',
-            'filename' => $options['filename'] ?? basename($filePath),
-            'custom_headers' => $options['custom_headers'] ?? []
-        ]);
-
-        readfile($filePath);
-    }
-
-    public function StreamingResponse($gen, $ContentType = 'text/event-stream'): void {
-        $this->setHeader("Content-Type", $ContentType);
-        $this->setHeader('Cache-Control', 'no-cache');
-    
-        foreach ($gen as $event) {
-            echo $event;
-            ob_flush();
-            flush();
-        }
     }
 
     public function set_content_type(
@@ -153,18 +67,13 @@ class Response {
         }
     }
 
-    public function RedirectResponse(string $url, int $statusCode = 302): void {
-        http_response_code($statusCode);
-        header("Location: $url");
-        exit;
-    }
-
-    public function redirect(string $url, int $statusCode = 302): void {
-        $this->RedirectResponse($url, $statusCode);
-    }
-
     public function setHeader($name, $value) {
         header("$name: $value");
+        return $this;
+    }
+
+    public function header($name, $value) {
+        return $this->setHeader($name, $value);
     }
 
     public function removeHeader($name) {
