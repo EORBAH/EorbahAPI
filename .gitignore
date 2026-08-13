@@ -3,3 +3,4 @@ composer.lock
 /.arch/
 .env
 dump.rdb
+.php-cs-fixer.cache
