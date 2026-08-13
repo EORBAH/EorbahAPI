@@ -18,7 +18,7 @@ jobs:
       with:
         php-version: '8.4'
         extensions: json, mbstring
-        tools: php-cs-fixer:3.51
+        tools: php-cs-fixer:3.64
     
     - name: Run PHP-CS-Fixer
       run: php-cs-fixer fix src --dry-run --diff --using-cache=no
