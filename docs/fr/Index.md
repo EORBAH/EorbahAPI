@@ -181,8 +181,6 @@ $app->put('/items/{item_id}', function (Response $res, Item $item, $item_id) {
 $app->run();
 ```
 
-> **Important :** `ExceptionHandlers` doit impérativement être enregistré sur l'application pour obtenir des erreurs structurées en JSON. Sans lui, une erreur de validation renverra simplement une `Internal server error`.
-
 ### 4.2 Tester la validation
 
 **Champ obligatoire manquant :**
