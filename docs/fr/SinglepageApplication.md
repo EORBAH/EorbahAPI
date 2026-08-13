@@ -51,8 +51,10 @@ Toute URL qui ne correspond ni à une route API explicite, ni à un fichier stat
 Cela se fait avec une route paramétrée dont le type est `path` — contrairement à un paramètre de route classique (`{item_id}`), qui ne capture qu'un seul segment d'URL, le type `path` capture **l'intégralité du chemin restant**, y compris les slashes :
 
 ```php
-$app->get("{full_path:path}", function (Request $req, Response $res) {
-    $res->HTMLResponse('
+use function Eorbahapi\Responses\HTMLResponse;
+
+$app->get("{full_path:path}", function () {
+    return HTMLResponse('
     <!DOCTYPE html>
     <html>
     <body>
@@ -68,8 +70,8 @@ Ainsi, aussi bien `GET /dashboard` que `GET /profil/42/parametres` seront captur
 > **En production**, le contenu retourné par cette route correspond typiquement au `index.html` généré par le build frontend, et non à un contenu codé en dur comme dans l'exemple ci-dessus :
 >
 > ```php
-> $app->get("{full_path:path}", function (Request $req, Response $res) {
->     $res->FileResponse(__DIR__ . '/frontend/dist/index.html');
+> $app->get("{full_path:path}", function () {
+>     return FileResponse(__DIR__ . '/frontend/dist/index.html');
 > });
 > ```
 
@@ -98,28 +100,18 @@ En effet, comme la route `{full_path:path}` capture n'importe quelle URL, toute 
 
 require __DIR__ . '/vendor/autoload.php';
 
-use Dotenv\Dotenv;
-
-$dotenv = Dotenv::createImmutable(__DIR__);
-$dotenv->load();
-
-use Eorbahapi\Request;
-use Eorbahapi\Response;
 use Eorbahapi\EorbahAPI;
 use Eorbahapi\StaticFiles;
-use Eorbahapi\ExceptionHandlers;
+use function Eorbahapi\Responses\HTMLResponse;
 
 $app = new EorbahAPI();
-
-$exceptionHandlers = new ExceptionHandlers();
-$exceptionHandlers->overrideExceptionHandlers($app);
 
 // Fichiers statiques compilés (ex. manifest.json, bundle.js, style.css...)
 $app->mount("/static", new StaticFiles("frontend/dist/"), "frontend");
 
 // Route de secours : renvoie index.html pour laisser le routage client s'exécuter
-$app->get("{full_path:path}", function (Request $req, Response $res) {
-    $res->HTMLResponse('
+$app->get("{full_path:path}", function () {
+    return HTMLResponse('
     <!DOCTYPE html>
     <html>
     <body>
