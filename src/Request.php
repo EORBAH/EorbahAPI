@@ -22,6 +22,9 @@ class Request
             return $this->segments[$value] ?? null;
         }
 
+        /**
+         * Injection des query dans les paramètre mais les url params sont en priorité
+         */
         foreach ($query as $queryName => $queryValue) {
             if (!in_array($queryName, $this->segments, true)) {
                 $this->segments[$queryName] = $queryValue;
