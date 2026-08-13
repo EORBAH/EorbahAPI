@@ -5,6 +5,7 @@ namespace Eorbahapi\rpc;
 use Eorbahapi\Request;
 use Eorbahapi\Response;
 use Eorbahapi\DependencyResolver;
+use function Eorbahapi\Responses\JSONResponse;
 
 class JsonRPC
 {
@@ -77,7 +78,7 @@ class JsonRPC
             $result = $callback(...$args);
 
             // Envoi de la réponse de succès
-            $this->response->json([
+            echo JSONResponse([
                 'jsonrpc' => '2.0',
                 'result' => $result,
                 'id' => $id,
@@ -93,7 +94,7 @@ class JsonRPC
      */
     private function sendError($id, int $code, string $message): void
     {
-        $this->response->json([
+        echo JSONResponse([
             'jsonrpc' => '2.0',
             'error' => [
                 'code' => $code,

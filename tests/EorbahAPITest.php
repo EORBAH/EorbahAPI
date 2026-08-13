@@ -5,6 +5,7 @@ namespace Eorbahapi\Tests;
 use PHPUnit\Framework\TestCase;
 use Eorbahapi\EorbahAPI;
 use Eorbahapi\Middlewares\BaseHTTPMiddleware;
+use function Eorbahapi\Responses\JSONResponse;
 
 class EorbahAPITest extends TestCase
 {
@@ -56,5 +57,21 @@ class EorbahAPITest extends TestCase
         $this->assertCount(1, $middlewares);
         $this->assertSame(BaseHTTPMiddleware::class, $middlewares[0]['class']);
         $this->assertSame(['test' => true], $middlewares[0]['options']);
+    }
+
+    public function testJsonResponseHelperCanBeReturnedFromRoute(): void
+    {
+        $app = new EorbahAPI();
+        $method = new \ReflectionMethod(EorbahAPI::class, 'applyReturn');
+        $method->setAccessible(true);
+
+        ob_start();
+        $method->invoke($app, function () {
+            return JSONResponse(['hello' => 'world'], 201, ['X-Test' => 'done']);
+        });
+        $output = ob_get_clean();
+
+        $this->assertSame('{"hello":"world"}', trim($output));
+        $this->assertSame(201, http_response_code());
     }
 }

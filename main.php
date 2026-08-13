@@ -19,7 +19,7 @@ class User extends BaseModel {
 
 $app->put('/users/{userId}', function (User $user, $userId, $q) {
      //return JSONResponse(['id' => $userId, 'name' => $user->name, 'age' => $user->age]);
-     return ['id' => $userId, 'name' => $user->name, 'age' => $user->age, "query" => $q];
+     return JSONResponse(['id' => $userId, 'name' => $user->name, 'age' => $user->age, "query" => $q]);
      //return "Hello world";
 });
 

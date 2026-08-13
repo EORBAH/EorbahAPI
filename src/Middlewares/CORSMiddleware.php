@@ -2,6 +2,8 @@
 
 namespace Eorbahapi\Middlewares;
 
+use function Eorbahapi\Responses\JSONResponse;
+
 class CORSMiddleware {
     private $allowOrigins;
     private $allowCredentials;
@@ -31,7 +33,7 @@ class CORSMiddleware {
 
         if (!$isOriginAllowed) {
             $response->status(403);
-            $response->json(['error' => 'Origin not allowed']);
+            echo JSONResponse(['error' => 'Origin not allowed'], 403);
             return false;
         }
 

@@ -4,11 +4,12 @@ namespace Eorbahapi;
 
 use Eorbahapi\Exceptions\HTTPException;
 use Eorbahapi\Exceptions\ValidationException;
+use function Eorbahapi\Responses\JSONResponse;
 
 class ExceptionHandlers
 {
     private $dev;
-    public function __construct($dev) {
+    public function __construct(bool $dev = false) {
         $this->dev = $dev;
     }
     /**
@@ -25,11 +26,11 @@ class ExceptionHandlers
         }
 
         // Réponse structurée en JSON (ou autre selon Accept header)
-        $response->json([
+        echo JSONResponse([
             'error' => true,
             'status' => $statusCode,
             'message' => $e->getMessage() ?: $this->getDefaultMessage($statusCode)
-        ]);
+        ], $statusCode);
 
         return $response;
     }
@@ -40,12 +41,12 @@ class ExceptionHandlers
     public function requestValidationExceptionHandler(ValidationException $e, Request $request, Response $response): Response
     {
         $response->status(422);
-        $response->json([
+        echo JSONResponse([
             'error' => true,
             'status' => 422,
             'message' => 'Validation error',
             'details' => $e->getErrors()
-        ]);
+        ], 422);
         return $response;
     }
 
@@ -55,13 +56,14 @@ class ExceptionHandlers
     public function genericExceptionHandler(\Throwable $e, Request $request, Response $response): Response
     {
         $response->status(500);
-        $response->json([
+        $isDebug = $this->dev || ($_ENV['APP_DEBUG'] ?? null) === '1' || ($_ENV['APP_DEBUG'] ?? null) === 'true' || ($_ENV['APP_ENV'] ?? null) === 'dev' || ($_ENV['APP_ENV'] ?? null) === 'development';
+
+        echo JSONResponse([
             'error' => true,
             'status' => 500,
             'message' => 'Internal Server Error',
-            //'debug' => ($_ENV['APP_DEBUG'] ?? '') || ($_ENV['APP_ENV'] ?? '') === 'dev' || ($_ENV['APP_ENV'] ?? '') === 'devlopment' ? $e->getMessage() : null
-            'debug' => $this->dev ? $e->getMessage() : null
-        ]);
+            'debug' => $isDebug ? $e->getMessage() : null
+        ], 500);
         return $response;
     }
 
