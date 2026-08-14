@@ -1,6 +1,6 @@
 /vendor/
 composer.lock
-/.arch/
+/.archive/
 .env
 dump.rdb
 .php-cs-fixer.cache
