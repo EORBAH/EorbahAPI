@@ -1,0 +1,25 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: EorbahAPI
+message: >-
+  If you use this software, please cite it using the  
+  metadata from this file.
+type: software
+authors:
+  - given-names: Elhadj Oumar Rafiou
+    family-names: Bah
+    email: eor.bah545@gmail.com
+identifiers:
+  - type: url
+    value: 'https://eorbahapi.phoenixshareplus.com'
+repository-code: 'https://github.com/EORBAH/eorbahapi.git'
+abstract: >-
+  EorbahAPI is lightweight PHP inspired by modern API tools
+  such as FastAPI and Express.js.
+keywords:
+  - EorbahAPI
+  - api-php
+  - php-web-frameworks-apis
+license: MIT
