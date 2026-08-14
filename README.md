@@ -2,7 +2,7 @@
   <img src="./docs/_images/logo.png" alt="Eor_bah545 logo" width="70%" />
   <h1>EorbahAPI</h1>
   <p>Framework PHP pour construire des API et applications web avec une syntaxe simple et moderne.</p>
-  <img src="https://img.shields.io/badge/license/Apache-2.0%2B-green" alt="License" />
+  <img src="https://img.shields.io/badge/license/MIT%2B-green" alt="License" />
 </div>
 
 <br>

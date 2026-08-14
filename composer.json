@@ -3,13 +3,7 @@
     "description": "EORBAH API est un framework web PHP moderne, rapide et haute performance, conçu pour construire des API avec une syntaxe épurée, inspiré de frameworks modernes comme Express.js et FastAPI.",
     "keywords": [
         "EorbahAPI",
-        "sdk",
         "api-php",
-        "php",
-        "client",
-        "fastapi-alternative",
-        "template-twig",
-        "php-web",
         "php-web-frameworks-apis"
     ],
     "homepage": "https://github.com/EORBAH/EorbahAPI",
@@ -45,8 +39,7 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Eorbahapi\\Tests\\": "tests/",
-            "Eorbahapi\\Examples\\": "examples/"
+            "Eorbahapi\\Tests\\": "tests/"
         }
     },
     "scripts": {
