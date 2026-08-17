@@ -201,7 +201,7 @@ Cette API met en place :
 ```php
 use Eorbahapi\EorbahAPI;
 use Eorbahapi\Validator\BaseModel;
-use Eorbahapi\Validator\Fields;
+use Eorbahapi\Validator\Field;
 
 $app = new EorbahAPI('Demo');
 
@@ -212,9 +212,9 @@ class Item extends BaseModel {
 
     public static function fields(): array {
         return [
-            'name' => Fields::required()->minLength(2),
-            'price' => Fields::required()->min(0),
-            'is_offer' => Fields::optional(),
+            'name' => Field::required()->minLength(2),
+            'price' => Field::required()->min(0),
+            'is_offer' => Field::optional(),
         ];
     }
 }
@@ -240,7 +240,7 @@ Réponse typique :
 {"error":true,"status":422,"message":"Validation error","details":{"name":"Le champ 'name' est requis."}}
 ```
 
-> `BaseModel` accepte aussi les alias via `Fields::alias()` et supporte les règles `min()`, `max()`, `minLength()`, `maxLength()`, `email()`, `regex()` et `oneOf()`.
+> `BaseModel` accepte aussi les alias via `Field::alias()` et supporte les règles `min()`, `max()`, `minLength()`, `maxLength()`, `email()`, `regex()` et `oneOf()`.
 
 ---
 

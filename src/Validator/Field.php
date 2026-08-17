@@ -2,7 +2,7 @@
 
 namespace Eorbahapi\Validator;
 
-class Fields {
+class Field {
     private bool $required = false;
     private bool $optional = false;
     private ?string $alias = null;

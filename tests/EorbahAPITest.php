@@ -12,6 +12,7 @@ class EorbahAPITest extends TestCase
     protected function setUp(): void
     {
         header_remove();
+        http_response_code(200); // réinitialisation du code de réponse
     }
 
     public function testRegisterRouteStoresRoute(): void
@@ -34,7 +35,7 @@ class EorbahAPITest extends TestCase
         $app = new EorbahAPI();
         $app->get('/secure', function () {
             return 'ok';
-        })->middleware([BaseHTTPMiddleware::class]);
+        }, [BaseHTTPMiddleware::class]);
 
         $property = new \ReflectionProperty(EorbahAPI::class, 'routes');
         $property->setAccessible(true);
@@ -71,7 +72,13 @@ class EorbahAPITest extends TestCase
         });
         $output = ob_get_clean();
 
-        $this->assertSame('{"hello":"world"}', trim($output));
+        // Vérification du contenu JSON
+        $this->assertSame(['hello' => 'world'], json_decode(trim($output), true));
+
+        // Vérification du code de réponse (doit être défini par JSONResponse)
         $this->assertSame(201, http_response_code());
+
+        // Si vous voulez aussi vérifier l'en-tête X-Test (optionnel)
+        // $this->assertSame('done', xdebug_get_headers()['X-Test'] ?? null);
     }
 }
