@@ -13,8 +13,8 @@ authors:
     email: eor.bah545@gmail.com
 identifiers:
   - type: url
-    value: 'https://eorbahapi.phoenixshareplus.com'
-repository-code: 'https://github.com/EORBAH/eorbahapi.git'
+    value: 'https://developer.phoenixshareplus.com/solutions/eorbahapi'
+repository-code: 'https://github.com/phoenixshareplus/eorbahapi.git'
 abstract: >-
   EorbahAPI is lightweight PHP inspired by modern API tools
   such as FastAPI and Express.js.

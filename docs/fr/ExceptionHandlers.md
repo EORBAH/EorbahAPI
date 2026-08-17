@@ -18,8 +18,6 @@ Enregistre les gestionnaires sur l'application. Cette méthode est appelée auto
 use Eorbahapi\ExceptionHandlers;
 
 $app = new EorbahAPI();
-$handlers = new ExceptionHandlers();
-$handlers->overrideExceptionHandlers($app);
 ```
 
 ## Comportements
@@ -55,10 +53,8 @@ Retourne une réponse `500` pour toutes les autres exceptions.
 Vous pouvez remplacer ou ajouter vos propres gestionnaires d'exception à l'aide de `setExceptionHandler()` de `EorbahAPI` :
 
 ```php
-$app->setExceptionHandler(
-    Eorbahapi\Exceptions\HTTPException::class,
-    function ($e, Request $req, Response $res) {
-        return $res->status(418)->json(['error' => true, 'message' => 'Je suis une tasse']);
+$app->setExceptionHandler(HTTPException::class, function ($e, Request $req, Response $res) {
+        return JSONResponse(['error' => true, 'message' => 'Je suis une tasse'], 418);
     }
 );
 ```

@@ -39,7 +39,8 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Eorbahapi\\Tests\\": "tests/"
+            "Eorbahapi\\Tests\\": "tests/",
+            "Eorbahapi\\Examples\\": "examples/"
         }
     },
     "scripts": {

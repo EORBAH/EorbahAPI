@@ -201,22 +201,20 @@ Cette API met en place :
 ```php
 use Eorbahapi\EorbahAPI;
 use Eorbahapi\Validator\BaseModel;
-use Eorbahapi\Validator\Field;
+use Eorbahapi\Validator\Fields;
 
 $app = new EorbahAPI('Demo');
 
-class Item extends BaseModel
-{
+class Item extends BaseModel {
     public string $name;
     public float $price = 0.0;
     public bool $is_offer = false;
 
-    public static function fields(): array
-    {
+    public static function fields(): array {
         return [
-            'name' => Field::required()->minLength(2),
-            'price' => Field::required()->min(0),
-            'is_offer' => Field::optional(),
+            'name' => Fields::required()->minLength(2),
+            'price' => Fields::required()->min(0),
+            'is_offer' => Fields::optional(),
         ];
     }
 }
@@ -242,7 +240,7 @@ Réponse typique :
 {"error":true,"status":422,"message":"Validation error","details":{"name":"Le champ 'name' est requis."}}
 ```
 
-> `BaseModel` accepte aussi les alias via `Field::alias()` et supporte les règles `min()`, `max()`, `minLength()`, `maxLength()`, `email()`, `regex()` et `oneOf()`.
+> `BaseModel` accepte aussi les alias via `Fields::alias()` et supporte les règles `min()`, `max()`, `minLength()`, `maxLength()`, `email()`, `regex()` et `oneOf()`.
 
 ---
 
@@ -263,7 +261,7 @@ $app->get('/old', function () {
 });
 ```
 
-Les valeurs retournées directement sont encore acceptées, mais les helpers rendent le code plus lisible et plus conforme à un style FastAPI.
+Les valeurs retournées directement sont encore acceptées, mais les helpers rendent le code plus lisible.
 
 ---
 
@@ -329,23 +327,20 @@ Le résolveur appelle ensuite le constructeur avec ces arguments et injecte l'in
 
 ---
 
-## 6. Organisation des routes : IncludeRoutes et IncludeRoute
+## 6. Organisation des routes : IncludeRouter
 
 Pour structurer une application plus large, les routes peuvent être regroupées dans des classes dédiées.
 
 ### 6.1 Regrouper des routes dans une classe
 
 ```php
-class AuthRouteur
-{
-    public function __invoke($router)
-    {
-        $router->post('/me', [$this, 'me']);
-        $router->post('/health', [$this, 'health']);
-    }
+use Eorbahapi\Attributes\Route;
 
-    public function health()
-    {
+class AuthRouteur {
+    #[Route('/health', methods: ['POST'], middlewares: [
+        [RateLimitingMiddleware::class, 'maxRequests' => 10, 'routeSpecific' => true]
+    ])]
+    public function health() {
         return [
             'status'    => 'ok',
             'version'   => '1.0.0',
@@ -354,40 +349,43 @@ class AuthRouteur
         ];
     }
 
-    public function me()
-    {
+    #[Route('/me', methods: ['POST'], middlewares: [])]
+    public function me() {
         return ['status' => 'ok'];
     }
 }
 ```
 
-### 6.2 Déclarer une route unique sous une classe
+Seconde version
 
 ```php
-class Login
-{
-    public $config;
+class UserRouteur {
+    public function __register_routes($router) {
+        $router->post('/me', [$this, 'me']);
+        $router->post('/health', [$this, 'health']);
+    }
 
-    public function __construct()
-    {
-        $this->config = [
-            'method' => 'GET',
-            'route'  => '/login'
+    public function health() {
+        return [
+            'status'    => 'ok',
+            'version'   => '1.0.0',
+            'timestamp' => '2026-07-08T12:00:00Z',
+            'uptime'    => 123456.78
         ];
     }
 
-    public function __invoke()
-    {
+    public function me() {
         return ['status' => 'ok'];
     }
 }
 ```
 
-### 6.3 Enregistrer les routes
+
+### 6.2 Enregistrer les routes
 
 ```php
-$app->IncludeRoutes(AuthRouteur::class); // Inclut un groupe de routes
-$app->IncludeRoute(Login::class);        // Inclut une route unique
+$app->IncludeRouter(AuthRouteur::class, args: []); // Inclut un groupe de routes
+$app->IncludeRoutes(UserRouteur::class); // Inclut un groupe de routes `_register_routes`
 ```
 
 Chaque route enregistrée répond alors normalement selon sa définition.
@@ -413,7 +411,6 @@ $app->addMiddleware(
     CORSMiddleware::class,
     [
         'allow_origins' => [
-            "https://accounts.phoenixshareplus.com", // Tunnel Cloudflare
             "http://localhost:3000",                 // API locale
             "http://localhost:8000"                  // Frontend Vite
         ],
@@ -428,7 +425,7 @@ $app->addMiddleware(
     RateLimitingMiddleware::class,
     [
         'max_request' => 100,
-        'timeWindow'  => 60 // La clé par défaut est l'adresse IP
+        'timeWindow'  => 60
     ]
 );
 ```
@@ -438,7 +435,7 @@ $app->addMiddleware(
 ```php
 $app->get('/', function (Response $res) {
     return ["hello" => "world"];
-})->middleware([VerifierAuthentification::class, 'role' => 'admin']);
+}, [[VerifierAuthentification::class, 'role' => 'admin']]);
 ```
 
 > **Attention :** `middleware()` doit être appelée immédiatement après la définition de la route concernée, avant toute autre déclaration de route.
@@ -477,7 +474,7 @@ $app->addMiddleware(SessionMiddleware::class);
 // 2. Route avec middleware spécifique
 $app->get('/profil/{id}', function ($id) {
     return ['id' => $id];
-})->middleware([VerifierAuthentification::class, 'scope' => 'profil']);
+}, [[VerifierAuthentification::class, 'scope' => 'profil']]);
 
 // 3. Lancement
 $app->run();
@@ -501,46 +498,14 @@ $app->mount("/static", new StaticFiles("frontend/dist"), "frontend");
 Toute classe destinée à être montée doit exposer une interface compatible avec `mount()` :
 
 ```php
-use Eorbahapi\Request;
-use Eorbahapi\Response;
+use Eorbahapi\BaseMountedApplication;
 
-class MaClass
-{
-    private $request;
-    private $response;
-
+class MaClass extends BaseMountedApplication {
     /**
-     * Permet à EorbahAPI d'injecter les instances Request/Response partagées.
-     * Appelé automatiquement par mount().
+     * Point d'entrée principal.
+     * $this->request, $this->response injecter
      */
-    public function setRequestResponse($request, $response): void
-    {
-        $this->request = $request;
-        $this->response = $response;
-    }
-
-    /**
-     * Compatibilité avec la signature run($http_code, $handler) de EorbahAPI.
-     * Utilisée si l'application montée est appelée via run().
-     */
-    public function run($http_code = "404", $handler = null): void
-    {
-        if ($this->request && $this->response) {
-            $this->handle($this->request, $this->response);
-        } else {
-            $this->handle(new Request(), new Response());
-        }
-    }
-
-    /**
-     * Point d'entrée principal appelé par mount().
-     *
-     * @param Request  $request
-     * @param Response $response
-     */
-    public function handle($request, $response): void
-    {
-        $this->setRequestResponse($request, $response);
+    public function process($request, $response): void {
         // Votre logique métier ici
     }
 }
@@ -576,7 +541,7 @@ $admin->addMiddleware(AuthGlobal::class); // S'exécute pour /admin/...
 
 $admin->get('/dashboard', function () {
     return 'Dashboard';
-})->middleware([CheckRole::class, 'admin']); // Spécifique à /admin/dashboard
+}, [CheckRole::class, 'admin']); // Spécifique à /admin/dashboard
 
 $admin->get('/stats', function () {
     return 'Statistiques';

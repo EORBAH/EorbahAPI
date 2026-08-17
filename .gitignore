@@ -4,3 +4,6 @@ composer.lock
 .env
 dump.rdb
 .php-cs-fixer.cache
+.vscode
+NOTES.md
+feats/

@@ -28,17 +28,19 @@ class RateLimiter
      */
     public function checkRateLimit(string $key, int $maxRequests, int $timeWindow): bool
     {
+        
         // 1. Déterminer la clé Redis et la fenêtre de temps actuelle
         $currentWindow = floor(time() / $timeWindow);
         $redisKey = "rate_limit:{$key}:{$currentWindow}";
 
         // 2. Incrémentation atomique et gestion de l'expiration
         $count = $this->redis->incr($redisKey);
+        
         if ($count === 1) {
             // Si c'est la première requête dans cette fenêtre, on définit l'expiration.
             $this->redis->expire($redisKey, $timeWindow);
         }
-
+        
         // 3. Vérifier si la limite est dépassée
         return $count <= $maxRequests;
     }

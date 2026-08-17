@@ -3,6 +3,8 @@
 namespace Eorbahapi;
 
 use Eorbahapi\ExceptionHandlers;
+use Eorbahapi\Attributes\Route;
+use function Eorbahapi\Responses\JSONResponse;
 
 class EorbahAPI
 {
@@ -13,9 +15,6 @@ class EorbahAPI
     private array $globalMiddlewares = [];
 
     private array $exceptionHandlers = [];
-
-    private string $currentRoute = '';
-    private string $currentMethod = '';
 
     public $request;
     public $response;
@@ -67,44 +66,141 @@ class EorbahAPI
     /**
      * Route GET
      */
-    public function get($route, $callback): static
-    {
-        $this->currentRoute = $this->normalizeRoute($route);
-        $this->currentMethod = 'GET';
-        $this->registerRoute('GET', $route, $callback);
-        return $this;
+    public function get(string $route, callable $callback, array $middlewares = []): void {
+        $this->api_route($route, ['GET'], $callback, $middlewares);
     }
 
     /**
      * Route POST
      */
-    public function post($route, $callback): static
-    {
-        $this->currentRoute = $this->normalizeRoute($route);
-        $this->currentMethod = 'POST';
-        $this->registerRoute('POST', $route, $callback);
-        return $this;
+    public function post(string $route, callable $callback, array $middlewares = []): void {
+        $this->api_route($route, ['POST'], $callback, $middlewares);
     }
 
     /**
      * Route PUT
      */
-    public function put($route, $callback): static
-    {
-        $this->currentRoute = $this->normalizeRoute($route);
-        $this->currentMethod = 'PUT';
-        $this->registerRoute('PUT', $route, $callback);
-        return $this;
+    public function put(string $route, callable $callback, array $middlewares = []): void {
+        $this->api_route($route, ['PUT'], $callback, $middlewares);
     }
 
     /**
      * Route DELETE
      */
-    public function delete($route, $callback): static
+    public function delete(string $route, callable $callback, array $middlewares = []): void {
+        $this->api_route($route, 'DELETE', $callback, $middlewares);
+    }
+
+
+    /**
+     * Enregistre une route pour plusieurs méthodes HTTP
+     *
+     * @param string $route   Le chemin de la route (ex: "/users")
+     * @param string|array $methods  Méthodes HTTP, soit un tableau ['GET','POST'], soit une chaîne séparée par des pipes "GET|POST"
+     * @param callable $callback Le callback à exécuter lorsque la route est appelée
+     * @return static
+     */
+    public function api_route(string $route, $methods, callable $callback, array $middlewares = []): void{
+        $methods = is_array($methods) ? $methods : explode('|', $methods);
+        foreach ($methods as $method) {
+            $method = strtoupper(trim($method));
+            $this->registerRoute($method, $route, $callback);
+            //$this->currentRoute = $this->normalizeRoute($route);
+            //$this->currentMethod = $method;
+
+            // Applique les middlewares à cette méthode
+            foreach ($middlewares as $mwConfig) {
+                if (is_string($mwConfig)) {
+                    $mwConfig = [$mwConfig];
+                }
+                
+                $this->middleware($mwConfig, currentRoute: $this->normalizeRoute($route), currentMethod: $method);
+            }
+        }
+    }
+
+    /**
+     * Charge toutes les routes définies par attribut APIRoute dans une classe.
+     * Les méthodes publiques avec #[APIRoute] sont enregistrées.
+     *
+     * @param string $className Nom complet de la classe (avec namespace)
+     * @param array $constructorArgs Arguments à passer au constructeur de la classe
+     * @return self
+     */
+    public function IncludeRouter(string $className, array $constructorArgs = []): self {
+        if (!class_exists($className)) {
+            throw new \InvalidArgumentException("La classe '$className' n'existe pas.");
+        }
+
+        // Instanciation de la classe
+        $reflectionClass = new \ReflectionClass($className);
+        $instance = $reflectionClass->newInstanceArgs($constructorArgs);
+
+
+        // Parcours des méthodes publiques
+        foreach ($reflectionClass->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
+            $attributes = $method->getAttributes(Route::class);
+            if (empty($attributes)) {
+                continue;
+            }
+
+            $attribute = $attributes[0]->newInstance();
+            $route = $attribute->route;
+            $methods = $attribute->methods;
+            $middlewares = $attribute->middlewares;
+
+            $callback = [$instance, $method->getName()];
+
+            foreach ($methods as $httpMethod) {
+                $httpMethod = strtoupper(trim($httpMethod));
+
+                $this->registerRoute($httpMethod, $route, $callback);
+                //$this->currentRoute = $this->normalizeRoute($route);
+                //$this->currentMethod = $httpMethod;
+
+                // Application des middlewares sur cette combinaison
+                foreach ($middlewares as $mwConfig) {
+                    if (is_string($mwConfig)) {
+                        $mwConfig = [$mwConfig];
+                    }
+                    
+                    $this->middleware($mwConfig, currentRoute: $this->normalizeRoute($route), currentMethod: $httpMethod);
+                }
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * Inclut un ensemble de routes (classe invocable)
+     */
+    public function IncludeRoutes(string $RouteClass, array $options = []): void {
+        if (!class_exists($RouteClass)) {
+            throw new \InvalidArgumentException("La classe route '$RouteClass' n'existe pas.");
+        }
+
+        $RouteInstance = new $RouteClass(...$options);
+
+        if (!method_exists($RouteInstance, '__register_routes')) {
+            throw new \RuntimeException("La classe route '$RouteClass' doit implémenter la méthode __invoke().");
+        }
+
+        $RouteInstance->__register_routes($this);
+    }
+
+
+    /**
+     * Ajoute un middleware global
+     */
+    public function addMiddleware($middlewareClass, $options = []): static
     {
-        $this->currentRoute = $this->normalizeRoute($route);
-        $this->currentMethod = 'DELETE';
-        $this->registerRoute('DELETE', $route, $callback);
+        $this->globalMiddlewares[] = [
+            'class' => $middlewareClass,
+            'options' => $options,
+            'instance' => null
+        ];
+        
         return $this;
     }
 
@@ -127,43 +223,34 @@ class EorbahAPI
     }
 
     /**
-     * Ajoute un middleware global
-     */
-    public function addMiddleware($middlewareClass, $options = []): static
-    {
-        $this->globalMiddlewares[] = [
-            'class' => $middlewareClass,
-            'options' => $options,
-            'instance' => null
-        ];
-        return $this;
-    }
-
-    /**
      * Ajoute un middleware à la dernière route définie
      */
-    public function middleware($middlewareConfig): static
+    private function middleware($middlewareConfig, string $currentRoute = '', string $currentMethod = ''): static
     {
-        if (empty($this->currentRoute) || empty($this->currentMethod)) {
+        
+        if (empty($currentMethod)) {
             throw new \Exception("Vous devez définir une route avant d'ajouter un middleware");
         }
 
-        if (!isset($this->routes[$this->currentMethod][$this->currentRoute])) {
-            $this->addDynamicRouteMiddleware($this->currentMethod, $this->currentRoute, $middlewareConfig);
+        if (!isset($this->routes[$currentMethod][$currentRoute])) {
+            $this->addDynamicRouteMiddleware($currentMethod, $currentRoute, $middlewareConfig);
         } else {
-            $routeConfig = $this->routes[$this->currentMethod][$this->currentRoute];
+            $routeConfig = $this->routes[$currentMethod][$currentRoute];
             if (!is_array($routeConfig) || !isset($routeConfig['middlewares'])) {
                 $routeConfig = [
                     'callback' => $routeConfig,
                     'middlewares' => []
                 ];
             }
+
             $routeConfig['middlewares'][] = [
                 'class' => $middlewareConfig[0],
                 'options' => array_slice($middlewareConfig, 1)
             ];
-            $this->routes[$this->currentMethod][$this->currentRoute] = $routeConfig;
+            
+            $this->routes[$currentMethod][$currentRoute] = $routeConfig;
         }
+        
         return $this;
     }
 
@@ -181,6 +268,7 @@ class EorbahAPI
                     'class' => $middlewareConfig[0],
                     'options' => array_slice($middlewareConfig, 1)
                 ];
+
                 break;
             }
         }
@@ -226,6 +314,7 @@ class EorbahAPI
     private function executeMiddlewares($routingCallback): mixed
     {
         $next = $routingCallback;
+        
 
         foreach (array_reverse($this->globalMiddlewares) as &$mwConfig) {
             if ($mwConfig['instance'] === null) {
@@ -238,16 +327,25 @@ class EorbahAPI
                     $result = $middlewareInstance->process($this->request, $this->response, $currentNext);
                     if ($result === false)
                         return false;
+                    if ($result !== null && $result !== true) {
+                        $this->applyReturn(result: $result);
+                    }
                     return $result;
                 } elseif (method_exists($middlewareInstance, '__invoke')) {
                     $result = $middlewareInstance($this->request, $currentNext);
                     if ($result === false)
                         return false;
+                    if ($result !== null && $result !== true) {
+                        $this->applyReturn(result: $result);
+                    }
                     return $result;
                 } elseif (method_exists($middlewareInstance, 'handle')) {
                     $result = $middlewareInstance->handle($this->request, $this->response, $currentNext);
                     if ($result === false)
                         return false;
+                    if ($result !== null && $result !== true) {
+                        $this->applyReturn(result: $result);
+                    }
                     return $result;
                 }
                 return $currentNext();
@@ -288,70 +386,6 @@ class EorbahAPI
         $this->response = $response;
     }
 
-    /**
-     * Inclut une route (classe avec config)
-     */
-    public function IncludeRoute(string $RouteClass, array $option = []): void
-    {
-        if (!class_exists($RouteClass)) {
-            throw new \InvalidArgumentException("La classe route '$RouteClass' n'existe pas.");
-        }
-
-        $RouteInstance = new $RouteClass();
-        if (!isset($RouteInstance->config) || !is_array($RouteInstance->config)) {
-            throw new \RuntimeException("La classe '$RouteClass' doit avoir une propriété 'config' (array) contenant 'method' et 'route'.");
-        }
-
-        $config = $RouteInstance->config;
-        $method = strtoupper($config['method'] ?? '');
-        $route = $config['route'] ?? '';
-
-        if (empty($method) || empty($route)) {
-            throw new \RuntimeException("La configuration de la route doit définir 'method' et 'route'.");
-        }
-
-        if (!method_exists($RouteInstance, '__invoke')) {
-            throw new \RuntimeException("La classe route '$RouteClass' doit implémenter la méthode __invoke().");
-        }
-
-        $callable = $RouteInstance;
-
-        switch ($method) {
-            case 'GET':
-                $this->get($route, $callable);
-                break;
-            case 'POST':
-                $this->post($route, $callable);
-                break;
-            case 'PUT':
-                $this->put($route, $callable);
-                break;
-            case 'DELETE':
-                $this->delete($route, $callable);
-                break;
-            default:
-                throw new \InvalidArgumentException("Méthode HTTP non supportée : $method");
-        }
-    }
-
-    /**
-     * Inclut un ensemble de routes (classe invocable)
-     */
-    public function IncludeRoutes(string $RouteClass, array $option = []): void
-    {
-        if (!class_exists($RouteClass)) {
-            throw new \InvalidArgumentException("La classe route '$RouteClass' n'existe pas.");
-        }
-
-        $RouteInstance = new $RouteClass();
-
-        if (!method_exists($RouteInstance, '__invoke')) {
-            throw new \RuntimeException("La classe route '$RouteClass' doit implémenter la méthode __invoke().");
-        }
-
-        $callable = $RouteInstance;
-        $callable($this);
-    }
 
     /**
      * Normalise une route (supprime le slash final)
@@ -389,6 +423,7 @@ class EorbahAPI
                     if ($result === false) {
                         return true;
                     }
+                    $this->applyReturn(result: $result);
                 } else {
                     $this->applyReturn($routeCallback);
                 }
@@ -468,12 +503,12 @@ class EorbahAPI
         if ($handler) {
             $result = $handler($e, $this->request, $this->response);
             if (is_array($result) || is_object($result)) {
-                echo \Eorbahapi\Responses\JSONResponse($result);
+                //echo \Eorbahapi\Responses\JSONResponse($result);
             } elseif ($result !== null) {
                 echo $result;
-            }
+            } 
         } else {
-            echo \Eorbahapi\Responses\JSONResponse(['error' => true, 'status' => 500, 'message' => 'Internal Server Error'], 500, ['Content-Type' => 'application/json; charset=UTF-8']);
+            echo JSONResponse(['error' => true, 'status' => 500, 'message' => 'Internal Server Error'], 500, ['Content-Type' => 'application/json; charset=UTF-8']);
         }
         exit;
     }
@@ -555,6 +590,7 @@ class EorbahAPI
                         if ($result === false) {
                             return false;
                         }
+                        $this->applyReturn(result: $result);
                     } else {
                         $this->applyReturn($routeCallback);
                     }
@@ -587,9 +623,12 @@ class EorbahAPI
         }
     }
 
-    private function applyReturn($routeCallback)
+    private function applyReturn($routeCallback = null, $result = null)
     {
-        $result = call_user_func_array($routeCallback, [$this->response]);
+        if ($result === null && $routeCallback !== null) {
+            $result = call_user_func_array($routeCallback, [$this->response]);
+        }
+
         $headers = $this->response->headers;
 
         foreach ($headers as $headerName => $headerValue) {
@@ -604,7 +643,7 @@ class EorbahAPI
         }
 
         if (is_array($result) || is_object($result)) {
-            echo \Eorbahapi\Responses\JSONResponse($result);
+            echo JSONResponse($result);
         } elseif ($result !== null) {
             echo $result;
         }
