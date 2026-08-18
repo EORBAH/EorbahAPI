@@ -541,7 +541,7 @@ $admin->addMiddleware(AuthGlobal::class); // S'exécute pour /admin/...
 
 $admin->get('/dashboard', function () {
     return 'Dashboard';
-}, [CheckRole::class, 'admin']); // Spécifique à /admin/dashboard
+}, [[CheckRole::class, 'admin']]); // Spécifique à /admin/dashboard
 
 $admin->get('/stats', function () {
     return 'Statistiques';
