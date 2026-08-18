@@ -9,7 +9,7 @@
 
 > Note : la version anglaise se trouve dans [README-EN.md](README-EN.md).
 
-**EorbahAPI** est un micro-framework PHP inspiré des éléments modernes de FastAPI, Express et des outils de validation basés sur les modèles.
+**EorbahAPI** est un framework PHP inspiré des éléments modernes de FastAPI, Express et des outils de validation basés sur les modèles.
 
 ## Documentation
 
