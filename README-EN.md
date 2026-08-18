@@ -7,7 +7,7 @@
 
 <br>
 
-**EorbahAPI** is a lightweight PHP framework inspired by modern API tools such as FastAPI and Express.js.
+**EorbahAPI** is a  PHP framework inspired by modern API tools such as FastAPI and Express.js.
 
 ## Documentation
 
