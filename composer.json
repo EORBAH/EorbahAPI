@@ -19,7 +19,17 @@
         "issues": "https://github.com/EORBAH/EorbahAPI/issues",
         "source": "https://github.com/EORBAH/EorbahAPI"
     },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../svinx-validator",
+            "options": {
+                "symlink": true
+            }
+        }
+    ],
     "require": {
+        "svinx/validator": "dev-main",
         "twig/twig": "^3.0",
         "firebase/php-jwt": "^7.0",
         "hvatum/oauth2-openid-connect-client": "^0.2.2",
@@ -34,7 +44,8 @@
             "src/Responses/HTMLResponse.php",
             "src/Responses/FileResponse.php",
             "src/Responses/StreamingResponse.php",
-            "src/Responses/RedirectResponse.php"
+            "src/Responses/RedirectResponse.php",
+            "src/Responses/TwigTemplates.php"
         ]
     },
     "autoload-dev": {
@@ -44,7 +55,7 @@
         }
     },
     "scripts": {
-        "test": "phpunit --bootstrap vendor/autoload.php tests"
+        "test": "phpunit"
     },
     "require-dev": {
         "phpunit/phpunit": "^13.1",

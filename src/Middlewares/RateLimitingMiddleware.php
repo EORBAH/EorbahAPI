@@ -3,7 +3,6 @@
 namespace Eorbahapi\Middlewares;
 
 use Eorbahapi\Security\RateLimiter;
-use Eorbahapi\Request;
 use function Eorbahapi\Responses\JSONResponse;
 
 class RateLimitingMiddleware
@@ -36,7 +35,6 @@ class RateLimitingMiddleware
     }
 
     public function process($request, $response, $next) {
-        // Construction de la clé
         if ($this->customPrefix !== null) {
             $key = $this->customPrefix;
         } else {

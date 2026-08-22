@@ -3,8 +3,8 @@
 namespace Eorbahapi;
 
 class BaseMountedApplication {
-    private $request;
-    private $response;
+    public $request;
+    public $response;
 
     /**
      * Permet à EorbahAPI d'injecter les instances Request/Response partagées.

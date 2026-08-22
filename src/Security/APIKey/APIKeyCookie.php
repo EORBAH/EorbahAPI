@@ -1,7 +1,10 @@
 <?php
 
 namespace Eorbahapi\Security\APIKey;
+
 use Eorbahapi\Response;
+use Eorbahapi\Exceptions\HTTPException;
+use function Eorbahapi\Responses\JSONResponse;
 
 class APIKeyCookie extends Response {
     private string $cookieName;
@@ -17,7 +20,7 @@ class APIKeyCookie extends Response {
             if ($this->autoError) {
                 $this->raiseForbiddenError('Cookie API key missing');
             }
-            throw new \RuntimeException('API key cookie not found');
+            throw new HTTPException(403, 'API key cookie not found');
         }
         
         $apiKey = $_COOKIE[$this->cookieName];
@@ -26,7 +29,7 @@ class APIKeyCookie extends Response {
             if ($this->autoError) {
                 $this->raiseForbiddenError('Invalid API key format');
             }
-            throw new \RuntimeException('Invalid API key format');
+            throw new HTTPException(403, 'Invalid API key format');
         }
         
         return $apiKey;
@@ -39,7 +42,7 @@ class APIKeyCookie extends Response {
             if ($this->autoError) {
                 $this->raiseForbiddenError('Invalid API key');
             }
-            throw new \RuntimeException('Invalid API key');
+            throw new HTTPException(403, 'Invalid API key');
         }
         
         return $apiKey;
@@ -52,7 +55,7 @@ class APIKeyCookie extends Response {
             if ($this->autoError) {
                 $this->raiseForbiddenError('API key validation failed');
             }
-            throw new \RuntimeException('API key validation failed');
+            throw new HTTPException(403, 'API key validation failed');
         }
         
         return $apiKey;
@@ -75,10 +78,10 @@ class APIKeyCookie extends Response {
     }
     
     private function raiseForbiddenError(string $detail): void {
-        $this->setStatusCode(403)->json([
+        echo JSONResponse([
             'detail' => $detail,
             'error' => 'Forbidden'
-        ]);
+        ], 403); 
         exit;
     }
 }

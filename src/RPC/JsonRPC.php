@@ -2,15 +2,12 @@
 
 namespace Eorbahapi\rpc;
 
-use Eorbahapi\Request;
-use Eorbahapi\Response;
 use Eorbahapi\DependencyResolver;
+use Eorbahapi\BaseMountedApplication;
 use function Eorbahapi\Responses\JSONResponse;
 
-class JsonRPC
+class JsonRPC extends BaseMountedApplication
 {
-    private Request $request;
-    private Response $response;
     private array $methods = [];
     private array $options;
     private DependencyResolver $resolver;
@@ -22,29 +19,15 @@ class JsonRPC
             'description' => 'JSON-RPC server exposing local routes as tools',
         ], $options);
 
-        $this->request = new Request();
-        $this->response = new Response();
         $this->resolver = new DependencyResolver($this->request, $this->response);
     }
 
-    /**
-     * Permet à EorbahAPI d'injecter les instances Request/Response partagées.
-     */
-    public function setRequestResponse(Request $request, Response $response): void
-    {
-        $this->request = $request;
-        $this->response = $response;
-    }
 
     /**
      * Point d'entrée principal appelé par mount().
-     *
-     * @param Request  $request
-     * @param Response $response
      */
-    public function handle(Request $request, Response $response): void
+    public function process(): void
     {
-        $this->setRequestResponse($request, $response);
         $data = $this->request->body();
 
         // Vérifications de base de la requête JSON‑RPC
@@ -92,8 +75,7 @@ class JsonRPC
     /**
      * Envoie une réponse d'erreur JSON‑RPC.
      */
-    private function sendError($id, int $code, string $message): void
-    {
+    private function sendError($id, int $code, string $message): void {
         echo JSONResponse([
             'jsonrpc' => '2.0',
             'error' => [
@@ -102,14 +84,6 @@ class JsonRPC
             ],
             'id' => $id,
         ]);
-    }
-
-    /**
-     * Compatibilité avec la signature run($http_code, $handler) de EorbahAPI.
-     */
-    public function run($http_code = "404", $handler = null): void
-    {
-        $this->handle($this->request, $this->response);
     }
 
     /**

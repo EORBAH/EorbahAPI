@@ -9,8 +9,7 @@ use Firebase\JWT\ExpiredException;
 use Firebase\JWT\SignatureInvalidException;
 use Firebase\JWT\BeforeValidException;
 
-class JWT
-{
+class JWT {
     private string $secret;
     private string $algorithm;
     
@@ -70,7 +69,7 @@ class JWT
             return (array) $decoded;
         } catch (ExpiredException $e) {
             $error = new TokenExpiredError();
-            $error->expiredAt = null; // On pourrait extraire le claim 'exp' si besoin
+            $error->expiredAt = null;
             throw $error;
         } catch (BeforeValidException $e) {
             throw new NotBeforeError($e->getMessage());
@@ -82,7 +81,7 @@ class JWT
     }
     
     /**
-     * Décode un token sans vérifier la signature (attention : usage interne uniquement).
+     * Décode un token sans vérifier la signature.
      */
     public function decode(string $token): array
     {
@@ -99,7 +98,7 @@ class JWT
     }
     
     /**
-     * Vérifie si un token est expiré (ne vérifie pas la signature).
+     * Vérifie si un token est expiré sans verifier la signature.
      */
     public function isExpired(string $token): bool
     {

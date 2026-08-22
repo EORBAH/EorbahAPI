@@ -2,15 +2,26 @@
 
 namespace Eorbahapi;
 
-class Response {
+class Response
+{
     public $headers = [];
 
-    public function status(int $code) {
+    public function status(int $code)
+    {
         if (!headers_sent()) {
             http_response_code($code);
         }
 
         return $this;
+    }
+
+    public function send() {
+        // Send header
+        if (!headers_sent()) {
+            foreach ($this->headers as $headerName => $headerValue) {
+                $this->setHeader($headerName, $headerValue);
+            }
+        }
     }
 
     public function set_content_type(
@@ -67,20 +78,24 @@ class Response {
         }
     }
 
-    public function setHeader($name, $value) {
+    public function setHeader($name, $value)
+    {
         header("$name: $value");
         return $this;
     }
 
-    public function header($name, $value) {
+    public function header($name, $value)
+    {
         return $this->setHeader($name, $value);
     }
 
-    public function removeHeader($name) {
+    public function removeHeader($name)
+    {
         header_remove($name);
     }
 
-    public function cookie(string $name, $value, array $options = []): void {
+    public function cookie(string $name, $value, array $options = []): void
+    {
         $defaultOptions = [
             'expires' => 0,
             'path' => '/',
@@ -105,13 +120,15 @@ class Response {
             ]
         );
 
-        $_COOKIE[$name] = $name;
+        $_COOKIE[$name] = $value;
     }
 
-    public function clearCookie($name) {
+    public function clearCookie($name)
+    {
         if (isset($_COOKIE[$name])) {
             setcookie(
-                $name, '',
+                $name,
+                '',
                 [
                     'expires' => time() - 3600,
                     'path' => '/',

@@ -1,8 +1,9 @@
 <?php
- 
+
 namespace Eorbahapi\Security;
 
-class SecurityBase {
+class SecurityBase
+{
     /**
      * Summary of setNonceClient
      * @return string
@@ -38,7 +39,7 @@ class SecurityBase {
 
         return $base64Header . "." . $base64Payload . "." . $base64Signature;
     }
-    
+
     /**
      * Summary of validateAppToken
      * @param string $token
@@ -67,7 +68,7 @@ class SecurityBase {
 
         return $payload;
     }
-    
+
     /**
      * Summary of generateBasicToken
      * @param mixed $data
@@ -85,7 +86,7 @@ class SecurityBase {
         $signature = hash_hmac('sha256', $payload_encoded, $secret);
         return $payload_encoded . '.' . $signature;
     }
-    
+
     /**
      * Summary of verifyBasicToken
      * @param mixed $token

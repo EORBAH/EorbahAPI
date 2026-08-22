@@ -44,7 +44,7 @@ class ExceptionHandlers
         echo JSONResponse([
             'error' => true,
             'status' => 422,
-            'message' => 'Validation error',
+            'message' => 'RequestValidation error',
             'details' => $e->getErrors()
         ], 422);
         return $response;

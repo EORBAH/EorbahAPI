@@ -2,6 +2,9 @@
 
 namespace Eorbahapi\Security\APIKey;
 
+use Eorbahapi\Exceptions\HTTPException;
+use function Eorbahapi\Responses\JSONResponse;
+
 class APIKeyHeader {
     private string $headerName;
     private bool $autoError;
@@ -23,7 +26,7 @@ class APIKeyHeader {
             if ($this->autoError) {
                 $this->raiseForbiddenError('API key header missing');
             }
-            throw new \RuntimeException('API key header not found');
+            throw new HTTPException(403, 'API key header not found');
         }
         
         $apiKey = $normalizedHeaders[$normalizedHeaderName];
@@ -32,7 +35,7 @@ class APIKeyHeader {
             if ($this->autoError) {
                 $this->raiseForbiddenError('Invalid API key format');
             }
-            throw new \RuntimeException('Invalid API key format');
+            throw new HTTPException(403, 'Invalid API key format');
         }
         
         return $apiKey;
@@ -45,7 +48,7 @@ class APIKeyHeader {
             if ($this->autoError) {
                 $this->raiseForbiddenError('Invalid API key');
             }
-            throw new \RuntimeException('Invalid API key');
+            throw new HTTPException(403, 'Invalid API key');
         }
         
         return $apiKey;
@@ -58,7 +61,7 @@ class APIKeyHeader {
             if ($this->autoError) {
                 $this->raiseForbiddenError('API key validation failed');
             }
-            throw new \RuntimeException('API key validation failed');
+            throw new HTTPException(403, 'API key validation failed');
         }
         
         return $apiKey;
@@ -73,13 +76,10 @@ class APIKeyHeader {
     }
     
     private function raiseForbiddenError(string $detail): void {
-        header('HTTP/1.1 403 Forbidden');
-        header('Content-Type: application/json');
-        
-        echo json_encode([
+        echo JSONResponse([
             'detail' => $detail,
             'error' => 'Forbidden'
-        ]);
+        ], 403);
         
         exit;
     }

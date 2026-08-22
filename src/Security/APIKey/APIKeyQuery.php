@@ -2,6 +2,9 @@
 
 namespace Eorbahapi\Security\APIKey;
 
+use Eorbahapi\Exceptions\HTTPException;
+use function Eorbahapi\Responses\JSONResponse;
+
 class APIKeyQuery {
     private string $queryParamName;
     private bool $autoError;
@@ -16,7 +19,7 @@ class APIKeyQuery {
             if ($this->autoError) {
                 $this->raiseForbiddenError('API key query parameter missing');
             }
-            throw new \RuntimeException('API key query parameter not found');
+            throw new HTTPException(403, 'API key query parameter not found');
         }
         
         $apiKey = $_GET[$this->queryParamName];
@@ -25,7 +28,7 @@ class APIKeyQuery {
             if ($this->autoError) {
                 $this->raiseForbiddenError('Invalid API key format');
             }
-            throw new \RuntimeException('Invalid API key format');
+            throw new HTTPException(403, 'Invalid API key format');
         }
         
         return $apiKey;
@@ -38,7 +41,7 @@ class APIKeyQuery {
             if ($this->autoError) {
                 $this->raiseForbiddenError('Invalid API key');
             }
-            throw new \RuntimeException('Invalid API key');
+            throw new HTTPException(403, 'Invalid API key');
         }
         
         return $apiKey;
@@ -51,7 +54,7 @@ class APIKeyQuery {
             if ($this->autoError) {
                 $this->raiseForbiddenError('API key validation failed');
             }
-            throw new \RuntimeException('API key validation failed');
+            throw new HTTPException(403, 'API key validation failed');
         }
         
         return $apiKey;
@@ -66,13 +69,10 @@ class APIKeyQuery {
     }
     
     private function raiseForbiddenError(string $detail): void {
-        header('HTTP/1.1 403 Forbidden');
-        header('Content-Type: application/json');
-        
-        echo json_encode([
+        echo JSONResponse([
             'detail' => $detail,
             'error' => 'Forbidden'
-        ]);
+        ], 403);
         
         exit;
     }

@@ -2,6 +2,7 @@
 
 namespace Eorbahapi\Examples;
 
+use Eorbahapi\Attributes\Post;
 use Eorbahapi\Attributes\Route;
 use Eorbahapi\Middlewares\RateLimitingMiddleware;
 
@@ -15,4 +16,7 @@ class AuthRouter {
     public function login() {
         return ["status" => "ok"];
     }
+
+    #[Post('/me')]
+    public function me() {}
 }

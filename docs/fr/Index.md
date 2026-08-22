@@ -384,8 +384,8 @@ class UserRouteur {
 ### 6.2 Enregistrer les routes
 
 ```php
-$app->IncludeRouter(AuthRouteur::class, args: []); // Inclut un groupe de routes
-$app->IncludeRoutes(UserRouteur::class); // Inclut un groupe de routes `_register_routes`
+$app->include_routes(AuthRouteur::class, args: []); // Inclut un groupe de routes
+$app->register_routes(UserRouteur::class); // Inclut un groupe de routes `_register_routes`
 ```
 
 Chaque route enregistrée répond alors normalement selon sa définition.
@@ -404,10 +404,10 @@ use Eorbahapi\Middlewares\SessionMiddleware;
 use Eorbahapi\Middlewares\RateLimitingMiddleware;
 
 // Gestion de session
-$app->addMiddleware(SessionMiddleware::class);
+$app->add_middleware(SessionMiddleware::class);
 
 // CORS
-$app->addMiddleware(
+$app->add_middleware(
     CORSMiddleware::class,
     [
         'allow_origins' => [
@@ -421,7 +421,7 @@ $app->addMiddleware(
 );
 
 // Limitation de débit (rate limiting)
-$app->addMiddleware(
+$app->add_middleware(
     RateLimitingMiddleware::class,
     [
         'max_request' => 100,
@@ -469,7 +469,7 @@ class VerifierAuthentification
 $app = new EorbahAPI('Mon API');
 
 // 1. Middleware global
-$app->addMiddleware(SessionMiddleware::class);
+$app->add_middleware(SessionMiddleware::class);
 
 // 2. Route avec middleware spécifique
 $app->get('/profil/{id}', function ($id) {
@@ -533,11 +533,11 @@ Toutes les routes définies dans `AuthRouteur`, par exemple, deviennent alors ac
 ```php
 // Application principale
 $main = new EorbahAPI('API principale');
-$main->addMiddleware(LoggerGlobal::class); // S'exécute pour toutes les requêtes
+$main->add_middleware(LoggerGlobal::class); // S'exécute pour toutes les requêtes
 
 // Sous-application admin
 $admin = new EorbahAPI('Admin');
-$admin->addMiddleware(AuthGlobal::class); // S'exécute pour /admin/...
+$admin->add_middleware(AuthGlobal::class); // S'exécute pour /admin/...
 
 $admin->get('/dashboard', function () {
     return 'Dashboard';
