@@ -27,13 +27,12 @@ dump.rdb export-ignore
 # Project root files
 public/ export-ignore
 examples/ export-ignore
-docs_src/ export-ignore
+templates/ export-ignore
 scripts/ export-ignore
 main.php export-ignore
 
 # Documentation
 docs/ export-ignore
-README-EN.md export-ignore
 
 # Development
 .env export-ignore
@@ -43,4 +42,4 @@ composer.lock export-ignore
 
 # Runtime
 coverage/ export-ignore
-.phpunit.cache export-ignore
+.phpunit.result.cache export-ignore
