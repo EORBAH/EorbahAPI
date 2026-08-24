@@ -2,25 +2,21 @@
 
 namespace Eorbahapi\Responses;
 
-use function json_encode;
+use Eorbahapi\Response;
 
-function JSONResponse($content, int $statusCode = 200, array $headers = [], bool $setContentType = true): string
+class JSONResponse extends Response
 {
-    if (!headers_sent()) {
-        if ($statusCode !== 200 || !empty($headers)) {
-            http_response_code($statusCode);
-        }
+    public function __construct(
+        mixed $data,
+        int $status = 200,
+        array $headers = [],
+    ) {
+        $headers['Content-Type'] ??= 'application/json';
 
-        if ($setContentType) {
-            header('Content-Type: application/json; charset=UTF-8');
-        }
-
-        foreach ($headers as $name => $value) {
-            header($name . ': ' . $value, false);
-        }
+        parent::__construct(
+            body: json_encode($data),
+            status: $status,
+            headers: $headers,
+        );
     }
-
-    $json = json_encode($content, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-
-    return $json;
 }

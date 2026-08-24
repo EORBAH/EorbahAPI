@@ -3,7 +3,7 @@
 namespace Eorbahapi\Security\APIKey;
 
 use Eorbahapi\Exceptions\HTTPException;
-use function Eorbahapi\Responses\JSONResponse;
+use Eorbahapi\Responses\JSONResponse;
 
 class APIKeyHeader {
     private string $headerName;
@@ -76,11 +76,11 @@ class APIKeyHeader {
     }
     
     private function raiseForbiddenError(string $detail): void {
-        echo JSONResponse([
+        $res = new JSONResponse([
             'detail' => $detail,
             'error' => 'Forbidden'
         ], 403);
-        
+        $res->send();
         exit;
     }
 }

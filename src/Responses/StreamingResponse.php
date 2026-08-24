@@ -2,17 +2,34 @@
 
 namespace Eorbahapi\Responses;
 
-function StreamingResponse(iterable $generator, string $contentType = 'text/event-stream'): iterable
+use Eorbahapi\Response;
+
+class StreamingResponse extends Response
 {
-    if (!headers_sent()) {
-        header('Content-Type: ' . $contentType);
-        header('Cache-Control: no-cache');
+    public function __construct(
+        private \Generator $generator,
+        int $status = 200,
+        array $headers = [],
+    ) {
+        parent::__construct(
+            body: null,
+            status: $status,
+            headers: $headers,
+        );
     }
 
-    foreach ($generator as $event) {
-        echo $event;
-        ob_flush();
-        flush();
-        yield $event;
+    public function send(): void
+    {
+        http_response_code($this->status);
+
+        foreach ($this->headers as $name => $value) {
+            header("$name: $value");
+        }
+
+        foreach ($this->generator as $chunk) {
+            echo $chunk;
+            if(ob_get_level()) ob_flush();
+            flush();
+        }
     }
 }

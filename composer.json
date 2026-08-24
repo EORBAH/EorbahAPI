@@ -29,6 +29,7 @@
         }
     ],
     "require": {
+        "php": "^8.1",
         "svinx/validator": "dev-main",
         "twig/twig": "^3.0",
         "firebase/php-jwt": "^7.0",
@@ -40,12 +41,9 @@
             "Eorbahapi\\": "src/"
         },
         "files": [
-            "src/Responses/JSONResponse.php",
-            "src/Responses/HTMLResponse.php",
-            "src/Responses/FileResponse.php",
-            "src/Responses/StreamingResponse.php",
-            "src/Responses/RedirectResponse.php",
-            "src/Responses/TwigTemplates.php"
+            "src/Utils/functions.php",
+            "src/Openapi/Docs.php",
+            "src/Openapi/Models.php"
         ]
     },
     "autoload-dev": {

@@ -1,4 +1,14 @@
 <?php
 
 namespace Eorbahapi\Params;
-class Path extends Param {}
+
+use Attribute;
+
+#[Attribute(Attribute::TARGET_PARAMETER)]
+class Path extends Param {
+    public $in_ = ParamTypes::class;
+
+    public function __construct(
+
+    ) {} 
+}

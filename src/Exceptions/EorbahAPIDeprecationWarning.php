@@ -2,4 +2,4 @@
 
 namespace Eorbahapi\Exceptions;
 
-class EorbahAPIDeprecationWarning extends \Exception {}
+class EorbahAPIDeprecationWarning extends UserWarning {}

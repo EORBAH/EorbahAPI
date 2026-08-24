@@ -2,7 +2,7 @@
 
 namespace Eorbahapi\Middlewares;
 
-class SessionMiddleware
+class SessionMiddleware implements BaseHTTPMiddleware
 {
     private array $options;
 
@@ -40,7 +40,7 @@ class SessionMiddleware
      * @param callable $next Middleware suivant
      * @return mixed
      */
-    public function process($request, $response, $next)
+    public function process($request, $response, $next): mixed
     {
         $this->configureSession();
 
@@ -48,11 +48,9 @@ class SessionMiddleware
             session_start();
         }
 
-        $response = $next();
-
         session_write_close();
 
-        return $response;
+        return $next();
     }
 
     /**

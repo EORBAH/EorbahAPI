@@ -5,7 +5,7 @@ namespace Eorbahapi\Security;
 use Eorbahapi\Security\RateLimiter;
 use Eorbahapi\Request;
 use Eorbahapi\Response;
-use function Eorbahapi\Responses\JSONResponse;
+use Eorbahapi\Responses\JSONResponse;
 
 class RateLimit
 {
@@ -35,13 +35,14 @@ class RateLimit
 
         if(!$isExceded && $default) {
             $this->response->status(429);
-            echo JSONResponse([
+            $res = new JSONResponse([
                 "response" => [
                     "code" =>"429",
                     "isExceded" => $isExceded,
                     "message" => "ratelimiting exceded"
                 ]
             ], 429);
+            $res->send();
             exit;
         }
 

@@ -2,7 +2,9 @@
 
 namespace Eorbahapi\Datastructures;
 
-// Représente un fichier uploadé (filename, content_type, file, write, read, seek, close)
+/**
+ * Représente un fichier uploadé (filename, content_type, file, write, read, seek, close)
+ */
 class UploadFile {
     public $filename;
     public $content_type;

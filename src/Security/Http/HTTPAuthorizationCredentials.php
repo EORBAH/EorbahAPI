@@ -1,6 +1,6 @@
 <?php
 
-namespace Eorbahapi\Security\Http;
+namespace Eorbahapi\Security\HTTP;
 
 class HTTPAuthorizationCredentials {
     private string $scheme;

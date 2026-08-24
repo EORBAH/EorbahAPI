@@ -1,11 +1,12 @@
 /vendor/
 composer.lock
-/.archive/
+.archive/
 .env
 dump.rdb
 .phpunit.result.cache
-.vscode
+.vscode/
 NOTES.md
-feats/
+feats
 main.php
-/cache/
+cache
+.idea

@@ -2,13 +2,15 @@
 
 namespace Eorbahapi;
 
-use Eorbahapi\ExceptionHandlers;
-use Eorbahapi\Attributes\Route;
-use function Eorbahapi\Responses\JSONResponse;
+use Eorbahapi\Request;
+use Eorbahapi\Response;
+use Eorbahapi\Routing\Route;
+use Eorbahapi\Responses\JSONResponse;
+use Eorbahapi\Exceptions\EorbahAPIError;
+use Eorbahapi\Dependency\DependencyResolver;
 
 class EorbahAPI
 {
-    private string $title;
     private array $routes = [];
     private array $mountedApps = [];
     private array $dynamicRoutes = [];
@@ -16,17 +18,18 @@ class EorbahAPI
 
     private array $exceptionHandlers = [];
 
-    public $request;
-    public $response;
+    private array $default_route = [];
 
-    private $dev;
+    public Request $request;
+    public Response $response;
 
     private DependencyResolver $resolver;
 
-    public function __construct(string $title = "EorbahAPI application", bool $dev = false)
+    public function __construct(
+        public ?string $title = null, 
+        public ?string $description = null, 
+        public bool $debug = false)
     {
-        $this->title = $title;
-        $this->dev = $dev;
         $this->request = new Request();
         $this->response = new Response();
         $this->resolver = new DependencyResolver($this->request, $this->response);
@@ -35,7 +38,7 @@ class EorbahAPI
 
     private function registerDefaultExceptionHandlers(): void
     {
-        $handlers = new ExceptionHandlers($this->dev);
+        $handlers = new ExceptionHandlers($this->debug);
         $handlers->overrideExceptionHandlers($this);
     }
 
@@ -48,7 +51,6 @@ class EorbahAPI
                 break;
 
             default:
-                # code...
                 break;
         }
     }
@@ -63,33 +65,28 @@ class EorbahAPI
     }
 
 
-    /**
-     * Route GET
-     */
     public function get(string $route, callable $callback, array $middlewares = []): void
     {
         $this->add_api_route($route, ['GET'], $callback, $middlewares);
     }
 
-    /**
-     * Route POST
-     */
     public function post(string $route, callable $callback, array $middlewares = []): void
     {
         $this->add_api_route($route, ['POST'], $callback, $middlewares);
     }
 
-    /**
-     * Route PUT
-     */
+
     public function put(string $route, callable $callback, array $middlewares = []): void
     {
         $this->add_api_route($route, ['PUT'], $callback, $middlewares);
     }
 
-    /**
-     * Route DELETE
-     */
+
+    public function patch(string $route, callable $callback, array $middlewares = []): void
+    {
+        $this->add_api_route($route, ['PATCH'], $callback, $middlewares);
+    }
+
     public function delete(string $route, callable $callback, array $middlewares = []): void
     {
         $this->add_api_route($route, ['DELETE'], $callback, $middlewares);
@@ -121,6 +118,11 @@ class EorbahAPI
         }
     }
 
+    public function default_route(int $http_code = 404, ?callable $handler = null) {
+        $this->default_route['http_code'] = $http_code;
+        $this->default_route['handler'] = $handler;
+    }
+
     /**
      * Charge un router definie par APIRouter
      */
@@ -132,13 +134,13 @@ class EorbahAPI
     ) {
         if ($router_class !== null && $router == null) {
             if (!class_exists($router_class)) {
-                throw new \InvalidArgumentException("La classe '$router_class' n'existe pas.");
+                throw new EorbahAPIError("La classe ['$router_class'] n'existe pas.");
             }
 
             $RouteInstance = new $router_class(...$args);
 
             if (!method_exists($RouteInstance, '__register_routes')) {
-                throw new \RuntimeException("La classe route '$router_class' doit implémenter la méthode __register_routes().");
+                throw new EorbahAPIError("La classe route ['$router_class'] doit implémenter la méthode __register_routes().");
             }
 
             $router = $RouteInstance->router;
@@ -170,7 +172,7 @@ class EorbahAPI
     public function include_routes(string $routes_class, ?string $prefix = null, array $args = []): self
     {
         if (!class_exists($routes_class)) {
-            throw new \InvalidArgumentException("La classe '$routes_class' n'existe pas.");
+            throw new EorbahAPIError("La classe ['$routes_class'] n'existe pas.");
         }
 
         // Instanciation de la classe
@@ -215,13 +217,13 @@ class EorbahAPI
     public function register_routes(string $routeClass, array $args = []): void
     {
         if (!class_exists($routeClass)) {
-            throw new \InvalidArgumentException("La classe route '$routeClass' n'existe pas.");
+            throw new EorbahAPIError("La classe route ['$routeClass'] n'existe pas.");
         }
 
         $RouteInstance = new $routeClass(...$args);
 
         if (!method_exists($RouteInstance, '__register_routes')) {
-            throw new \RuntimeException("La classe route '$routeClass' doit implémenter la méthode __register_routes().");
+            throw new EorbahAPIError("La classe route ['$routeClass'] doit implémenter la méthode __register_routes().");
         }
 
         $RouteInstance->__register_routes($this);
@@ -267,7 +269,7 @@ class EorbahAPI
     {
 
         if (empty($currentMethod)) {
-            throw new \Exception("Vous devez définir une route avant d'ajouter un middleware");
+            throw new EorbahAPIError("Vous devez définir une route avant d'ajouter un middleware");
         }
 
         if (!isset($this->routes[$currentMethod][$currentRoute])) {
@@ -317,14 +319,14 @@ class EorbahAPI
      * Retourne true si la route a été exécutée, false si interrompue
      *
      * @param array $middlewares Liste des middlewares
-     * @param array $segments Paramètres de l'URL
+     * @param array $paramsPath Paramètres de l'URL
      * @param callable $routeCallback Callback final de la route
      * @return bool
      */
-    private function applyRouteMiddlewares($middlewares, $segments, $routeCallback): mixed
+    private function applyRouteMiddlewares($middlewares, $paramsPath, $routeCallback): mixed
     {
-        $next = function () use ($routeCallback, $segments) {
-            return call_user_func_array($routeCallback, $segments);
+        $next = function () use ($routeCallback, $paramsPath) {
+            return call_user_func_array($routeCallback, $paramsPath);
         };
 
         foreach (array_reverse($middlewares) as $mwConfig) {
@@ -448,8 +450,8 @@ class EorbahAPI
             $pattern = $this->buildPattern($route);
 
             if (preg_match($pattern, $uri, $matches)) {
-                $segments = $this->extractSegments($matches, $matchType);
-                $this->request->params($segments);
+                $paramsPath = $this->extractParamsPath($matches, $matchType);
+                $this->request->params(path: $paramsPath);
 
                 $routeCallback = function () use ($callback) {
                     $args = $this->resolver->resolve($callback, $this->request->params());
@@ -493,7 +495,7 @@ class EorbahAPI
     /**
      * Extrait les paramètres d'une correspondance
      */
-    private function extractSegments($matches, $matchType): array
+    private function extractParamsPath($matches, $matchType): array
     {
         if ($matchType === 'parametrized') {
             $params = [];
@@ -541,26 +543,26 @@ class EorbahAPI
         if ($handler) {
             $result = $handler($e, $this->request, $this->response);
             if (is_array($result) || is_object($result)) {
-                //echo \Eorbahapi\Responses\JSONResponse($result);
+                echo '';
             } elseif ($result !== null) {
-                echo $result;
+                $this->response->body = $result;
+                $this->response->send();
             }
         } else {
-            echo JSONResponse(['error' => true, 'status' => 500, 'message' => 'Internal Server Error'], 500, ['Content-Type' => 'application/json; charset=UTF-8']);
+            $res = new JSONResponse(['error' => true, 'status' => 500, 'message' => 'Internal Server Error'], 500, ['Content-Type' => 'application/json; charset=UTF-8']);
+            $res->send();
         }
         exit;
     }
 
-    /**
-     * Summary of run
-     * @param mixed $http_code
-     * @param mixed $handler
-     * @return void
-     */
-    public function run($http_code = "404", $handler = null): void
+    
+    public function run(): void
     {
+        $defaultHttpCode = $this->default_route['http_code'] ?? 404;
+        $defaultRouteHandler = $this->default_route['handler'] ?? null;
+
         try {
-            $routingCallback = function () use ($http_code, $handler) {
+            $routingCallback = function () use ($defaultHttpCode, $defaultRouteHandler) {
                 $uri = $this->request->path();
                 $method = $this->request->method();
 
@@ -569,8 +571,8 @@ class EorbahAPI
                         $subUri = substr($uri, strlen($prefix));
                         $subUri = '/' . ltrim($subUri, '/');
 
-                        $originalUri = $_SERVER['REQUEST_URI'];
-                        $originalPathInfo = $_SERVER['PATH_INFO'] ?? null;
+                        $originalUri = $this->request->uri();
+                        $originalPathInfo = $this->request->pathInfo() ?? null;
                         $originalScriptName = $_SERVER['SCRIPT_NAME'] ?? null;
 
                         if ($originalScriptName) {
@@ -581,9 +583,9 @@ class EorbahAPI
 
                         try {
                             if ($app instanceof self) {
-                                $app->run($http_code, $handler);
+                                $app->run();
                             } elseif (method_exists($app, 'run')) {
-                                $app->run($http_code, $handler);
+                                $app->run();
                             } elseif (method_exists($app, 'handle')) {
                                 $app->handle($this->request, $this->response);
                             } elseif (is_callable($app)) {
@@ -591,11 +593,13 @@ class EorbahAPI
                             }
                         } finally {
                             $_SERVER['REQUEST_URI'] = $originalUri;
+
                             if ($originalPathInfo !== null) {
                                 $_SERVER['PATH_INFO'] = $originalPathInfo;
                             } else {
                                 unset($_SERVER['PATH_INFO']);
                             }
+
                             if ($originalScriptName !== null) {
                                 $_SERVER['SCRIPT_NAME'] = $originalScriptName;
                             } else {
@@ -639,20 +643,17 @@ class EorbahAPI
                     return true;
                 }
 
-                if ($http_code === '404') {
-                    http_response_code(404);
-                    if (is_callable($handler)) {
-                        $handler($this->request, $this->response);
-                    }
-                    return false;
-                } else {
-                    $segment = explode('/', $uri);
-                    if (is_callable($handler)) {
-                        $this->request->params($segment);
-                        $handler($this->request, $this->response);
-                    }
+                if (is_callable($defaultRouteHandler)) {
+                    $this->response->status = $defaultHttpCode;
+                    $defaultRouteCallback = function () use ($defaultRouteHandler) {
+                        $args = $this->resolver->resolve($defaultRouteHandler, $this->request->params());
+                        return $defaultRouteHandler(...$args);
+                    };
+                    $this->applyReturn($defaultRouteCallback);
                     return false;
                 }
+
+                return false;
             };
 
             $this->executeMiddlewares($routingCallback);
@@ -667,19 +668,26 @@ class EorbahAPI
             $result = call_user_func_array($routeCallback, [$this->response]);
         }
 
-        $this->response->send();
+        if ($result instanceof Response) {
+            $result->send();
+            return;
+        }
 
         if (is_string($result) && str_starts_with($result, 'redirect:')) {
             [$prefix, $statusCode, $url] = explode(':', $result, 3);
-            http_response_code((int) $statusCode);
-            header('Location: ' . $url);
+            $this->response->status = (int) $statusCode;
+            $this->response->headers['Location'] = $url;
+            $this->response->body = $result;
+            $this->response->send();
             return;
         }
 
         if (is_array($result) || is_object($result)) {
-            echo JSONResponse($result);
+            $this->response->body = json_encode($result);
         } elseif ($result !== null) {
-            echo $result;
+           $this->response->body = $result;
         }
+
+        $this->response->send();
     }
 }

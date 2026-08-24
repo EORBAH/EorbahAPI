@@ -2,7 +2,9 @@
 
 namespace Eorbahapi\Middlewares;
 
-class TrustedHostMiddleware
+use Eorbahapi\Responses\JSONResponse;
+
+class TrustedHostMiddleware implements BaseHTTPMiddleware
 {
     private array $trustedHosts;
 
@@ -24,7 +26,7 @@ class TrustedHostMiddleware
      * @param callable $next Prochain middleware ou route
      * @return mixed
      */
-    public function process($request, $response, $next)
+    public function process($request, $response, $next): mixed
     {
         // Récupération de l'hôte depuis le serveur
         $host = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '';
@@ -33,7 +35,7 @@ class TrustedHostMiddleware
 
         // Vérification
         if (!in_array($host, $this->trustedHosts)) {
-            return JSONResponse([
+            return new JSONResponse([
                 "error" => [
                     "code" =>"403",
                     "message" => "Forbidden: Untrusted host \"$host\""

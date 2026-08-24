@@ -2,8 +2,9 @@
 
 namespace Eorbahapi;
 
+use Eorbahapi\Exceptions\EorbahAPIError;
 
-class StaticFiles extends BaseMountedApplication
+class StaticFiles extends MountedApp
 {
     private $directory;
     private $indexFile;
@@ -44,7 +45,7 @@ class StaticFiles extends BaseMountedApplication
         ];
 
         if (!$this->directory || !is_dir($this->directory)) {
-            throw new \Exception("Le répertoire '$directory' n'existe pas");
+            throw new EorbahAPIError("Le répertoire '$directory' n'existe pas");
         }
     }
 
@@ -53,20 +54,17 @@ class StaticFiles extends BaseMountedApplication
      * Compatible avec l'interface attendue par EorbahAPI::mount().
      *
      */
-    public function process(): void {
-        // Récupération du chemin (après retrait du préfixe par mount)
-        $uri = $_SERVER['REQUEST_URI'] ?? '/';
-        $path = parse_url($uri, PHP_URL_PATH);
+    public function run(): void {
+        $path = $this->request->path();
 
         $served = $this->serve($path);
         if (!$served) {
-            if ($this->response) {
-                $this->response->status(404)->send('File not found');
-            } else {
-                http_response_code(404);
-                echo 'File not found';
-            }
+            $this->response->status = 404;
+            $this->response->body = 'File not found';
+            $this->response->send();
+            return;
         }
+        $this->response->send();
     }
 
 
@@ -126,12 +124,12 @@ class StaticFiles extends BaseMountedApplication
         $etag = md5($filePath . $lastModified . $fileSize);
         $mimeType = $this->getMimeType($filePath);
 
-        header('Content-Type: ' . $mimeType);
-        header('Last-Modified: ' . gmdate('D, d M Y H:i:s', $lastModified) . ' GMT');
-        header('ETag: "' . $etag . '"');
+        $this->response->headers['Content-Type'] = $mimeType;
+        $this->response->headers['Last-Modified'] =  gmdate('D, d M Y H:i:s', $lastModified) . ' GMT';
+        $this->response->headers['ETag'] = "'$etag'";
 
         if ($this->cacheControl) {
-            header('Cache-Control: ' . $this->cacheControl);
+            $this->response->headers['Cache-Control'] = $this->cacheControl;
         }
 
         $compressed = false;
@@ -141,12 +139,12 @@ class StaticFiles extends BaseMountedApplication
 
 
         if ($this->isNotModified($lastModified, $etag)) {
-            header('HTTP/1.1 304 Not Modified');
-            exit;
+            $this->response->status = 304;
+            return;
         }
 
         if (!$compressed) {
-            header('Content-Length: ' . $fileSize);
+            $this->response->headers['Content-Length'] = $fileSize;
             readfile($filePath);
         }
     }
@@ -219,18 +217,18 @@ class StaticFiles extends BaseMountedApplication
         }
 
         if ($compressedContent === false || strlen($compressedContent) === 0) {
-            header('Content-Length: ' . $originalSize);
-            echo $content;
+            $this->response->headers['Content-Length'] = $originalSize;
+            $this->response->body =  $content;
             return true;
         }
 
         $compressedSize = strlen($compressedContent);
 
-        header('Content-Encoding: ' . $encoding);
-        header('Content-Length: ' . $compressedSize);
-        header('Vary: Accept-Encoding');
+        $this->response->headers['Content-Encoding'] = $encoding;
+        $this->response->headers['Content-Length'] = $compressedSize;
+        $this->response->headers['Vary'] = 'Accept-Encoding';
 
-        echo $compressedContent;
+        $this->response->body = $compressedContent;
         return true;
     }
 

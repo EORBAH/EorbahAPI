@@ -1,4 +1,12 @@
 <?php
 
 namespace Eorbahapi\Params;
-class Query extends Param {}
+
+use Attribute;
+
+#[Attribute(Attribute::TARGET_PARAMETER)]
+class Query {
+    public function __construct(
+        public ?string $name = null,
+    ) {}
+} 

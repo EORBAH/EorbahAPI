@@ -2,12 +2,18 @@
 
 namespace Eorbahapi\Responses;
 
-function RedirectResponse(string $url, int $statusCode = 302): string
-{
-    if (!headers_sent()) {
-        http_response_code($statusCode);
-        header('Location: ' . $url);
-    }
+use Eorbahapi\Response;
 
-    return 'redirect:' . $statusCode . ':' . $url;
+class RedirectResponse extends Response
+{
+    public function __construct(
+        string $url, int $status = 302
+    ) {
+        $headers['Location'] = $url;
+        parent::__construct(
+            body: 'redirect:' . $status . ':' . $url,
+            status: $status,
+            headers: $headers
+        );
+    }
 }

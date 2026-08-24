@@ -2,7 +2,9 @@
 
 namespace Eorbahapi\Params;
 
-use Svinx\Validator\FieldInfo;
+use Attribute;
 
-class Param extends FieldInfo {
+#[Attribute(Attribute::TARGET_PARAMETER | Attribute::TARGET_PROPERTY)]
+abstract class Param {
+    public function __construct() {} 
 }

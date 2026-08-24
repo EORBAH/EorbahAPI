@@ -2,9 +2,9 @@
 
 namespace Eorbahapi\rpc;
 
-use Eorbahapi\DependencyResolver;
 use Eorbahapi\BaseMountedApplication;
-use function Eorbahapi\Responses\JSONResponse;
+use Eorbahapi\Responses\JSONResponse;
+use Eorbahapi\Dependency\DependencyResolver;
 
 class JsonRPC extends BaseMountedApplication
 {
@@ -23,10 +23,7 @@ class JsonRPC extends BaseMountedApplication
     }
 
 
-    /**
-     * Point d'entrée principal appelé par mount().
-     */
-    public function process(): void
+    public function run(): void
     {
         $data = $this->request->body();
 
@@ -61,11 +58,12 @@ class JsonRPC extends BaseMountedApplication
             $result = $callback(...$args);
 
             // Envoi de la réponse de succès
-            echo JSONResponse([
+            $res = new JSONResponse([
                 'jsonrpc' => '2.0',
                 'result' => $result,
                 'id' => $id,
             ]);
+            $res->send();
         } catch (\Throwable $e) {
             // Erreur interne du serveur ou lors de l'exécution
             $this->sendError($id, -32603, 'Internal error: ' . $e->getMessage());
@@ -76,7 +74,7 @@ class JsonRPC extends BaseMountedApplication
      * Envoie une réponse d'erreur JSON‑RPC.
      */
     private function sendError($id, int $code, string $message): void {
-        echo JSONResponse([
+        $res = new JSONResponse([
             'jsonrpc' => '2.0',
             'error' => [
                 'code' => $code,
@@ -84,6 +82,7 @@ class JsonRPC extends BaseMountedApplication
             ],
             'id' => $id,
         ]);
+        $res->send();
     }
 
     /**

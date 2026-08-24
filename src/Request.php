@@ -2,53 +2,43 @@
 
 namespace Eorbahapi;
 
-class Request
-{
-    public $segments;
-    private ?array $bodyCache = null;
+class Request {
+    public function __construct(
+        private ?array $body = null,
+        private array $params = []
+    ) {}
 
-    public function __construct()
-    {
-        $this->segments = [];
-    }
-
-    public function params($value = null)
-    {
+    public function params(array|null $path = null) {
         $query = $this->query();
 
-        if (is_array($value)) {
-            $this->segments = $value;
-        } elseif (is_string($value)) {
-            return $this->segments[$value] ?? null;
+        if (is_array($path)) {
+            $this->params = $path;
+        } elseif (is_string($path)) {
+            return $this->params[$path] ?? null;
         }
 
-        /**
-         * Injection des query dans les paramètre mais les url params sont en priorité
-         */
         foreach ($query as $queryName => $queryValue) {
-            if (!in_array($queryName, $this->segments, true)) {
-                $this->segments[$queryName] = $queryValue;
-            }
+            $this->params[$queryName] = $queryValue;
         }
 
-        return $this->segments;
+        return $this->params;
     }
-
+    
     public function body(?string $key = null, $default = null)
     {
         // Lazy loading : on ne parse qu'une seule fois
-        if ($this->bodyCache === null) {
+        if ($this->body === null) {
             $input = file_get_contents("php://input");
             $decoded = json_decode($input, true);
             // Si JSON invalide ou vide, on utilise $_POST (pour les requêtes traditionnelles)
-            $this->bodyCache = is_array($decoded) ? $decoded : ($_POST ?: []);
+            $this->body = is_array($decoded) ? $decoded : ($_POST ?: []);
         }
 
         if ($key === null) {
-            return $this->bodyCache;
+            return $this->body;
         }
 
-        return $this->bodyCache[$key] ?? $default;
+        return $this->body[$key] ?? $default;
     }
 
     public function json()
@@ -95,11 +85,17 @@ class Request
         return $_SERVER['REQUEST_URI'];
     }
 
+    public function pathInfo()
+    {
+        return $_SERVER['PATH_INFO'];
+    }
+
     public function path()
     {
         $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
         return rtrim($uri, '/');
     }
+    
 
     public function getHeader($key = null)
     {
@@ -123,18 +119,23 @@ class Request
         return $_COOKIE;
     }
 
-    public function input($key, $default = null)
+    public function input(?string $key = null, $default = null)
     {
         $data = array_merge($this->body(), $_POST, $_GET);
-        return $data[$key] ?? $default;
+
+        if ($key) {
+            return $data[$key] ?? $default;
+        }
+
+        return $data;
     }
 
-    public function FormData()
+    public function form()
     {
         return $this->post();
     }
 
-    public function File($key = null)
+    public function file($key = null)
     {
         if ($key) {
             return $_FILES[$key] ?? null;
@@ -146,9 +147,9 @@ class Request
      * Récupère les données de session
      * @return array
      */
-    public function getSession(): array
+    public function getSession(): array|null
     {
-        return $_SESSION;
+        return $_SESSION ?? null;
     }
 
     /**
@@ -157,9 +158,12 @@ class Request
      * @param mixed $default
      * @return mixed
      */
-    public function session(string $key, $default = null)
+    public function session($key = null, $default = null)
     {
-        return $_SESSION[$key] ?? $default;
+        if ($key) {
+            return $_SESSION[$key] ?? $default;
+        }
+        return $_SESSION;
     }
 
     /**

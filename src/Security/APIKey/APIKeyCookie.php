@@ -4,7 +4,7 @@ namespace Eorbahapi\Security\APIKey;
 
 use Eorbahapi\Response;
 use Eorbahapi\Exceptions\HTTPException;
-use function Eorbahapi\Responses\JSONResponse;
+use Eorbahapi\Responses\JSONResponse;
 
 class APIKeyCookie extends Response {
     private string $cookieName;
@@ -78,10 +78,11 @@ class APIKeyCookie extends Response {
     }
     
     private function raiseForbiddenError(string $detail): void {
-        echo JSONResponse([
+        $res = new JSONResponse([
             'detail' => $detail,
             'error' => 'Forbidden'
         ], 403); 
+        $res->send();
         exit;
     }
 }

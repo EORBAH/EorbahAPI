@@ -3,7 +3,6 @@
 namespace Eorbahapi;
 
 class Logger {
-    private $logDir;
     private $logLevel;
     private $levels = [
         'debug' => 1,
@@ -13,13 +12,9 @@ class Logger {
         'critical' => 5
     ];
     
-    public function __construct(string $logDir, string $logLevel = 'info') {
-        $this->logDir = rtrim($logDir, '/') . '/';
+    public function __construct(string $logLevel = 'info') {
         $this->logLevel = strtolower($logLevel);
-        
-        if (!file_exists($this->logDir)) {
-            mkdir($this->logDir, 0755, true);
-        }
+    
     }
     
     public function log(string $level, string $message, array $context = []): void {
@@ -32,6 +27,7 @@ class Logger {
         
         $logEntry = [
             'timestamp' => date('Y-m-d H:i:s'),
+            'date' => date('Y-m-d'),
             'level' => strtoupper($level),
             'message' => $message,
             'context' => $context,
@@ -39,10 +35,12 @@ class Logger {
             'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown'
         ];
         
-        $logFile = $this->logDir . date('Y-m-d') . '.log';
         $logLine = json_encode($logEntry) . PHP_EOL;
         
-        file_put_contents($logFile, $logLine, FILE_APPEND | LOCK_EX);
+        /**
+         * Traitement deslogs
+         */
+        error_log($logLine);
     }
     
     public function debug(string $message, array $context = []): void {

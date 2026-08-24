@@ -4,24 +4,26 @@ namespace Eorbahapi;
 
 class Response
 {
-    public $headers = [];
+    public function __construct(
+        public string|array|null $body = null,
+        public int $status = 200,
+        public array $headers = [],
+    ) {}
 
-    public function status(int $code)
+    public function send(): void
     {
-        if (!headers_sent()) {
-            http_response_code($code);
+        http_response_code($this->status);
+
+        foreach ($this->headers as $name => $value) {
+            header("$name: $value");
         }
 
-        return $this;
+        echo $this->body;
     }
 
-    public function send() {
-        // Send header
-        if (!headers_sent()) {
-            foreach ($this->headers as $headerName => $headerValue) {
-                $this->setHeader($headerName, $headerValue);
-            }
-        }
+    public function status(): int
+    {
+        return $this->status;
     }
 
     public function set_content_type(
@@ -54,26 +56,26 @@ class Response
             $mime .= "; charset=$charset";
         }
 
-        header("Content-Type: $mime");
+        $this->headers['Content-Type'] = $mime;
 
         if ($cacheMaxAge !== null) {
-            header('Cache-Control: public, max-age=' . $cacheMaxAge);
-            header('Expires: ' . gmdate('D, d M Y H:i:s', time() + $cacheMaxAge) . ' GMT');
+            $this->headers['Cache-Control'] = "public, max-age=$cacheMaxAge";
+            $this->headers['Expires'] = gmdate('D, d M Y H:i:s', time() + $cacheMaxAge) . ' GMT';
         } else {
-            header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
-            header('Pragma: no-cache');
+            $this->headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0';
+            $this->headers['Pragma'] = 'no-cache';
         }
 
         if (isset($options['disposition'])) {
             $disposition = $options['disposition'] === 'attachment' && isset($options['filename'])
                 ? "attachment; filename=\"{$options['filename']}\""
                 : $options['disposition'];
-            header("Content-Disposition: $disposition");
+            $this->headers['Content-Disposition'] = $disposition;
         }
 
         if (!empty($options['custom_headers']) && is_array($options['custom_headers'])) {
             foreach ($options['custom_headers'] as $name => $value) {
-                header("$name: $value");
+                $this->headers[$name] = $value;
             }
         }
     }
