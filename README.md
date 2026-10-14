@@ -19,7 +19,7 @@ La documentation détaillée est disponible dans le dossier [docs/fr](docs/fr/In
 
 Depuis le Composer :
 ```bash
-composer install eor_bah545/eorbahapi
+composer require eor_bah545/eorbahapi
 ```
 
 Depuis le dépôt GitHub :

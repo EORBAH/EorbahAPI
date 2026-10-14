@@ -17,7 +17,7 @@ The full documentation is available in [docs/fr/Index.md](docs/fr/Index.md).
 
 From Composer :
 ```bash
-composer install eor_bah545/eorbahapi
+composer require eor_bah545/eorbahapi
 ```
 
 From GitHub:

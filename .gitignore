@@ -8,3 +8,5 @@ dump.rdb
 NOTES.md
 feats/
 main.php
+.idea
+cache
