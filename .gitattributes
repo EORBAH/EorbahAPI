@@ -1,5 +1,11 @@
 # Auto detect text files and normalize line endings to LF
-* text=auto
+* text=auto eol=lf
+
+# Fichier devant rester en CRLF
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
 
 # Documentation
 *.md text diff=markdown
