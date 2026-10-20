@@ -1,34 +1,35 @@
-name: Translate Documentation
+name: Check translations
+
+# La traduction est faite **en local** (scripts/translate.py + LLM_API_KEY) :
+# ce workflow ne traduit pas, il vérifie seulement que les langues déclarées
+# dans docs/language_names.yml ont bien toutes leurs pages.
+#
+# Traduire :
+#   LLM_API_KEY=... python scripts/translate.py --lang en
+#   python scripts/build_docs.py --strict
+#
+# Le contrôle ci-dessous est informatif (continue-on-error) : une page non
+# traduite n'empêche pas de fusionner, mais le résumé du job le signale.
 
 on:
   push:
     branches: [ main, develop ]
     paths:
-      - 'docs/fr/**'
+      - 'docs/**'
       - 'scripts/translate.py'
       - 'scripts/prompts/**'
   pull_request:
     paths:
       - 'docs/**'
+      - 'scripts/translate.py'
   workflow_dispatch:
-    inputs:
-      lang:
-        description: "Langue cible (code, ou 'all')"
-        required: false
-        default: all
-      force:
-        description: "Retraduire même les pages à jour"
-        type: boolean
-        required: false
-        default: false
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   check:
-    name: Vérifier les traductions
+    name: Vérifier docs/fr → docs/<lang>
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -38,53 +39,12 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Vérifier que chaque page française existe dans toutes les langues
+      - name: Vérifier les traductions (sans clé API)
         continue-on-error: true
-        run: python scripts/translate.py --lang all --check
-
-  translate:
-    name: Traduire
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Traduire les pages manquantes ou modifiées
-        env:
-          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-          LLM_BASE_URL: ${{ vars.LLM_BASE_URL || 'https://api.deepseek.com/v1' }}
-          LLM_MODEL: ${{ vars.LLM_MODEL || 'deepseek-chat' }}
-          TARGET_LANG: ${{ github.event.inputs.lang || 'all' }}
-          FORCE: ${{ github.event.inputs.force || 'false' }}
         run: |
-          if [ -z "$LLM_API_KEY" ]; then
-            echo "::notice::Secret LLM_API_KEY absent : traduction ignorée (ajoutez-le pour l'activer)."
-            exit 0
-          fi
-          if [ "$FORCE" = "true" ]; then
-            python scripts/translate.py --lang "$TARGET_LANG" --force
-          else
-            python scripts/translate.py --lang "$TARGET_LANG"
-          fi
+          python scripts/translate.py --lang all --check || true
+          python scripts/translate.py --lang all --check >> "$GITHUB_STEP_SUMMARY" 2>&1 || true
 
-      - name: Ouvrir une pull request avec les traductions
-        uses: peter-evans/create-pull-request@v6
-        with:
-          commit-message: 'docs: traductions automatiques'
-          branch: docs/translations
-          delete-branch: true
-          title: 'docs: traductions automatiques'
-          body: |
-            Traductions générées automatiquement à partir de `docs/fr`.
-
-            - script : `scripts/translate.py`
-            - prompts : `scripts/prompts/`
-            - merci de relire les pages avant fusion (le modèle peut se tromper)
-          add-paths: |
-            docs/
-          labels: documentation, automated
+      - name: Rappel
+        run: |
+          echo "Traduction locale : LLM_API_KEY=... python scripts/translate.py --lang en"
