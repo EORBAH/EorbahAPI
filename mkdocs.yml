@@ -1,6 +1,6 @@
 site_name: EorbahAPI
 site_description: Framework web PHP moderne pour construire des API — cours complet
-site_url: https://eor-bah545.github.io/EorbahAPI/
+site_url: https://eorbah.github.io/EorbahAPI/
 repo_url: https://github.com/EORBAH/EorbahAPI
 repo_name: EORBAH/EorbahAPI
 docs_dir: docs
@@ -39,8 +39,10 @@ plugins:
         - locale: fr
           name: Français
           default: true
-        - locale: en
-          name: English
+        # Ajoutez la langue ici (et le dossier docs/en/) une fois les
+        # traductions générées :
+        # - locale: en
+        #   name: English
 
 markdown_extensions:
   - admonition
@@ -84,3 +86,7 @@ nav:
       - Tests: testing.md
       - Runners personnalisés: runners.md
   - Référence API: reference.md
+  - Notes de version:
+      - Journal des modifications: release-notes/changelog.md
+      - v0.1.0-beta: release-notes/v.0.1.0-beta.md
+      - v0.1.0: release-notes/v.0.1.0.md

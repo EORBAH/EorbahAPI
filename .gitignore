@@ -11,5 +11,7 @@ cache
 .idea
 .eorbahapi
 
-# site généré (CI)
-_site/
+# documentation (MkDocs)
+build/
+.venv-docs/
+site/

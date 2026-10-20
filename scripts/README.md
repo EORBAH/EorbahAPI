@@ -1,49 +1,47 @@
 # Scripts
 
-Outillage du dépôt : génération du site de documentation et traduction.
+Outillage du dépôt : construction du site de documentation (MkDocs) et
+traduction.
 
-## `build_docs_site.py`
+## `build_docs.py`
 
-Convertit le cours (`docs/fr`, navigation `mkdocs.yml`) en site statique dans
-`docs-template/` :
+Construit le site **MkDocs** (`docs/` → `build/`) avec le thème Material :
 
-- copie des pages vers `docs-template/content/<langue>/` ;
-- conversion du Markdown Material : `!!! note "Titre"` → plugin `callout`,
-  liens `page.md` → routes `#/langue/page` ;
-- génération de `docs-template/config/nav.json` (groupes, icônes, ordre) ;
-- personnalisation de `docs-template/config/site.json` (marque, langues, footer) ;
-- manifeste `.docs-build.json` (SHA-256) pour détecter les dérives.
+- vérifie que MkDocs est disponible (interpréteur courant, puis `.venv-docs/`) ;
+- nettoie `build/` ;
+- lance `mkdocs build --site-dir build` et vérifie `build/index.html`.
 
 ```bash
-python scripts/build_docs_site.py            # génère / met à jour
-python scripts/build_docs_site.py --check    # code retour 1 si dérive (CI)
-python scripts/build_docs_site.py --dry-run  # affiche sans écrire
-python scripts/build_docs_site.py --no-prune # garde les pages obsolètes
+python scripts/build_docs.py              # construit build/
+python scripts/build_docs.py --strict     # un avertissement = échec (CI)
+python scripts/build_docs.py --install    # crée .venv-docs/ et installe MkDocs
+python scripts/build_docs.py --no-clean   # ne vide pas build/ avant
 ```
+
+Dépendances Python : `requirements-docs.txt`
+(`pip install -r requirements-docs.txt`).
 
 ## `docs_start.sh`
 
-Génère le site puis le sert localement (PHP, Python 3 ou `npx serve`) :
+Sert la documentation en local avec `mkdocs serve` (rechargement à chaud) :
 
 ```bash
 ./scripts/docs_start.sh            # http://localhost:4000
 ./scripts/docs_start.sh 8080       # autre port
-./scripts/docs_start.sh --no-build # sert le site déjà généré
-./scripts/docs_start.sh --check    # vérifie que le site est à jour
+./scripts/docs_start.sh --build    # construit build/ puis quitte
+./scripts/docs_start.sh --check    # construit en mode strict
 ```
 
 ## Workflows
 
 | Fichier | Rôle |
 | --- | --- |
-| `.github/workflows/docs.yml` | génère le site, le publie sur GitHub Pages et propose une PR avec `docs-template/` |
+| `.github/workflows/docs.yml` | construit le site MkDocs et le publie sur GitHub Pages |
 | `.github/workflows/translate.yml` | traduit `docs/fr` vers les autres langues (LLM) |
 | `.github/workflows/tests.yml` | `composer test` |
 
 **GitHub Pages** — activez Pages dans *Settings → Pages → Source : GitHub
-Actions*. Le site est publié par le job `deploy` du workflow
-`Documentation site`, à partir de l'artefact `_site` (copie de
-`docs-template/`).
+Actions*. Le job `deploy` publie `build/` à chaque push sur `main`.
 
 ## `translate.py`
 

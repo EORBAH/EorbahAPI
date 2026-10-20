@@ -1,0 +1,9 @@
+# Dépendances Python du site de documentation (MkDocs).
+#
+#   python scripts/build_docs.py --install
+#   pip install -r requirements-docs.txt
+#
+# Versions minimales : elles suffisent pour le thème Material et le plugin
+# de traduction (docs/fr → docs/en).
+mkdocs-material>=9.5
+mkdocs-static-i18n>=1.2

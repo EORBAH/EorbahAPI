@@ -72,9 +72,12 @@ the source language; translations are generated with `scripts/translate.py`):
 Every chapter is backed by a file in [`docs_src/`](docs_src) **executed by the
 test suite**: the documentation cannot drift away from the code.
 
+The site is built with **MkDocs** (Material theme):
+
 ```bash
-mkdocs serve                              # local site (mkdocs-material + i18n)
-./scripts/docs_start.sh                   # static site from docs-template
+python scripts/build_docs.py --install   # once: creates .venv-docs/ and installs MkDocs
+./scripts/docs_start.sh                  # http://localhost:4000 (hot reload)
+python scripts/build_docs.py             # builds build/ (published to GitHub Pages)
 ```
 
 ## Validation

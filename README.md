@@ -71,8 +71,12 @@ Le cours complet (25 chapitres) est dans [`docs/fr`](docs/fr/index.md) :
 Chaque chapitre s'appuie sur un fichier de [`docs_src/`](docs_src) **exécuté par
 la suite de tests** : la documentation ne peut pas dériver du code.
 
+Le site est construit avec **MkDocs** (thème Material) :
+
 ```bash
-mkdocs serve        # site local (pip install mkdocs-material mkdocs-static-i18n)
+python scripts/build_docs.py --install   # une fois : crée .venv-docs/ et installe MkDocs
+./scripts/docs_start.sh                  # http://localhost:4000 (rechargement à chaud)
+python scripts/build_docs.py             # construit build/ (publié sur GitHub Pages)
 ```
 
 ## Validation
