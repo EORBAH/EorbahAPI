@@ -1,6 +1,6 @@
 <?php
 
-namespace Eorbahapi\rpc;
+namespace Eorbahapi\RPC;
 
 use Eorbahapi\BaseMountedApplication;
 use Eorbahapi\Responses\JSONResponse;

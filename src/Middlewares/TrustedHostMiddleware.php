@@ -2,9 +2,11 @@
 
 namespace Eorbahapi\Middlewares;
 
+use Eorbahapi\Request;
+use Eorbahapi\Response;
 use Eorbahapi\Responses\JSONResponse;
 
-class TrustedHostMiddleware implements BaseHTTPMiddleware
+class TrustedHostMiddleware implements MiddlewareInterface
 {
     private array $trustedHosts;
 
@@ -21,12 +23,12 @@ class TrustedHostMiddleware implements BaseHTTPMiddleware
      * Traite la requête.
      * Si l'hôte n'est pas dans la liste des hôtes de confiance, retourne 403.
      *
-     * @param mixed $request  Objet Request (Eorbahapi\Request)
-     * @param mixed $response Objet Response (Eorbahapi\Response)
+     * @param Request $request  Objet Request (Eorbahapi\Request)
+     * @param Response $response Objet Response (Eorbahapi\Response)
      * @param callable $next Prochain middleware ou route
      * @return mixed
      */
-    public function process($request, $response, $next): mixed
+    public function __invoke(Request $request, Response $response, callable $next): mixed
     {
         // Récupération de l'hôte depuis le serveur
         $host = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '';

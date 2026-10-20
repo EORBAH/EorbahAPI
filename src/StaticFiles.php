@@ -4,16 +4,16 @@ namespace Eorbahapi;
 
 use Eorbahapi\Exceptions\EorbahAPIError;
 
-class StaticFiles extends MountedApp
+class StaticFiles extends BaseMountedApplication
 {
-    private $directory;
-    private $indexFile;
-    private $cacheControl;
-    private $compression;
-    private $allowedExtensions;
+    private string $directory;
+    private string $indexFile;
+    private string $cacheControl;
+    private bool $compression;
+    private array $allowedExtensions;
 
 
-    public function __construct($directory, $options = [])
+    public function __construct(string $directory, $options = [])
     {
         $this->directory = realpath($directory);
         $this->indexFile = $options['index'] ?? 'index.html';
@@ -68,7 +68,7 @@ class StaticFiles extends MountedApp
     }
 
 
-    public function serve($path): bool
+    public function serve(string $path): bool
     {
         $cleanPath = $this->sanitizePath($path);
         $filePath = $this->directory . DIRECTORY_SEPARATOR . $cleanPath;
@@ -88,7 +88,7 @@ class StaticFiles extends MountedApp
         return true;
     }
 
-    private function sanitizePath($path): string
+    private function sanitizePath(string $path): string
     {
         $path = str_replace(['../', '..\\'], '', $path);
 
@@ -100,19 +100,19 @@ class StaticFiles extends MountedApp
         return $path;
     }
 
-    private function isAllowedExtension($filePath): bool
+    private function isAllowedExtension(string $filePath): bool
     {
         $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
         return in_array($extension, $this->allowedExtensions);
     }
 
-    private function isInDirectory($filePath): bool
+    private function isInDirectory(string $filePath): bool
     {
         $realPath = realpath($filePath);
         return $realPath && strpos($realPath, $this->directory) === 0;
     }
 
-    private function sendFile($filePath): void
+    private function sendFile(string $filePath): void
     {
         if (function_exists('apache_setenv')) {
             @apache_setenv('no-gzip', '1');
@@ -149,7 +149,7 @@ class StaticFiles extends MountedApp
         }
     }
 
-    private function getMimeType($filePath): bool|string
+    private function getMimeType(string $filePath): bool|string
     {
         $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
 
@@ -179,7 +179,7 @@ class StaticFiles extends MountedApp
         return $mimeTypes[$extension] ?? mime_content_type($filePath) ?: 'application/octet-stream';
     }
 
-    private function isCompressible($mimeType): bool
+    private function isCompressible(string $mimeType): bool
     {
         $compressibleTypes = [
             'text/html',
@@ -197,7 +197,7 @@ class StaticFiles extends MountedApp
         return in_array($mimeType, $compressibleTypes);
     }
 
-    private function handleCompression($filePath, $mimeType): bool
+    private function handleCompression(string $filePath, $mimeType): bool
     {
         $acceptEncoding = isset($_SERVER['HTTP_ACCEPT_ENCODING']) ? $_SERVER['HTTP_ACCEPT_ENCODING'] : '';
 
@@ -208,7 +208,7 @@ class StaticFiles extends MountedApp
 
         if (strpos($acceptEncoding, 'br') !== false && function_exists('brotli_compress')) {
             $encoding = 'br';
-            $compressedContent = brotli_compress($content, 4);
+            $compressedContent = \brotli_compress($content, 4);
         } elseif (strpos($acceptEncoding, 'gzip') !== false) {
             $encoding = 'gzip';
             $compressedContent = gzencode($content, 6);

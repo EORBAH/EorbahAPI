@@ -10,9 +10,9 @@ use Eorbahapi\Responses\JSONResponse;
 class RateLimit
 {
 
-    private $rate_limiter;
-    private $request;
-    private $response;
+    private RateLimiter $rate_limiter;
+    private Request $request;
+    private Response $response;
 
     public function __construct()
     {
@@ -29,7 +29,7 @@ class RateLimit
      * @param int $timeWindow Période en secondes
      * @return bool True = autorisé, False = limité
      */
-    public function checkRateLimit(string $suffix = '', string $maxRequests, int $timeWindow, bool $default = true): bool {
+    public function checkRateLimit(string $suffix = "", int $maxRequests, int $timeWindow, bool $default = true): bool {
         $key = $this->request->getClientIP() . '-' . $suffix;
         $isExceded = $this->rate_limiter->checkRateLimit($key, $maxRequests, $timeWindow);
 

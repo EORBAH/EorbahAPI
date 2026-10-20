@@ -2,13 +2,15 @@
 
 namespace Eorbahapi\Middlewares;
 
+use Eorbahapi\Request;
+use Eorbahapi\Response;
 use Eorbahapi\Responses\JSONResponse;
 
-class CORSMiddleware implements BaseHTTPMiddleware {
-    private $allowOrigins;
-    private $allowCredentials;
-    private $allowMethods;
-    private $allowHeaders;
+class CORSMiddleware implements MiddlewareInterface {
+    private array $allowOrigins;
+    private bool $allowCredentials;
+    private array $allowMethods;
+    private array $allowHeaders;
 
     public function __construct(
         array $allow_origins = ["*"],
@@ -22,8 +24,8 @@ class CORSMiddleware implements BaseHTTPMiddleware {
         $this->allowHeaders = $allow_headers;
     }
 
-    public function process($request, $response, $next): mixed {
-        $origin = $_SERVER['HTTP_ORIGIN'] ?? null;
+    public function __invoke(Request $request, Response $response, callable $next): mixed {
+        $origin = $request->getHeader('Origin') ?? $request->server('HTTP_ORIGIN');
 
         if ($origin === null) {
             return $next();
@@ -59,12 +61,12 @@ class CORSMiddleware implements BaseHTTPMiddleware {
             $response->headers['Access-Control-Allow-Headers'] = '*';
         }
 
-        if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+        if ($request->method() === 'OPTIONS') {
             $response->headers['Access-Control-Max-Age'] = '86400';
             $response->status = 204;
             return false;
         }
-        
+
         return $next();
     }
 }

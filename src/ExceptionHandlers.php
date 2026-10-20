@@ -6,12 +6,21 @@ use Eorbahapi\Exceptions\HTTPException;
 use Eorbahapi\Exceptions\ValidationException;
 use Eorbahapi\Responses\JSONResponse;
 
+/**
+ * Gestionnaires d'exceptions par défaut.
+ *
+ * Chaque gestionnaire retourne une `Response` sans l'envoyer : c'est
+ * `EorbahAPI::run()` qui l'envoie, et `EorbahAPI::handle()` qui la retourne au
+ * runner (TestClient, runner personnalisé...).
+ */
 class ExceptionHandlers
 {
-    private $debug;
+    private bool $debug;
+
     public function __construct(bool $debug = false) {
         $this->debug = $debug;
     }
+
     /**
      * Gère les HTTPException (404, 403, 500, etc.)
      */
@@ -20,14 +29,11 @@ class ExceptionHandlers
         $statusCode = $e->getStatusCode();
 
         // Réponse structurée en JSON (ou autre selon Accept header)
-        $res = new JSONResponse([
+        return new JSONResponse([
             'error' => true,
             'status' => $statusCode,
             'message' => $e->getMessage() ?: $this->getDefaultMessage($statusCode)
-        ], $statusCode);
-        $res->send();
-
-        return $response;
+        ], $statusCode, $e->getHeaders());
     }
 
     /**
@@ -35,14 +41,12 @@ class ExceptionHandlers
      */
     public function requestValidationExceptionHandler(ValidationException $e, Request $request, Response $response): Response
     {
-        $res = new JSONResponse([
+        return new JSONResponse([
             'error' => true,
             'status' => 422,
-            'message' => 'RequestValidation error',
+            'message' => $e->getMessage() ?: 'RequestValidation error',
             'details' => $e->getErrors()
         ], 422, $e->getHeaders());
-        $res->send();
-        return $response;
     }
 
     /**
@@ -52,14 +56,12 @@ class ExceptionHandlers
     {
         $isDebug = $this->debug || ($_ENV['APP_DEBUG'] ?? null) === '1' || ($_ENV['APP_DEBUG'] ?? null) === 'true' || ($_ENV['APP_ENV'] ?? null) === 'dev' || ($_ENV['APP_ENV'] ?? null) === 'development';
 
-        $res = new JSONResponse([
+        return new JSONResponse([
             'error' => true,
             'status' => 500,
             'message' => 'Internal Server Error',
             'debug' => $isDebug ? $e->getMessage() : null
         ], 500);
-        $res->send();
-        return $response;
     }
 
     /**

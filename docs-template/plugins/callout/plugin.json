@@ -1,0 +1,10 @@
+{
+  "name": "callout",
+  "version": "1.0.0",
+  "tag": "callout",
+  "kind": "block",
+  "description": "Encadré d'alerte (info / succès / attention / danger).",
+  "usage": ":::callout{type=\"warning\" title=\"Attention\"}\nTexte...\n:::",
+  "entry": "index.js",
+  "style": "index.css"
+}

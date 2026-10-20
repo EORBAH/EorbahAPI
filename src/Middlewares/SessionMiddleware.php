@@ -2,7 +2,10 @@
 
 namespace Eorbahapi\Middlewares;
 
-class SessionMiddleware implements BaseHTTPMiddleware
+use Eorbahapi\Request;
+use Eorbahapi\Response;
+
+class SessionMiddleware implements MiddlewareInterface
 {
     private array $options;
 
@@ -35,12 +38,12 @@ class SessionMiddleware implements BaseHTTPMiddleware
     /**
      * Démarre la session sécurisée et l'attache à la requête.
      *
-     * @param object $request Objet Request (doit avoir une méthode setSession)
-     * @param object $response Objet Response
+     * @param Request $request Objet Request (doit avoir une méthode setSession)
+     * @param Response $response Objet Response
      * @param callable $next Middleware suivant
      * @return mixed
      */
-    public function process($request, $response, $next): mixed
+    public function __invoke(Request $request, Response $response, callable $next): mixed
     {
         $this->configureSession();
 

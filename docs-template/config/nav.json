@@ -1,0 +1,73 @@
+{
+  "_comment": "inSidebar=true -> le groupe apparaît dans la barre latérale contextuelle (.docs-sidebar, ancré à la page en cours). Tous les groupes, inSidebar ou non, apparaissent dans le menu complet du site (bouton 'menu' du header) - c'est là que vivent le changelog/releases. L'ordre des items ici définit aussi la chaîne précédent/suivant.",
+
+  "fr": [
+    {
+      "id": "guide",
+      "title": "Guide",
+      "icon": "ti ti-book-2",
+      "inSidebar": true,
+      "items": [
+        { "id": "introduction",  "title": "Introduction",   "icon": "ti ti-book-2",   "file": "introduction.md" },
+        { "id": "installation",  "title": "Installation",   "icon": "ti ti-download", "file": "installation.md" },
+        { "id": "configuration", "title": "Configuration",  "icon": "ti ti-settings", "file": "configuration.md" }
+      ]
+    },
+    {
+      "id": "reference",
+      "title": "Référence",
+      "icon": "ti ti-api",
+      "inSidebar": true,
+      "items": [
+        { "id": "api",      "title": "API reference", "icon": "ti ti-api",          "file": "api.md" },
+        { "id": "cli",      "title": "CLI",            "icon": "ti ti-terminal-2",  "file": "cli.md" },
+        { "id": "examples", "title": "Exemples",       "icon": "ti ti-code",        "file": "examples.md" }
+      ]
+    },
+    {
+      "id": "resources",
+      "title": "Ressources",
+      "icon": "ti ti-lifebuoy",
+      "inSidebar": false,
+      "items": [
+        { "id": "changelog", "title": "Changelog / Releases", "icon": "ti ti-history",  "file": "changelog.md", "badge": "v0.3.0" },
+        { "id": "support",   "title": "Support",               "icon": "ti ti-lifebuoy", "file": "support.md" }
+      ]
+    }
+  ],
+
+  "en": [
+    {
+      "id": "guide",
+      "title": "Guide",
+      "icon": "ti ti-book-2",
+      "inSidebar": true,
+      "items": [
+        { "id": "introduction",  "title": "Introduction",  "icon": "ti ti-book-2",   "file": "introduction.md" },
+        { "id": "installation",  "title": "Installation",  "icon": "ti ti-download", "file": "installation.md" },
+        { "id": "configuration", "title": "Configuration", "icon": "ti ti-settings", "file": "configuration.md" }
+      ]
+    },
+    {
+      "id": "reference",
+      "title": "Reference",
+      "icon": "ti ti-api",
+      "inSidebar": true,
+      "items": [
+        { "id": "api",      "title": "API reference", "icon": "ti ti-api",         "file": "api.md" },
+        { "id": "cli",      "title": "CLI",           "icon": "ti ti-terminal-2",  "file": "cli.md" },
+        { "id": "examples", "title": "Examples",      "icon": "ti ti-code",        "file": "examples.md" }
+      ]
+    },
+    {
+      "id": "resources",
+      "title": "Resources",
+      "icon": "ti ti-lifebuoy",
+      "inSidebar": false,
+      "items": [
+        { "id": "changelog", "title": "Changelog / Releases", "icon": "ti ti-history",  "file": "changelog.md", "badge": "v0.3.0" },
+        { "id": "support",   "title": "Support",               "icon": "ti ti-lifebuoy", "file": "support.md" }
+      ]
+    }
+  ]
+}

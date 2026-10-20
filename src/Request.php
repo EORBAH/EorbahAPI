@@ -2,13 +2,74 @@
 
 namespace Eorbahapi;
 
+/**
+ * Requête HTTP.
+ *
+ * Toutes les sources de données sont injectables : par défaut la requête lit les
+ * superglobales et `php://input`, mais un runner personnalisé (ou le TestClient)
+ * peut fournir ses propres valeurs :
+ *
+ *     $request = new Request(
+ *         server: ['REQUEST_METHOD' => 'POST', 'REQUEST_URI' => '/users'],
+ *         query: ['page' => '2'],
+ *         headers: ['Content-Type' => 'application/json'],
+ *         body: ['name' => 'Jean'],
+ *     );
+ */
 class Request {
+    private ?array $headersCache = null;
+
+    /**
+     * @param array|string|null $body      Corps déjà décodé (tableau) ou brut (chaîne JSON).
+     * @param array             $params    Paramètres de route.
+     * @param array|null        $server    Surcharge de $_SERVER.
+     * @param array|null        $query     Surcharge de $_GET.
+     * @param array|null        $postData  Surcharge de $_POST.
+     * @param array|null        $cookies   Surcharge de $_COOKIE.
+     * @param array|null        $files     Surcharge de $_FILES.
+     * @param array|null        $headers   En-têtes déjà extraits (noms insensibles à la casse).
+     */
     public function __construct(
-        private ?array $body = null,
-        private array $params = []
+        private array|string|null $body = null,
+        private array $params = [],
+        private ?array $server = null,
+        private ?array $query = null,
+        private ?array $postData = null,
+        private ?array $cookies = null,
+        private ?array $files = null,
+        private ?array $headers = null,
     ) {}
 
-    public function params(array|null $path = null) {
+    // ------------------------------------------------------------------
+    // Surcharges injectées
+    // ------------------------------------------------------------------
+
+    /**
+     * Valeur de `$_SERVER` (injectée ou réelle).
+     */
+    public function server(?string $key = null, mixed $default = null): mixed
+    {
+        $server = $this->server ?? $_SERVER;
+
+        return $key === null ? $server : ($server[$key] ?? $default);
+    }
+
+    /**
+     * Copie de la requête pointant sur une autre URI (utilisé par les
+     * sous-applications montées).
+     */
+    public function withUri(string $uri): static
+    {
+        $clone = clone $this;
+        $clone->server = array_merge(
+            $this->server ?? $_SERVER,
+            ['REQUEST_URI' => $uri, 'PATH_INFO' => $uri]
+        );
+
+        return $clone;
+    }
+
+    public function params(array|null|string $path = null) {
         $query = $this->query();
 
         if (is_array($path)) {
@@ -23,15 +84,23 @@ class Request {
 
         return $this->params;
     }
-    
+
+    /**
+     * Alias de `params($key)` : valeur d'un paramètre de route.
+     */
+    public function param(string $key, mixed $default = null): mixed
+    {
+        return $this->params[$key] ?? $default;
+    }
+
     public function body(?string $key = null, $default = null)
     {
         // Lazy loading : on ne parse qu'une seule fois
-        if ($this->body === null) {
-            $input = file_get_contents("php://input");
+        if (!is_array($this->body)) {
+            $input = is_string($this->body) ? $this->body : (string) file_get_contents('php://input');
             $decoded = json_decode($input, true);
             // Si JSON invalide ou vide, on utilise $_POST (pour les requêtes traditionnelles)
-            $this->body = is_array($decoded) ? $decoded : ($_POST ?: []);
+            $this->body = is_array($decoded) ? $decoded : ($this->post() ?: []);
         }
 
         if ($key === null) {
@@ -48,20 +117,22 @@ class Request {
 
     public function query(?string $key = null, $default = null)
     {
+        $query = $this->query ?? $_GET;
+
         if ($key === null) {
-            return $_GET;
+            return $query;
         }
-        return $_GET[$key] ?? $default;
+        return $query[$key] ?? $default;
     }
 
     public function query_string()
     {
-        return $_SERVER['QUERY_STRING'];
+        return (string) $this->server('QUERY_STRING', '');
     }
 
     public function post()
     {
-        return $_POST;
+        return $this->postData ?? $_POST;
     }
 
     public function getBearerToken()
@@ -77,32 +148,38 @@ class Request {
 
     public function method()
     {
-        return $_SERVER['REQUEST_METHOD'];
+        return (string) $this->server('REQUEST_METHOD', 'GET');
     }
 
     public function uri()
     {
-        return $_SERVER['REQUEST_URI'];
+        return (string) $this->server('REQUEST_URI', '/');
     }
 
     public function pathInfo()
     {
-        return $_SERVER['PATH_INFO'];
+        $pathInfo = $this->server('PATH_INFO');
+
+        return is_string($pathInfo) ? $pathInfo : null;
     }
 
     public function path()
     {
-        $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-        return rtrim($uri, '/');
+        $uri = parse_url($this->uri(), PHP_URL_PATH);
+
+        return rtrim(is_string($uri) ? $uri : '/', '/');
     }
-    
 
     public function getHeader($key = null)
     {
-        $headers = getallheaders();
-        if ($key) {
-            return $headers[$key] ?? null;
+        $headers = $this->headers ?? $this->headersCache ??= $this->readHeaders();
+
+        if ($key !== null) {
+            $normalized = array_change_key_case($headers, CASE_LOWER);
+
+            return $normalized[strtolower($key)] ?? null;
         }
+
         return $headers;
     }
 
@@ -111,17 +188,52 @@ class Request {
         return $this->getHeader($key);
     }
 
+    /**
+     * En-têtes lus depuis le SAPI, avec repli sur $_SERVER (CLI, tests).
+     *
+     * @return array<string, string>
+     */
+    private function readHeaders(): array
+    {
+        $headers = function_exists('getallheaders') ? getallheaders() : [];
+
+        if (is_array($headers) && $headers !== []) {
+            return $headers;
+        }
+
+        $headers = [];
+        foreach ($this->server() as $name => $value) {
+            if (!is_string($name) || !is_string($value)) {
+                continue;
+            }
+            if (str_starts_with($name, 'HTTP_')) {
+                $headers[str_replace('_', '-', ucwords(strtolower(substr($name, 5)), '_'))] = $value;
+            }
+        }
+
+        foreach (['CONTENT_TYPE' => 'Content-Type', 'CONTENT_LENGTH' => 'Content-Length'] as $key => $header) {
+            $value = $this->server($key);
+            if (is_string($value) && !isset($headers[$header])) {
+                $headers[$header] = $value;
+            }
+        }
+
+        return $headers;
+    }
+
     public function cookie($key = null)
     {
+        $cookies = $this->cookies ?? $_COOKIE;
+
         if ($key) {
-            return $_COOKIE[$key] ?? null;
+            return $cookies[$key] ?? null;
         }
-        return $_COOKIE;
+        return $cookies;
     }
 
     public function input(?string $key = null, $default = null)
     {
-        $data = array_merge($this->body(), $_POST, $_GET);
+        $data = array_merge($this->body(), $this->post(), $this->query());
 
         if ($key) {
             return $data[$key] ?? $default;
@@ -137,10 +249,12 @@ class Request {
 
     public function file($key = null)
     {
+        $files = $this->files ?? $_FILES;
+
         if ($key) {
-            return $_FILES[$key] ?? null;
+            return $files[$key] ?? null;
         }
-        return $_FILES;
+        return $files;
     }
 
     /**
@@ -180,14 +294,14 @@ class Request {
      */
     public function isSocialBot()
     {
-        $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+        $userAgent = (string) $this->userAgent();
         $isSocialBot = preg_match('/(facebook|twitter|linkedin|whatsapp|telegram)/i', $userAgent);
         return $isSocialBot;
     }
 
     public function userAgent()
     {
-        return $_SERVER['HTTP_USER_AGENT'] ?? '';
+        return (string) $this->server('HTTP_USER_AGENT', '');
     }
 
     /**
@@ -195,12 +309,12 @@ class Request {
      */
     public function getClientIP()
     {
-        if (!empty($_SERVER["HTTP_CLIENT_IP"])) {
-            return $_SERVER["HTTP_CLIENT_IP"];
-        } elseif (!empty($_SERVER["HTTP_X_FORWARDED_FOR"])) {
-            return $_SERVER["HTTP_X_FORWARDED_FOR"];
+        if (!empty($this->server('HTTP_CLIENT_IP'))) {
+            return $this->server('HTTP_CLIENT_IP');
+        } elseif (!empty($this->server('HTTP_X_FORWARDED_FOR'))) {
+            return $this->server('HTTP_X_FORWARDED_FOR');
         } else {
-            return $_SERVER["REMOTE_ADDR"];
+            return $this->server('REMOTE_ADDR');
         }
     }
 
@@ -214,11 +328,11 @@ class Request {
         if (empty($allowedDomains))
             return true;
 
-        $origin = $_SERVER['HTTP_ORIGIN'] ?? $_SERVER['HTTP_REFERER'] ?? null;
+        $origin = $this->server('HTTP_ORIGIN') ?? $this->server('HTTP_REFERER') ?? null;
         if (!$origin)
             return false;
 
-        $domain = parse_url($origin, PHP_URL_HOST);
+        $domain = parse_url((string) $origin, PHP_URL_HOST);
         return in_array($domain, $allowedDomains, true);
     }
 }

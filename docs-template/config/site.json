@@ -1,0 +1,83 @@
+{
+  "brand": {
+    "name": "Documentation",
+    "logo": ""
+  },
+
+  "defaultLanguage": "fr",
+  "languages": [
+    { "id": "fr", "label": "Français", "flag": "🇫🇷" },
+    { "id": "en", "label": "English", "flag": "🇬🇧" }
+  ],
+  "defaultTheme": "dark",
+  "themes": [
+    { "id": "dark",     "label": "Sombre",  "swatch": "#101110" },
+    { "id": "light",    "label": "Clair",   "swatch": "#ffffff" },
+    { "id": "midnight", "label": "Minuit",  "swatch": "#0a0b14" }
+  ],
+
+  "search": {
+    "_comment": "scope = 'global' -> indexe toutes les pages listées dans nav.json (recommandé, cohérent avec le bouton menu). scope = 'page' -> n'indexe que la page actuellement affichée.",
+    "scope": "global",
+    "placeholder": "Rechercher dans la documentation...",
+    "maxResults": 8
+  },
+
+  "assistant": {
+    "enabled": true,
+    "title": "AI assistant",
+    "subtitle": "Documentation assistant"
+  },
+
+  "footer": {
+    "tagline": "Une base de documentation propre, thémable et extensible via plugins.",
+    "social": [
+      { "icon": "ti ti-brand-github",   "url": "https://github.com/votre-org",   "label": "GitHub" },
+      { "icon": "ti ti-brand-x",        "url": "https://x.com/votre-org",        "label": "X / Twitter" },
+      { "icon": "ti ti-brand-discord",  "url": "https://discord.gg/votre-invite","label": "Discord" },
+      { "icon": "ti ti-brand-linkedin", "url": "https://linkedin.com/company/votre-org", "label": "LinkedIn" }
+    ],
+    "columns": [
+      {
+        "title": "Produit",
+        "links": [
+          { "label": "Fonctionnalités", "url": "#" },
+          { "label": "Tarifs", "url": "#" },
+          { "label": "Changelog", "url": "#changelog" }
+        ]
+      },
+      {
+        "title": "Solutions",
+        "links": [
+          { "label": "Startups", "url": "#" },
+          { "label": "Entreprises", "url": "#" },
+          { "label": "Agences", "url": "#" }
+        ]
+      },
+      {
+        "title": "Ressources",
+        "links": [
+          { "label": "Guides", "url": "#introduction" },
+          { "label": "Référence API", "url": "#api" },
+          { "label": "Statut du service", "url": "#" }
+        ]
+      },
+      {
+        "title": "Contact",
+        "links": [
+          { "label": "support@votre-domaine.com", "url": "mailto:support@votre-domaine.com" },
+          { "label": "+224 000 00 00 00", "url": "tel:+224000000000" },
+          { "label": "Conakry, Guinée", "url": "#" }
+        ]
+      }
+    ],
+    "corporate": {
+      "name": "Votre Entreprise SARL",
+      "line": "© 2026 Votre Entreprise. Tous droits réservés."
+    },
+    "legalLinks": [
+      { "label": "Confidentialité", "url": "#" },
+      { "label": "Conditions d'utilisation", "url": "#" }
+    ]
+  }
+}

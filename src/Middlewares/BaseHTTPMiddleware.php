@@ -1,8 +1,12 @@
 <?php
 
 namespace Eorbahapi\Middlewares;
-interface BaseHTTPMiddleware {
-    public function __construct() {}
-    
-    public function process($request, $response, $next): mixed;
+
+use Eorbahapi\Request;
+use Eorbahapi\Response;
+
+class BaseHTTPMiddleware  implements MiddlewareInterface {
+    public function __invoke(Request $request, Response $response, callable $next): mixed {
+        throw new \RuntimeException('BaseRoute::__invoke must be overridden');
+    }
 }
