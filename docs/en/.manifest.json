@@ -1,0 +1,105 @@
+{
+  "source_language": "fr",
+  "files": {
+    "controllers.md": {
+      "source_hash": "99e793792e613cb3ff1c102be45754912eb58a078893c1d4f4f008549200a1cf",
+      "translated_at": "2026-10-20T21:47:25Z"
+    },
+    "cookies.md": {
+      "source_hash": "56a5d15abe9e7194a35e7595ea688f2de09efef120020472166bc99e64a4277f",
+      "translated_at": "2026-10-20T21:47:30Z"
+    },
+    "dependencies.md": {
+      "source_hash": "c078f611586502ed8c65cf4aaab8f6be0b3018309d7d26e12d3d5736ef15404e",
+      "translated_at": "2026-10-20T21:47:35Z"
+    },
+    "errors.md": {
+      "source_hash": "8fe70dc29fa78ae88e72a93e5acf9a75b40dd8630e9824c7266ae89bca5bc0c7",
+      "translated_at": "2026-10-20T21:47:40Z"
+    },
+    "files.md": {
+      "source_hash": "99cbf38f4fd729bf4c18545bbd755d3c20cdc308d47d759b26a59b08c528df1e",
+      "translated_at": "2026-10-20T21:49:37Z"
+    },
+    "first-steps.md": {
+      "source_hash": "2c037271ed40eebe3eb630d6768beef0195f830b5dbc18b2ddf4f8c58e9e2b15",
+      "translated_at": "2026-10-20T21:49:41Z"
+    },
+    "forms.md": {
+      "source_hash": "1081169926b44844a88c616d1257f412101929431f1a0237a4c81c5392a04928",
+      "translated_at": "2026-10-20T21:49:45Z"
+    },
+    "headers.md": {
+      "source_hash": "c53a8527a24f02f7522fab299e0271976dc54e54430d3fc9bfcaa59e314da5a5",
+      "translated_at": "2026-10-20T21:49:50Z"
+    },
+    "index.md": {
+      "source_hash": "a09be30595855c825f24b728443f73c75147236476821d1cd8af3b327ba8675c",
+      "translated_at": "2026-10-20T21:49:55Z"
+    },
+    "installation.md": {
+      "source_hash": "d0db2adf52ec49f59a2ebe1ad66b615bebe3c9504b74415f3c3d5c670fbc4956",
+      "translated_at": "2026-10-20T21:49:58Z"
+    },
+    "middlewares.md": {
+      "source_hash": "5e30741167cd943165e013cf308aa7439cbcc015da79e82cfa6a9c724de98f86",
+      "translated_at": "2026-10-20T21:50:04Z"
+    },
+    "nested-models.md": {
+      "source_hash": "4477ffe83ffec37bf3ba27ef732b0b8c13492368b10e25dfd922d3a89d01e935",
+      "translated_at": "2026-10-20T21:50:09Z"
+    },
+    "path-params.md": {
+      "source_hash": "9222d8f897319abb2d0d6e8410f043307f60ffc9ffffe9d297377ca910623577",
+      "translated_at": "2026-10-20T21:50:16Z"
+    },
+    "query-params.md": {
+      "source_hash": "f76d52644bce3f4c8fce17373381efe13d7565cf9f3a2073602b17b757ca88a9",
+      "translated_at": "2026-10-20T21:50:22Z"
+    },
+    "reference.md": {
+      "source_hash": "168068d64c2dc62d87b7b8e2f16d5365cbcfa39f617f4c9c4354d86cb60930a8",
+      "translated_at": "2026-10-20T21:50:31Z"
+    },
+    "request-body.md": {
+      "source_hash": "5e34cd2af394c360c0d78227d8cb1901269b3b3d54557b1dd4fe60b62b245fc9",
+      "translated_at": "2026-10-20T21:50:36Z"
+    },
+    "responses.md": {
+      "source_hash": "ad179d3155050cca7373e2ea18ec9a1e2b5f81f11b9d16c858bbdd38859631a8",
+      "translated_at": "2026-10-20T21:50:42Z"
+    },
+    "routing.md": {
+      "source_hash": "487ca303acb860164bd97c24615969808a7ab8c0a1c483beafce47ee49414af7",
+      "translated_at": "2026-10-20T21:50:48Z"
+    },
+    "rpc.md": {
+      "source_hash": "7ba59210de3c881e8c71e45aa26a6ecb830698d69ed76928ca8298fb456e9e72",
+      "translated_at": "2026-10-20T21:50:56Z"
+    },
+    "runners.md": {
+      "source_hash": "427a0ba3c6f14cba3084191e157cb58478c849c8a9e9b41e6c6268427d84afa3",
+      "translated_at": "2026-10-20T21:51:04Z"
+    },
+    "security.md": {
+      "source_hash": "7849765a471017ff9d722a593cd35b4dc26db32cae50068c9cc9611d880feb1b",
+      "translated_at": "2026-10-20T21:51:10Z"
+    },
+    "static-files.md": {
+      "source_hash": "3aaf7e9dca89fcdb0993684deb17788f8e1a0aa57a9664560641a7c93adaa093",
+      "translated_at": "2026-10-20T21:51:23Z"
+    },
+    "templates.md": {
+      "source_hash": "f2a73ce0b61cbee67a68aede006f7cafc6c97716bcca10b6ec1f143305f00c25",
+      "translated_at": "2026-10-20T21:51:44Z"
+    },
+    "testing.md": {
+      "source_hash": "5385f696225859b6500c8d653a580fd230dc09ba2b38b96f7fcb4557546d765d",
+      "translated_at": "2026-10-20T21:51:50Z"
+    },
+    "validations.md": {
+      "source_hash": "0b5daa4c71737f40a890df18463c43417463b2528f27e5aebda02da86368c15d",
+      "translated_at": "2026-10-20T21:51:57Z"
+    }
+  }
+}
