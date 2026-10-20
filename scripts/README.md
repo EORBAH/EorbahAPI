@@ -43,17 +43,24 @@ Sert la documentation en local avec `mkdocs serve` (rechargement à chaud) :
 **GitHub Pages** — activez Pages dans *Settings → Pages → Source : GitHub
 Actions*. Le job `deploy` publie `build/` à chaque push sur `main`.
 
-## `translate.py`
+## `translate.py` — traduction locale du cours
 
-Traduit la documentation de `docs/fr` vers les langues déclarées dans
-`docs/language_names.yml` (`docs/en`, puis les langues ajoutées au besoin).
+Traduit `docs/fr/` vers les langues déclarées dans `docs/language_names.yml`
+(`docs/en`, puis les langues ajoutées au besoin). Le script tourne **en local** :
+il n'est pas lancé à chaque push, vous décidez quand traduire.
 
 ```bash
-# Traduire ce qui manque ou ce qui a changé
+# Traduire l'anglais (crée docs/en/ et docs/en/.manifest.json)
 LLM_API_KEY=sk-... python scripts/translate.py --lang en
 
-# Toutes les langues, tout retraduire
-LLM_API_KEY=sk-... python scripts/translate.py --lang all --force
+# Traduire toutes les langues déclarées
+LLM_API_KEY=sk-... python scripts/translate.py --lang all
+
+# Retraduire même les pages à jour
+LLM_API_KEY=sk-... python scripts/translate.py --lang en --force
+
+# Une seule page (incrémental)
+LLM_API_KEY=sk-... python scripts/translate.py --lang en --only routing.md
 
 # Vérifier sans clé API (code retour 1 si une page manque)
 python scripts/translate.py --lang all --check
@@ -61,8 +68,8 @@ python scripts/translate.py --lang all --check
 # Voir le plan sans rien écrire
 python scripts/translate.py --lang en --dry-run
 
-# Amorcer une nouvelle langue sans API (copie du français)
-python scripts/translate.py --lang es --provider copy
+# Amorcer une langue sans API (copie le français, à retraduire ensuite)
+python scripts/translate.py --lang en --provider copy
 ```
 
 ### Variables d'environnement
@@ -73,12 +80,12 @@ python scripts/translate.py --lang es --provider copy
 | `LLM_BASE_URL` | `https://api.deepseek.com/v1` | Endpoint (`.../chat/completions`) |
 | `LLM_MODEL` | `deepseek-chat` | Modèle utilisé |
 
-Fonctionne avec DeepSeek, OpenAI, Mistral, Groq, Ollama en local, etc. : tout
+Fonctionne avec DeepSeek, OpenAI, Mistral, Groq, un Ollama local, etc. : tout
 service exposant `POST /chat/completions`.
 
 ### Fonctionnement
 
-1. lecture de `docs/fr/**/*.md` ;
+1. lecture de `docs/fr/**/*.md` (25 pages) ;
 2. comparaison avec `docs/<lang>/.manifest.json` (empreinte SHA-256 de la source) ;
 3. pour chaque page manquante ou modifiée : appel du modèle avec
    `scripts/prompts/translate.md` ;
@@ -88,13 +95,28 @@ service exposant `POST /chat/completions`.
 
 Le prompt impose de **copier les blocs de code à l'identique** : ils
 correspondent aux fichiers de `docs_src/`, eux-mêmes exécutés par
-`tests/ExamplesTest.php`.
+`tests/ExamplesTest.php`. Les admonitions `!!! note`, les liens `.md` relatifs et
+les boutons `.md-button` sont conservés : c'est MkDocs qui les rend.
+
+### Publier la langue traduite
+
+Le script affiche à la fin le bloc à ajouter à `mkdocs.yml`. Décommentez
+`- locale: en` dans `plugins → i18n → languages`, puis :
+
+```bash
+python scripts/build_docs.py --strict     # ou ./scripts/docs_start.sh
+```
+
+Le site contient alors `/en/…` et le sélecteur de langue du thème Material
+fonctionne. Tant que `docs/en/` n'existe pas, laissez `en` commenté : la
+traduction anglaise n'est pas publiée.
 
 ### Ajouter une langue
 
-1. ajoutez le code dans `docs/language_names.yml` (et dans `mkdocs.yml`) ;
+1. ajoutez le code dans `docs/language_names.yml` ;
 2. ajoutez éventuellement sa colonne dans `scripts/prompts/glossary.md` ;
-3. lancez `python scripts/translate.py --lang <code>`.
+3. lancez `python scripts/translate.py --lang <code>` ;
+4. décommentez/ajoutez la langue dans `mkdocs.yml` (plugins → i18n).
 
 ## Prompts
 

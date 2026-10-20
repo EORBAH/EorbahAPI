@@ -4,6 +4,13 @@ site_url: https://eorbah.github.io/EorbahAPI/
 repo_url: https://github.com/EORBAH/EorbahAPI
 repo_name: EORBAH/EorbahAPI
 docs_dir: docs
+
+# Fichiers de travail qui ne doivent pas être publiés :
+# - language_names.yml : langues utilisées par scripts/translate.py ;
+# - .manifest.json : empreintes des traductions (docs/<lang>/.manifest.json).
+exclude_docs: |
+  language_names.yml
+  **/.manifest.json
 edit_uri: edit/develop/docs/
 
 theme:
