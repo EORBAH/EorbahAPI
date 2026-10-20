@@ -4,6 +4,11 @@ Base de documentation statique, réutilisable, thémable et extensible via
 plugins — inspirée de Mintlify. Aucune dépendance de build (pas de npm
 install obligatoire), juste HTML/CSS/JS.
 
+Dans ce dépôt, le contenu de ce dossier est **généré** à partir du cours :
+`python scripts/build_docs_site.py` convertit `docs/fr` (navigation
+`mkdocs.yml`) et régénère `content/`, `config/nav.json`, `config/site.json`,
+`sitemap.xml` et `robots.txt`. Voir `scripts/README.md`.
+
 ## Démarrer
 
 ```bash
@@ -111,3 +116,41 @@ utilisent `js/scroll-lock.js`, qui compense la largeur de la scrollbar
 retirée par un `padding-right` calculé dynamiquement, en plus de
 `scrollbar-gutter: stable` sur `<html>`. Résultat : ouvrir/fermer une
 overlay ne décale jamais le contenu horizontalement.
+
+## SEO
+
+Le référencement est pris en charge à deux niveaux :
+
+1. **Statique** — `index.html` contient un `<title>`, les meta description /
+   keywords / author / robots, les balises Open Graph, la Twitter Card, l'URL
+   canonique et un JSON-LD `WebSite` (+ `SearchAction`). Ce sont les valeurs
+   reçues par un crawler qui n'exécute pas JavaScript.
+2. **Dynamique** — `js/seo.js` met ces balises à jour à chaque changement de
+   page : `<title>`, description tirée du premier paragraphe, `og:*`,
+   `twitter:*`, `<link rel="canonical">`, puis trois blocs JSON-LD
+   (`WebSite`, `TechArticle`, `BreadcrumbList`).
+
+Tout est piloté par `config/site.json → seo` :
+
+```json
+{
+  "seo": {
+    "siteUrl": "https://eorbah.github.io/EorbahAPI/",
+    "titleTemplate": "{title} — EorbahAPI",
+    "titleDefault": "EorbahAPI — Documentation",
+    "description": "Cours complet du framework…",
+    "keywords": ["EorbahAPI", "PHP", "framework"],
+    "author": "EORBAH",
+    "locale": "fr_FR",
+    "robots": "index,follow",
+    "repo": "https://github.com/EORBAH/EorbahAPI",
+    "ogImage": "",
+    "twitter": ""
+  }
+}
+```
+
+`sitemap.xml` et `robots.txt` sont générés avec une URL par page et par
+langue (`#/<langue>/<page>`). Pour une page dont le contenu doit fournir une
+description dédiée, il suffit d'ajouter un frontmatter `description:` en tête
+du Markdown : il est prioritaire sur le premier paragraphe.

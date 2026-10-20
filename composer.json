@@ -19,15 +19,6 @@
         "issues": "https://github.com/EORBAH/EorbahAPI/issues",
         "source": "https://github.com/EORBAH/EorbahAPI"
     },
-    "repositories": [
-        {
-            "type": "path",
-            "url": "../../svinx-packages/svinx-validator",
-            "options": {
-                "symlink": true
-            }
-        }
-    ],
     "require": {
         "php": "^8.1",
         "svinx/validator": "^0.1",

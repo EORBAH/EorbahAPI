@@ -32,7 +32,8 @@ dump.rdb export-ignore
 
 # Project root files
 public/ export-ignore
-examples/ export-ignore
+docs_src/ export-ignore
+docs-templates/ export-ignore
 templates/ export-ignore
 scripts/ export-ignore
 main.php export-ignore

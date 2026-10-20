@@ -69,14 +69,6 @@
         "title": "Produit",
         "links": [
           {
-            "label": "Fonctionnalités",
-            "url": "#"
-          },
-          {
-            "label": "Tarifs",
-            "url": "#"
-          },
-          {
             "label": "Changelog",
             "url": "#changelog"
           }
@@ -148,5 +140,29 @@
         "url": "#"
       }
     ]
+  },
+  "seo": {
+    "siteUrl": "https://eorbah.github.io/EorbahAPI/",
+    "titleTemplate": "{title} — EorbahAPI",
+    "titleDefault": "EorbahAPI — Documentation",
+    "description": "Cours complet du framework web PHP EorbahAPI : routage, paramètres validés par Svinx, sécurité, middlewares, tests et déploiement.",
+    "keywords": [
+      "EorbahAPI",
+      "PHP",
+      "framework",
+      "API",
+      "routage",
+      "validation",
+      "Svinx",
+      "middlewares",
+      "tests",
+      "documentation"
+    ],
+    "author": "EORBAH",
+    "locale": "fr_FR",
+    "robots": "index,follow",
+    "repo": "https://github.com/EORBAH/EorbahAPI",
+    "ogImage": "",
+    "twitter": ""
   }
 }

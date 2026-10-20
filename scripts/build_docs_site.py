@@ -50,6 +50,7 @@ KNOWN_LANGS = ("fr", "en")
 
 REPO_URL = "https://github.com/EORBAH/EorbahAPI"
 REPO_BRANCH = "develop"
+SITE_URL = "https://eorbah.github.io/EorbahAPI/"
 
 LANG_META = {
     "fr": {"label": "Français", "flag": "🇫🇷"},
@@ -402,6 +403,26 @@ def patch_site_config(config: dict, languages: list[str]) -> dict:
         {"id": lang, **LANG_META.get(lang, {"label": lang, "flag": ""})} for lang in languages
     ]
 
+    # Référencement : valeurs par défaut statiques de index.html + js/seo.js.
+    seo = config.setdefault("seo", {})
+    seo["siteUrl"] = seo.get("siteUrl") or SITE_URL
+    seo["titleTemplate"] = "{title} — EorbahAPI"
+    seo["titleDefault"] = "EorbahAPI — Documentation"
+    seo["description"] = (
+        "Cours complet du framework web PHP EorbahAPI : routage, paramètres "
+        "validés par Svinx, sécurité, middlewares, tests et déploiement."
+    )
+    seo["keywords"] = [
+        "EorbahAPI", "PHP", "framework", "API", "routage", "validation",
+        "Svinx", "middlewares", "tests", "documentation",
+    ]
+    seo["author"] = "EORBAH"
+    seo["locale"] = {"fr": "fr_FR", "en": "en_US"}.get(config.get("defaultLanguage", "fr"), "fr_FR")
+    seo["robots"] = "index,follow"
+    seo["repo"] = REPO_URL
+    seo.setdefault("ogImage", "")
+    seo.setdefault("twitter", "")
+
     footer = config.setdefault("footer", {})
     footer["tagline"] = "Framework web PHP pour construire des API : routes déclaratives, paramètres validés, pipeline testable."
 
@@ -454,6 +475,32 @@ def build(dry_run: bool = False, check: bool = False, prune: bool = True) -> int
 
     # nav.json : structure à plusieurs langues attendue par le template.
     planned[TEMPLATE / "config" / "nav.json"] = json.dumps(nav_all, ensure_ascii=False, indent=2) + "\n"
+
+    # Référencement : robots.txt + sitemap.xml (une URL par page et par langue).
+    base = str(site.get("seo", {}).get("siteUrl") or SITE_URL).rstrip("/")
+    urls: list[str] = []
+    for lang, groups in nav_all.items():
+        for group in groups:
+            for item in group["items"]:
+                if item["id"] == "index":
+                    urls.append(f"{base}/#/{lang}/{item['id']}")
+                else:
+                    urls.append(f"{base}/#/{lang}/{item['id']}")
+
+    sitemap = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    ]
+    for url in urls:
+        sitemap.append(f"  <url><loc>{url}</loc></url>")
+    sitemap.append("</urlset>")
+
+    planned[TEMPLATE / "sitemap.xml"] = "\n".join(sitemap) + "\n"
+    planned[TEMPLATE / "robots.txt"] = (
+        "User-agent: *\n"
+        "Allow: /\n"
+        f"Sitemap: {base}/sitemap.xml\n"
+    )
 
     planned[Path(TEMPLATE / MANIFEST_NAME)] = json.dumps(manifest, ensure_ascii=False, indent=2) + "\n"
 

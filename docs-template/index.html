@@ -3,8 +3,56 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Documentation template extensible">
-  <title>Documentation</title>
+
+  <!-- ===================================================================
+       SEO — valeurs par défaut statiques (crawlers, partage de lien).
+       js/seo.js les met à jour à chaque changement de page :
+       title, description, Open Graph, Twitter, canonical, JSON-LD.
+       Source de vérité : config/site.json → seo
+       =================================================================== -->
+  <title>EorbahAPI — Documentation</title>
+  <meta name="description" content="Cours complet du framework web PHP EorbahAPI : routage, paramètres validés par Svinx, sécurité, middlewares, tests et déploiement.">
+  <meta name="keywords" content="EorbahAPI, PHP, framework, API, routage, validation, Svinx, middlewares, tests, documentation">
+  <meta name="author" content="EORBAH">
+  <meta name="robots" content="index,follow">
+  <meta name="theme-color" content="#101110">
+  <link rel="canonical" href="https://eorbah.github.io/EorbahAPI/">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23101110'/%3E%3Ctext x='32' y='44' font-family='system-ui,sans-serif' font-size='34' font-weight='700' fill='%237dd3fc' text-anchor='middle'%3EE%3C/text%3E%3C/svg%3E">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="EorbahAPI">
+  <meta property="og:title" content="EorbahAPI — Documentation">
+  <meta property="og:description" content="Cours complet du framework web PHP EorbahAPI : routage, paramètres validés par Svinx, sécurité, middlewares, tests et déploiement.">
+  <meta property="og:url" content="https://eorbah.github.io/EorbahAPI/">
+  <meta property="og:locale" content="fr_FR">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="EorbahAPI — Documentation">
+  <meta name="twitter:description" content="Cours complet du framework web PHP EorbahAPI : routage, paramètres validés, sécurité, middlewares et tests.">
+
+  <!-- JSON-LD statique (complété par page par js/seo.js) -->
+  <script type="application/ld+json" data-seo="website">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "EorbahAPI",
+    "url": "https://eorbah.github.io/EorbahAPI/",
+    "description": "Cours complet du framework web PHP EorbahAPI : routage, paramètres validés par Svinx, sécurité, middlewares, tests et déploiement.",
+    "inLanguage": "fr",
+    "publisher": {
+      "@type": "Organization",
+      "name": "EORBAH",
+      "url": "https://github.com/EORBAH/EorbahAPI"
+    },
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://eorbah.github.io/EorbahAPI/#/fr/{search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  }
+  </script>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
   <link rel="stylesheet" href="css/core.css">
@@ -195,6 +243,7 @@
   <script src="js/plugin-loader.js"></script>
   <script src="js/markdown.js"></script>
   <script src="js/scroll-lock.js"></script>
+  <script src="js/seo.js"></script>
   <script src="js/nav.js"></script>
   <script src="js/theme.js"></script>
   <script src="js/i18n.js"></script>

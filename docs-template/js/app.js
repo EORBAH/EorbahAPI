@@ -127,6 +127,11 @@
     DocsNav.renderPager($("#docsPager"), groups, lang, pageId);
     DocsNav.renderToc($("#docsToc"), toc);
 
+    // Métadonnées SEO de la page (title, description, OG, canonical, JSON-LD).
+    if (window.DocsSeo) {
+      window.DocsSeo.update({ site, item: found, lang, html, meta, headingId });
+    }
+
     DocsSearch.setContext(lang, pageId, groups);
 
     // Ferme les overlays mobiles après navigation
