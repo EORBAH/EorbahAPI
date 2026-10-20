@@ -3,9 +3,22 @@
 namespace Eorbahapi\RPC;
 
 use Eorbahapi\BaseMountedApplication;
+use Eorbahapi\Request;
+use Eorbahapi\Response;
 use Eorbahapi\Responses\JSONResponse;
 use Eorbahapi\Dependency\DependencyResolver;
+use Eorbahapi\Exceptions\ValidationException;
 
+/**
+ * Serveur JSON-RPC 2.0 montable.
+ *
+ *     $rpc = new JsonRPC();
+ *     $rpc->add_method('user.create', fn (#[Body] CreateUser $user) => ...);
+ *     $app->mount('/rpc', $rpc);
+ *
+ * Le traitement remplit la réponse partagée (`process()`) : le pipeline
+ * d'EorbahAPI décide de l'envoi, ce qui rend le serveur testable via TestClient.
+ */
 class JsonRPC extends BaseMountedApplication
 {
     private array $methods = [];
@@ -19,11 +32,10 @@ class JsonRPC extends BaseMountedApplication
             'description' => 'JSON-RPC server exposing local routes as tools',
         ], $options);
 
-        $this->resolver = new DependencyResolver($this->request, $this->response);
+        $this->resolver = new DependencyResolver($this->request ?? new Request(), $this->response ?? new Response());
     }
 
-
-    public function run(): void
+    public function process(): void
     {
         $data = $this->request->body();
 
@@ -51,19 +63,28 @@ class JsonRPC extends BaseMountedApplication
 
         $callback = $this->methods[$method];
 
+        // Les `params` de l'enveloppe deviennent le corps de la requête : les
+        // attributs de paramètre (#[Body], #[Query]...) fonctionnent comme dans
+        // une route, et `Request::body()` expose les paramètres de la méthode.
+        $rpcRequest = $this->request->withBody(is_array($params) ? $params : []);
+        $this->resolver->setRequestResponse($rpcRequest, $this->response);
+
         try {
             // Le resolver construit les arguments en fonction des paramètres nommés
             // et des dépendances (type‑hints) de la fonction.
-            $args = $this->resolver->resolve($callback, $params);
+            $args = $this->resolver->resolve($callback, is_array($params) ? $params : []);
             $result = $callback(...$args);
 
-            // Envoi de la réponse de succès
-            $res = new JSONResponse([
+            // Réponse de succès
+            $this->response = new JSONResponse([
                 'jsonrpc' => '2.0',
                 'result' => $result,
                 'id' => $id,
             ]);
-            $res->send();
+        } catch (ValidationException $e) {
+            // Paramètres invalides : -32602 (Invalid params), avec le détail.
+            $detail = $e->getErrors()[0]['msg'] ?? $e->getMessage();
+            $this->sendError($id, -32602, 'Invalid params: ' . $detail);
         } catch (\Throwable $e) {
             // Erreur interne du serveur ou lors de l'exécution
             $this->sendError($id, -32603, 'Internal error: ' . $e->getMessage());
@@ -71,10 +92,11 @@ class JsonRPC extends BaseMountedApplication
     }
 
     /**
-     * Envoie une réponse d'erreur JSON‑RPC.
+     * Remplit la réponse avec une erreur JSON‑RPC.
      */
-    private function sendError($id, int $code, string $message): void {
-        $res = new JSONResponse([
+    private function sendError($id, int $code, string $message): void
+    {
+        $this->response = new JSONResponse([
             'jsonrpc' => '2.0',
             'error' => [
                 'code' => $code,
@@ -82,13 +104,12 @@ class JsonRPC extends BaseMountedApplication
             ],
             'id' => $id,
         ]);
-        $res->send();
     }
 
     /**
      * Enregistre une méthode JSON‑RPC.
      *
-     * @param string   $method   Nom de la méthode (ex: "user.create")
+     * @param string   $method   Nom de la méthode (ex: "user.create").
      * @param callable $callback Fonction ou méthode à appeler.
      */
     public function add_method(string $method, callable $callback): void

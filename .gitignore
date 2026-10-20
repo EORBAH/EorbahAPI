@@ -10,3 +10,6 @@ main.php
 cache
 .idea
 .eorbahapi
+
+# site généré (CI)
+_site/

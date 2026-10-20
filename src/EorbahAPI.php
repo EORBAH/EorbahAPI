@@ -204,18 +204,21 @@ class EorbahAPI
                 return $app->handle($subRequest, $this->response);
             }
 
-            // Applications montées historiques (BaseMountedApplication, JsonRPC...) :
-            // elles émettent elles-mêmes leur réponse via run().
+            // Applications montées (StaticFiles, JsonRPC, BaseMountedApplication...) :
+            // handle() remplit et retourne la réponse partagée.
+            if (is_object($app) && method_exists($app, 'handle')) {
+                $result = $app->handle($subRequest, $this->response);
+
+                if ($result instanceof Response) {
+                    return $result;
+                }
+            }
+
+            // Repli historique : applications qui émettent elles-mêmes leur réponse.
             if (is_object($app) && method_exists($app, 'run')) {
                 $app->run();
 
                 return new Response();
-            }
-
-            if (is_object($app) && method_exists($app, 'handle')) {
-                $result = $app->handle($subRequest, $this->response);
-
-                return $result instanceof Response ? $result : new Response();
             }
 
             if (is_callable($app)) {

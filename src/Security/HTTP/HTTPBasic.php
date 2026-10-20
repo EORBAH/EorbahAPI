@@ -3,7 +3,7 @@
 namespace Eorbahapi\Security\HTTP;
 
 use Eorbahapi\Exceptions\HTTPException;
-use Eorbahapi\Responses\JSONResponse;
+use Eorbahapi\Request;
 
 class HTTPBasic {
     private bool $autoError;
@@ -20,24 +20,22 @@ class HTTPBasic {
         $this->realm = $realm;
     }
     
-    public function __invoke(): HTTPAuthorizationCredentials {
-        $headers = getallheaders();
-        $normalizedHeaders = array_change_key_case($headers, CASE_LOWER);
-        
-        if (!isset($normalizedHeaders['authorization'])) {
+    public function __invoke(?Request $request = null): HTTPAuthorizationCredentials {
+        $request ??= new Request();
+        $authHeader = $request->getHeader('Authorization');
+
+        if ($authHeader === null || $authHeader === '') {
             if ($this->autoError) {
                 $this->raiseUnauthorizedError('Authorization header missing');
             }
-            throw new HTTPException(403, 'Authorization header not found');
+            throw new HTTPException(401, 'Authorization header not found');
         }
-        
-        $authHeader = $normalizedHeaders['authorization'];
         
         if (!is_string($authHeader) || empty($authHeader)) {
             if ($this->autoError) {
                 $this->raiseUnauthorizedError('Invalid authorization header');
             }
-            throw new HTTPException(403, 'Invalid authorization header');
+            throw new HTTPException(401, 'Invalid authorization header');
         }
         
         // Parse "Basic base64(username:password)"
@@ -47,7 +45,7 @@ class HTTPBasic {
             if ($this->autoError) {
                 $this->raiseUnauthorizedError('Invalid authorization format');
             }
-            throw new HTTPException(403, 'Invalid authorization format');
+            throw new HTTPException(401, 'Invalid authorization format');
         }
         
         $scheme = $parts[0];
@@ -58,7 +56,7 @@ class HTTPBasic {
             if ($this->autoError) {
                 $this->raiseUnauthorizedError('Invalid authorization scheme');
             }
-            throw new HTTPException(403, 'Invalid authorization scheme');
+            throw new HTTPException(401, 'Invalid authorization scheme');
         }
         
         // Décoder les credentials base64
@@ -67,7 +65,7 @@ class HTTPBasic {
             if ($this->autoError) {
                 $this->raiseUnauthorizedError('Invalid basic auth credentials');
             }
-            throw new HTTPException(403, 'Invalid basic auth credentials');
+            throw new HTTPException(401, 'Invalid basic auth credentials');
         }
         
         return new HTTPAuthorizationCredentials($scheme, $decoded);
@@ -103,17 +101,19 @@ class HTTPBasic {
         $this->autoError = $autoError;
     }
     
-    private function raiseUnauthorizedError(string $detail): void {
+    /**
+     * Valeur de l'en-tête `WWW-Authenticate` associé au schéma.
+     */
+    public function challenge(): string {
         $wwwAuthenticate = 'Basic';
         if ($this->realm) {
             $wwwAuthenticate .= ' realm="' . $this->realm . '"';
         }
-        
-        $res = new JSONResponse([
-            'detail' => $detail,
-            'error' => 'Unauthorized'
-        ], 401, headers: ['WWW-Authenticate' => $wwwAuthenticate]);
-        $res->send();
-        exit;
+
+        return $wwwAuthenticate;
+    }
+
+    private function raiseUnauthorizedError(string $detail): never {
+        throw new HTTPException(401, $detail, ['WWW-Authenticate' => $this->challenge()]);
     }
 }

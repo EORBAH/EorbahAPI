@@ -30,8 +30,12 @@ class TrustedHostMiddleware implements MiddlewareInterface
      */
     public function __invoke(Request $request, Response $response, callable $next): mixed
     {
-        // Récupération de l'hôte depuis le serveur
-        $host = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '';
+        // Hôte de la requête (en-tête Host recopié dans $_SERVER par le SAPI,
+        // ou fourni par une requête injectée).
+        $host = (string) ($request->getHeader('Host')
+            ?? $request->server('HTTP_HOST')
+            ?? $request->server('SERVER_NAME')
+            ?? '');
         // Nettoyage : suppression du port éventuel et mise en minuscule
         $host = strtolower(explode(':', $host)[0]);
 

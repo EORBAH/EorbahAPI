@@ -4,6 +4,17 @@ namespace Eorbahapi;
 
 use Eorbahapi\Exceptions\EorbahAPIError;
 
+/**
+ * Sert un répertoire de fichiers statiques.
+ *
+ *     $app->mount('/static', new StaticFiles(__DIR__ . '/public'));
+ *
+ * L'application montée remplit la réponse partagée (`process()`) : statut,
+ * en-têtes (Content-Type, Last-Modified, ETag, Cache-Control), éventuelle
+ * compression (`Content-Encoding`) et corps. Rien n'est envoyé ici : c'est le
+ * pipeline d'EorbahAPI (ou `run()` en usage autonome) qui envoie la réponse,
+ * ce qui rend le service testable via `TestClient`.
+ */
 class StaticFiles extends BaseMountedApplication
 {
     private string $directory;
@@ -11,7 +22,6 @@ class StaticFiles extends BaseMountedApplication
     private string $cacheControl;
     private bool $compression;
     private array $allowedExtensions;
-
 
     public function __construct(string $directory, $options = [])
     {
@@ -50,24 +60,23 @@ class StaticFiles extends BaseMountedApplication
     }
 
     /**
-     * Point d'entrée principal appelé par mount().
-     * Compatible avec l'interface attendue par EorbahAPI::mount().
-     *
+     * Remplit la réponse (statut, en-têtes, corps) pour le chemin courant.
      */
-    public function run(): void {
+    public function process(): void
+    {
         $path = $this->request->path();
 
-        $served = $this->serve($path);
-        if (!$served) {
+        if (!$this->serve($path)) {
             $this->response->status = 404;
             $this->response->body = 'File not found';
-            $this->response->send();
-            return;
         }
-        $this->response->send();
     }
 
-
+    /**
+     * Sert un chemin relatif au répertoire, en remplissant `$this->response`.
+     *
+     * @return bool false si le fichier n'existe pas ou n'est pas autorisé.
+     */
     public function serve(string $path): bool
     {
         $cleanPath = $this->sanitizePath($path);
@@ -84,8 +93,7 @@ class StaticFiles extends BaseMountedApplication
             return false;
         }
 
-        $this->sendFile($filePath);
-        return true;
+        return $this->serveFile($filePath);
     }
 
     private function sanitizePath(string $path): string
@@ -112,7 +120,17 @@ class StaticFiles extends BaseMountedApplication
         return $realPath && strpos($realPath, $this->directory) === 0;
     }
 
-    private function sendFile(string $filePath): void
+    /**
+     * En-tête de la requête courante (ou null hors requête).
+     */
+    private function requestHeader(string $name): ?string
+    {
+        $request = $this->request ?? null;
+
+        return $request instanceof Request ? $request->getHeader($name) : null;
+    }
+
+    private function serveFile(string $filePath): bool
     {
         if (function_exists('apache_setenv')) {
             @apache_setenv('no-gzip', '1');
@@ -125,28 +143,30 @@ class StaticFiles extends BaseMountedApplication
         $mimeType = $this->getMimeType($filePath);
 
         $this->response->headers['Content-Type'] = $mimeType;
-        $this->response->headers['Last-Modified'] =  gmdate('D, d M Y H:i:s', $lastModified) . ' GMT';
-        $this->response->headers['ETag'] = "'$etag'";
+        $this->response->headers['Last-Modified'] = gmdate('D, d M Y H:i:s', $lastModified) . ' GMT';
+        $this->response->headers['ETag'] = '"' . $etag . '"';
 
         if ($this->cacheControl) {
             $this->response->headers['Cache-Control'] = $this->cacheControl;
         }
 
-        $compressed = false;
-        if ($this->compression && $this->isCompressible($mimeType)) {
-            $compressed = $this->handleCompression($filePath, $mimeType);
-        }
-
-
         if ($this->isNotModified($lastModified, $etag)) {
             $this->response->status = 304;
-            return;
+            $this->response->body = null;
+
+            return true;
         }
 
-        if (!$compressed) {
-            $this->response->headers['Content-Length'] = $fileSize;
-            readfile($filePath);
+        $content = (string) file_get_contents($filePath);
+
+        if ($this->compression && $this->isCompressible($mimeType) && $this->tryCompress($content)) {
+            return true;
         }
+
+        $this->response->headers['Content-Length'] = $fileSize;
+        $this->response->body = $content;
+
+        return true;
     }
 
     private function getMimeType(string $filePath): bool|string
@@ -197,14 +217,17 @@ class StaticFiles extends BaseMountedApplication
         return in_array($mimeType, $compressibleTypes);
     }
 
-    private function handleCompression(string $filePath, $mimeType): bool
+    /**
+     * Compresse le corps lorsque le client accepte gzip (ou brotli si
+     * l'extension est disponible). Retourne true si le corps a été remplacé.
+     */
+    private function tryCompress(string $content): bool
     {
-        $acceptEncoding = isset($_SERVER['HTTP_ACCEPT_ENCODING']) ? $_SERVER['HTTP_ACCEPT_ENCODING'] : '';
-
-        $content = file_get_contents($filePath);
+        $acceptEncoding = (string) $this->requestHeader('Accept-Encoding');
         $originalSize = strlen($content);
-        $compressedContent = null;
+
         $encoding = null;
+        $compressedContent = null;
 
         if (strpos($acceptEncoding, 'br') !== false && function_exists('brotli_compress')) {
             $encoding = 'br';
@@ -212,40 +235,40 @@ class StaticFiles extends BaseMountedApplication
         } elseif (strpos($acceptEncoding, 'gzip') !== false) {
             $encoding = 'gzip';
             $compressedContent = gzencode($content, 6);
-        } else {
+        }
+
+        if ($compressedContent === false || $compressedContent === null || $compressedContent === '') {
             return false;
         }
 
-        if ($compressedContent === false || strlen($compressedContent) === 0) {
-            $this->response->headers['Content-Length'] = $originalSize;
-            $this->response->body =  $content;
-            return true;
+        // Compression inefficace : on sert le contenu original.
+        if (strlen($compressedContent) >= $originalSize) {
+            return false;
         }
 
-        $compressedSize = strlen($compressedContent);
-
         $this->response->headers['Content-Encoding'] = $encoding;
-        $this->response->headers['Content-Length'] = $compressedSize;
+        $this->response->headers['Content-Length'] = strlen($compressedContent);
         $this->response->headers['Vary'] = 'Accept-Encoding';
-
         $this->response->body = $compressedContent;
+
         return true;
     }
 
     private function isNotModified($lastModified, $etag): bool
     {
-        if (isset($_SERVER['HTTP_IF_MODIFIED_SINCE'])) {
-            $ifModifiedSince = strtotime($_SERVER['HTTP_IF_MODIFIED_SINCE']);
-            if ($ifModifiedSince && $lastModified <= $ifModifiedSince) {
+        $ifModifiedSince = $this->requestHeader('If-Modified-Since');
+
+        if ($ifModifiedSince !== null && $ifModifiedSince !== '') {
+            $timestamp = strtotime($ifModifiedSince);
+            if ($timestamp && $lastModified <= $timestamp) {
                 return true;
             }
         }
 
-        if (isset($_SERVER['HTTP_IF_NONE_MATCH'])) {
-            $ifNoneMatch = trim($_SERVER['HTTP_IF_NONE_MATCH'], '"');
-            if ($ifNoneMatch === $etag) {
-                return true;
-            }
+        $ifNoneMatch = $this->requestHeader('If-None-Match');
+
+        if ($ifNoneMatch !== null && trim($ifNoneMatch, "\"'") === $etag) {
+            return true;
         }
 
         return false;

@@ -5,6 +5,14 @@ namespace Eorbahapi;
 use Eorbahapi\Request;
 use Eorbahapi\Response;
 
+/**
+ * Base des applications montées (`$app->mount('/prefix', $subApp)`).
+ *
+ * Une application montée est un handler de requête comme un autre : `handle()`
+ * reçoit la requête (préfixe déjà retiré par l'application hôte), remplit la
+ * réponse partagée dans `process()` et la retourne sans l'envoyer. `run()` reste
+ * disponible pour un usage autonome (elle envoie la réponse).
+ */
 class BaseMountedApplication {
     public Request $request;
     public Response $response;
@@ -19,28 +27,27 @@ class BaseMountedApplication {
     }
 
     /**
-     * Compatibilité avec la signature run($http_code, $handler) de EorbahAPI.
-     * Utilisée si l'application montée est appelée via run().
+     * Usage autonome : traite la requête courante et envoie la réponse.
      */
     public function run(): void {
-        if ($this->request && $this->response) {
-            $this->handle($this->request, $this->response);
-        } else {
-            $this->handle(new Request(), new Response());
-        }
+        $this->handle($this->request ?? new Request(), $this->response ?? new Response())->send();
     }
 
     /**
-     * Point d'entrée principal appelé par mount().
-     *
-     * @param Request  $request
-     * @param Response $response
+     * Point d'entrée principal appelé par mount() puis par le pipeline
+     * d'EorbahAPI. Retourne la réponse sans l'envoyer.
      */
-    public function handle($request, $response): void {
-        $this->setRequestResponse($request, $response);
+    public function handle(?Request $request = null, ?Response $response = null): Response {
+        $this->setRequestResponse($request ?? new Request(), $response ?? new Response());
+
         $this->process();
-        $this->response->send();
+
+        return $this->response;
     }
 
-    public function process() {}
+    /**
+     * Traitement de la requête : à surcharger. Les sous-classes remplissent
+     * `$this->response` (statut, en-têtes, corps).
+     */
+    public function process(): void {}
 }

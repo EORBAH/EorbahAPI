@@ -26,6 +26,24 @@ class Response
         return $this->status;
     }
 
+    public function body(): string|array|null
+    {
+        return $this->body;
+    }
+
+    public function headers(): array
+    {
+        return $this->headers;
+    }
+
+    /**
+     * Corps sous forme de chaîne (les tableaux sont encodés en JSON).
+     */
+    public function text(): string
+    {
+        return is_array($this->body) ? (string) json_encode($this->body) : (string) $this->body;
+    }
+
     public function set_content_type(
         string $contentType = 'html',
         ?int $cacheMaxAge = null,

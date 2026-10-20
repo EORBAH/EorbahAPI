@@ -3,7 +3,7 @@
 namespace Eorbahapi\Security\APIKey;
 
 use Eorbahapi\Exceptions\HTTPException;
-use Eorbahapi\Responses\JSONResponse;
+use Eorbahapi\Request;
 
 class APIKeyHeader {
     private string $headerName;
@@ -14,22 +14,17 @@ class APIKeyHeader {
         $this->autoError = $autoError;
     }
     
-    public function __invoke(): string {
-        // getallheaders() est disponible dans PHP >= 5.4
-        $headers = getallheaders();
-        
-        // Normalisation du nom du header (insensible à la casse)
-        $normalizedHeaders = array_change_key_case($headers, CASE_LOWER);
-        $normalizedHeaderName = strtolower($this->headerName);
-        
-        if (!isset($normalizedHeaders[$normalizedHeaderName])) {
+    public function __invoke(?Request $request = null): string {
+        $request ??= new Request();
+
+        $apiKey = $request->getHeader($this->headerName);
+
+        if ($apiKey === null) {
             if ($this->autoError) {
                 $this->raiseForbiddenError('API key header missing');
             }
             throw new HTTPException(403, 'API key header not found');
         }
-        
-        $apiKey = $normalizedHeaders[$normalizedHeaderName];
         
         if (empty($apiKey) || !is_string($apiKey)) {
             if ($this->autoError) {
@@ -75,12 +70,7 @@ class APIKeyHeader {
         $this->autoError = $autoError;
     }
     
-    private function raiseForbiddenError(string $detail): void {
-        $res = new JSONResponse([
-            'detail' => $detail,
-            'error' => 'Forbidden'
-        ], 403);
-        $res->send();
-        exit;
+    private function raiseForbiddenError(string $detail): never {
+        throw new HTTPException(403, $detail);
     }
 }

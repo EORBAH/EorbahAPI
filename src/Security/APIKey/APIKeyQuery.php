@@ -3,7 +3,7 @@
 namespace Eorbahapi\Security\APIKey;
 
 use Eorbahapi\Exceptions\HTTPException;
-use Eorbahapi\Responses\JSONResponse;
+use Eorbahapi\Request;
 
 class APIKeyQuery {
     private string $queryParamName;
@@ -14,15 +14,17 @@ class APIKeyQuery {
         $this->autoError = $autoError;
     }
     
-    public function __invoke(): string {
-        if (!isset($_GET[$this->queryParamName])) {
+    public function __invoke(?Request $request = null): string {
+        $request ??= new Request();
+
+        $apiKey = $request->query($this->queryParamName);
+
+        if ($apiKey === null) {
             if ($this->autoError) {
                 $this->raiseForbiddenError('API key query parameter missing');
             }
             throw new HTTPException(403, 'API key query parameter not found');
         }
-        
-        $apiKey = $_GET[$this->queryParamName];
         
         if (empty($apiKey) || !is_string($apiKey)) {
             if ($this->autoError) {
@@ -68,12 +70,7 @@ class APIKeyQuery {
         $this->autoError = $autoError;
     }
     
-    private function raiseForbiddenError(string $detail): void {
-        $res = new  JSONResponse([
-            'detail' => $detail,
-            'error' => 'Forbidden'
-        ], 403);
-        $res->send();
-        exit;
+    private function raiseForbiddenError(string $detail): never {
+        throw new HTTPException(403, $detail);
     }
 }

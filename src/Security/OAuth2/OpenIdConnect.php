@@ -2,7 +2,7 @@
 
 namespace Eorbahapi\Security\OAuth2;
 
-use Eorbahapi\DependencyInterface;
+use Eorbahapi\Dependency\DependencyInterface;
 use Eorbahapi\Request;
 use Eorbahapi\Response;
 use Eorbahapi\Security\JWTAuth\JWT;

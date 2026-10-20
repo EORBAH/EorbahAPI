@@ -69,6 +69,19 @@ class Request {
         return $clone;
     }
 
+    /**
+     * Copie de la requête avec un autre corps (utilisé par JSON-RPC : les
+     * `params` de l'enveloppe deviennent le corps pour les attributs `#[Body]`).
+     */
+    public function withBody(array|string|null $body): static
+    {
+        $clone = clone $this;
+        $clone->body = $body;
+        $clone->headersCache = null;
+
+        return $clone;
+    }
+
     public function params(array|null|string $path = null) {
         $query = $this->query();
 
@@ -177,7 +190,15 @@ class Request {
         if ($key !== null) {
             $normalized = array_change_key_case($headers, CASE_LOWER);
 
-            return $normalized[strtolower($key)] ?? null;
+            // `user_agent` (convention PHP) et `user-agent` (convention HTTP)
+            // désignent le même en-tête.
+            foreach ([strtolower($key), strtolower(str_replace('_', '-', $key))] as $candidate) {
+                if (array_key_exists($candidate, $normalized)) {
+                    return $normalized[$candidate];
+                }
+            }
+
+            return null;
         }
 
         return $headers;

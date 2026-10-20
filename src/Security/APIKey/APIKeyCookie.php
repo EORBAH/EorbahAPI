@@ -4,7 +4,7 @@ namespace Eorbahapi\Security\APIKey;
 
 use Eorbahapi\Response;
 use Eorbahapi\Exceptions\HTTPException;
-use Eorbahapi\Responses\JSONResponse;
+use Eorbahapi\Request;
 
 class APIKeyCookie extends Response {
     private string $cookieName;
@@ -15,15 +15,17 @@ class APIKeyCookie extends Response {
         $this->autoError = $autoError;
     }
     
-    public function __invoke(): string {
-        if (!isset($_COOKIE[$this->cookieName])) {
+    public function __invoke(?Request $request = null): string {
+        $request ??= new Request();
+
+        $apiKey = $request->cookie($this->cookieName);
+
+        if ($apiKey === null) {
             if ($this->autoError) {
                 $this->raiseForbiddenError('Cookie API key missing');
             }
             throw new HTTPException(403, 'API key cookie not found');
         }
-        
-        $apiKey = $_COOKIE[$this->cookieName];
         
         if (empty($apiKey) || !is_string($apiKey)) {
             if ($this->autoError) {
@@ -77,12 +79,7 @@ class APIKeyCookie extends Response {
         $this->autoError = $autoError;
     }
     
-    private function raiseForbiddenError(string $detail): void {
-        $res = new JSONResponse([
-            'detail' => $detail,
-            'error' => 'Forbidden'
-        ], 403); 
-        $res->send();
-        exit;
+    private function raiseForbiddenError(string $detail): never {
+        throw new HTTPException(403, $detail);
     }
 }
