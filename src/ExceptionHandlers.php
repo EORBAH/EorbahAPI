@@ -4,35 +4,36 @@ namespace Eorbahapi;
 
 use Eorbahapi\Exceptions\HTTPException;
 use Eorbahapi\Exceptions\ValidationException;
-use function Eorbahapi\Responses\JSONResponse;
+use Eorbahapi\Responses\JSONResponse;
 
+/**
+ * Gestionnaires d'exceptions par défaut.
+ *
+ * Chaque gestionnaire retourne une `Response` sans l'envoyer : c'est
+ * `EorbahAPI::run()` qui l'envoie, et `EorbahAPI::handle()` qui la retourne au
+ * runner (TestClient, runner personnalisé...).
+ */
 class ExceptionHandlers
 {
-    private $dev;
-    public function __construct(bool $dev = false) {
-        $this->dev = $dev;
+    private bool $debug;
+
+    public function __construct(bool $debug = false) {
+        $this->debug = $debug;
     }
+
     /**
      * Gère les HTTPException (404, 403, 500, etc.)
      */
     public function httpExceptionHandler(HTTPException $e, Request $request, Response $response): Response
     {
         $statusCode = $e->getStatusCode();
-        $response->status($statusCode);
-
-        // Ajout des en-têtes personnalisés éventuels
-        foreach ($e->getHeaders() as $name => $value) {
-            $response->header($name, $value);
-        }
 
         // Réponse structurée en JSON (ou autre selon Accept header)
-        echo JSONResponse([
+        return new JSONResponse([
             'error' => true,
             'status' => $statusCode,
             'message' => $e->getMessage() ?: $this->getDefaultMessage($statusCode)
-        ], $statusCode);
-
-        return $response;
+        ], $statusCode, $e->getHeaders());
     }
 
     /**
@@ -40,14 +41,12 @@ class ExceptionHandlers
      */
     public function requestValidationExceptionHandler(ValidationException $e, Request $request, Response $response): Response
     {
-        $response->status(422);
-        echo JSONResponse([
+        return new JSONResponse([
             'error' => true,
             'status' => 422,
-            'message' => 'Validation error',
+            'message' => $e->getMessage() ?: 'RequestValidation error',
             'details' => $e->getErrors()
-        ], 422);
-        return $response;
+        ], 422, $e->getHeaders());
     }
 
     /**
@@ -55,16 +54,14 @@ class ExceptionHandlers
      */
     public function genericExceptionHandler(\Throwable $e, Request $request, Response $response): Response
     {
-        $response->status(500);
-        $isDebug = $this->dev || ($_ENV['APP_DEBUG'] ?? null) === '1' || ($_ENV['APP_DEBUG'] ?? null) === 'true' || ($_ENV['APP_ENV'] ?? null) === 'dev' || ($_ENV['APP_ENV'] ?? null) === 'development';
+        $isDebug = $this->debug || ($_ENV['APP_DEBUG'] ?? null) === '1' || ($_ENV['APP_DEBUG'] ?? null) === 'true' || ($_ENV['APP_ENV'] ?? null) === 'dev' || ($_ENV['APP_ENV'] ?? null) === 'development';
 
-        echo JSONResponse([
+        return new JSONResponse([
             'error' => true,
             'status' => 500,
             'message' => 'Internal Server Error',
             'debug' => $isDebug ? $e->getMessage() : null
         ], 500);
-        return $response;
     }
 
     /**

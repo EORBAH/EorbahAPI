@@ -1,6 +1,8 @@
 <?php
 namespace Eorbahapi\Datastructures;
 
+use Eorbahapi\Exceptions\HTTPException;
+
 /**
  * Classe Headers - Représentation immuable des en-têtes HTTP
  */
@@ -105,11 +107,11 @@ class Headers implements \ArrayAccess, \IteratorAggregate, \Countable {
     }
     
     public function offsetSet($offset, $value): void {
-        throw new \RuntimeException('Headers object is immutable');
+        throw new HTTPException(403, 'Headers object is immutable');
     }
     
     public function offsetUnset($offset): void {
-        throw new \RuntimeException('Headers object is immutable');
+        throw new HTTPException(403, 'Headers object is immutable');
     }
     
     /**

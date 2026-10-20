@@ -1,0 +1,8 @@
+{
+  "_comment": "Liste des plugins activés, dans l'ordre de chargement. Pour ajouter un plugin : crée plugins/<nom>/{plugin.json,index.js,index.css}, puis ajoute <nom> ici.",
+  "enabled": [
+    "callout",
+    "youtube-embed",
+    "review"
+  ]
+}

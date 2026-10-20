@@ -2,13 +2,15 @@
 
 namespace Eorbahapi\Middlewares;
 
-use function Eorbahapi\Responses\JSONResponse;
+use Eorbahapi\Request;
+use Eorbahapi\Response;
+use Eorbahapi\Responses\JSONResponse;
 
-class CORSMiddleware {
-    private $allowOrigins;
-    private $allowCredentials;
-    private $allowMethods;
-    private $allowHeaders;
+class CORSMiddleware implements MiddlewareInterface {
+    private array $allowOrigins;
+    private bool $allowCredentials;
+    private array $allowMethods;
+    private array $allowHeaders;
 
     public function __construct(
         array $allow_origins = ["*"],
@@ -22,8 +24,8 @@ class CORSMiddleware {
         $this->allowHeaders = $allow_headers;
     }
 
-    public function process($request, $response, $next) {
-        $origin = $_SERVER['HTTP_ORIGIN'] ?? null;
+    public function __invoke(Request $request, Response $response, callable $next): mixed {
+        $origin = $request->getHeader('Origin') ?? $request->server('HTTP_ORIGIN');
 
         if ($origin === null) {
             return $next();
@@ -32,41 +34,39 @@ class CORSMiddleware {
         $isOriginAllowed = in_array('*', $this->allowOrigins) || in_array($origin, $this->allowOrigins);
 
         if (!$isOriginAllowed) {
-            $response->status(403);
-            echo JSONResponse(['error' => 'Origin not allowed'], 403);
-            return false;
+            return new JSONResponse(['error' => 'Origin not allowed'], 403);;
         }
 
         if ($this->allowCredentials && in_array('*', $this->allowOrigins)) {
-            $response->setHeader('Access-Control-Allow-Origin', $origin);
-            $response->setHeader('Access-Control-Allow-Credentials', 'true');
+            $response->headers['Access-Control-Allow-Origin'] = $origin;
+            $response->headers['Access-Control-Allow-Credentials'] ='true';
         } elseif (in_array('*', $this->allowOrigins)) {
-            $response->setHeader('Access-Control-Allow-Origin', '*');
+            $response->headers['Access-Control-Allow-Origin'] = '*';
         } else {
-            $response->setHeader('Access-Control-Allow-Origin', $origin);
+            $response->headers['Access-Control-Allow-Origin'] = $origin;
             if ($this->allowCredentials) {
-                $response->setHeader('Access-Control-Allow-Credentials', 'true');
+                $response->headers['Access-Control-Allow-Credentials'] = 'true';
             }
         }
 
         if (!in_array('*', $this->allowMethods)) {
-            $response->setHeader('Access-Control-Allow-Methods', implode(', ', $this->allowMethods));
+            $response->headers['Access-Control-Allow-Methods'] = implode(', ', $this->allowMethods);
         } else {
-            $response->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+            $response->headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, PATCH, OPTIONS';
         }
 
         if (!in_array('*', $this->allowHeaders)) {
-            $response->setHeader('Access-Control-Allow-Headers', implode(', ', $this->allowHeaders));
+            $response->headers['Access-Control-Allow-Headers'] = implode(', ', $this->allowHeaders);
         } else {
-            $response->setHeader('Access-Control-Allow-Headers', '*');
+            $response->headers['Access-Control-Allow-Headers'] = '*';
         }
 
-        if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-            $response->setHeader('Access-Control-Max-Age', '86400');
-            $response->status(204);
+        if ($request->method() === 'OPTIONS') {
+            $response->headers['Access-Control-Max-Age'] = '86400';
+            $response->status = 204;
             return false;
         }
-        
+
         return $next();
     }
 }

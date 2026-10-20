@@ -2,19 +2,23 @@
 
 namespace Eorbahapi\Responses;
 
-function HTMLResponse(string $content, int $statusCode = 200, array $headers = [], bool $setContentType = true): string
+use Eorbahapi\Response;
+
+class HTMLResponse extends Response
 {
-    if (!headers_sent()) {
-        http_response_code($statusCode);
-
+    public function __construct(
+        string $content,
+        int $status = 200,
+        array $headers = [],
+        bool $setContentType = true
+    ) {
         if ($setContentType) {
-            header('Content-Type: text/html; charset=UTF-8');
+            $headers['Content-Type'] ??= 'text/html; charset=UTF-8';
         }
-
-        foreach ($headers as $name => $value) {
-            header($name . ': ' . $value, false);
-        }
+        parent::__construct(
+            body: $content,
+            status: $status,
+            headers: $headers,
+        );
     }
-
-    return $content;
 }

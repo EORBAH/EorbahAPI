@@ -1,0 +1,104 @@
+name: Documentation site
+
+# Génère le site statique (docs-template) à partir du cours (docs/fr), le publie
+# sur GitHub Pages et propose une pull request avec les fichiers générés pour
+# que le dépôt reste à jour.
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'scripts/build_docs_site.py'
+      - 'scripts/docs_start.sh'
+      - 'docs-template/**'
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'scripts/**'
+      - 'docs-template/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write      # créer la pull request des fichiers générés
+  pages: write         # publier sur GitHub Pages
+  id-token: write      # OIDC requis par actions/deploy-pages
+
+concurrency:
+  group: docs-site-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Générer le site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Générer docs-template depuis docs/fr
+        run: python scripts/build_docs_site.py
+
+      - name: Vérifier que le site est à jour
+        if: github.event_name == 'push'
+        run: python scripts/build_docs_site.py --check
+
+      - name: Valider le JSON généré
+        run: |
+          python -c "import json,pathlib; [json.loads(p.read_text(encoding='utf-8')) for p in pathlib.Path('docs-template/config').glob('*.json')]; print('JSON valide')"
+          python -c "import pathlib; files=sorted(pathlib.Path('docs-template/content').glob('*/*.md')); assert files, 'aucune page'; assert all(p.read_text(encoding='utf-8').strip() for p in files), 'page vide'; print(len(files), 'pages non vides')"
+
+      - name: Préparer l'artefact Pages
+        run: |
+          rm -rf _site
+          mkdir -p _site
+          cp -R docs-template/. _site/
+          rm -f _site/.docs-build.json
+          test -f _site/index.html
+          test -f _site/config/nav.json
+
+      - name: Upload de l'artefact Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Proposer une pull request avec le site généré
+        if: github.event_name == 'push' && github.ref_name != 'gh-pages'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: 'docs: régénère le site de documentation'
+          branch: docs/site
+          delete-branch: true
+          title: 'docs: régénère le site de documentation'
+          body: |
+            Site généré automatiquement depuis `docs/fr` par
+            `scripts/build_docs_site.py`.
+
+            - pages : `docs-template/content/fr/`
+            - navigation : `docs-template/config/nav.json`
+            - configuration : `docs-template/config/site.json`
+
+            Rien à relire côté contenu : les pages viennent du cours, lui-même
+            vérifié par `tests/ExamplesTest.php`.
+          add-paths: |
+            docs-template/
+          labels: documentation, automated
+
+  deploy:
+    name: Publier sur GitHub Pages
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Déployer
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,10 @@
+{
+  "name": "youtube-embed",
+  "version": "1.0.0",
+  "tag": "youtube",
+  "kind": "inline",
+  "description": "Intègre une vidéo YouTube dans une page markdown.",
+  "usage": "::youtube{id=\"dQw4w9WgXcQ\" title=\"Titre optionnel\"}",
+  "entry": "index.js",
+  "style": "index.css"
+}

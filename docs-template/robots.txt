@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://eorbah.github.io/EorbahAPI/sitemap.xml

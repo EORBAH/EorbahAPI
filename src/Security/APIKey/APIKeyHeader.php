@@ -2,6 +2,9 @@
 
 namespace Eorbahapi\Security\APIKey;
 
+use Eorbahapi\Exceptions\HTTPException;
+use Eorbahapi\Request;
+
 class APIKeyHeader {
     private string $headerName;
     private bool $autoError;
@@ -11,28 +14,23 @@ class APIKeyHeader {
         $this->autoError = $autoError;
     }
     
-    public function __invoke(): string {
-        // getallheaders() est disponible dans PHP >= 5.4
-        $headers = getallheaders();
-        
-        // Normalisation du nom du header (insensible à la casse)
-        $normalizedHeaders = array_change_key_case($headers, CASE_LOWER);
-        $normalizedHeaderName = strtolower($this->headerName);
-        
-        if (!isset($normalizedHeaders[$normalizedHeaderName])) {
+    public function __invoke(?Request $request = null): string {
+        $request ??= new Request();
+
+        $apiKey = $request->getHeader($this->headerName);
+
+        if ($apiKey === null) {
             if ($this->autoError) {
                 $this->raiseForbiddenError('API key header missing');
             }
-            throw new \RuntimeException('API key header not found');
+            throw new HTTPException(403, 'API key header not found');
         }
-        
-        $apiKey = $normalizedHeaders[$normalizedHeaderName];
         
         if (empty($apiKey) || !is_string($apiKey)) {
             if ($this->autoError) {
                 $this->raiseForbiddenError('Invalid API key format');
             }
-            throw new \RuntimeException('Invalid API key format');
+            throw new HTTPException(403, 'Invalid API key format');
         }
         
         return $apiKey;
@@ -45,7 +43,7 @@ class APIKeyHeader {
             if ($this->autoError) {
                 $this->raiseForbiddenError('Invalid API key');
             }
-            throw new \RuntimeException('Invalid API key');
+            throw new HTTPException(403, 'Invalid API key');
         }
         
         return $apiKey;
@@ -58,7 +56,7 @@ class APIKeyHeader {
             if ($this->autoError) {
                 $this->raiseForbiddenError('API key validation failed');
             }
-            throw new \RuntimeException('API key validation failed');
+            throw new HTTPException(403, 'API key validation failed');
         }
         
         return $apiKey;
@@ -72,15 +70,7 @@ class APIKeyHeader {
         $this->autoError = $autoError;
     }
     
-    private function raiseForbiddenError(string $detail): void {
-        header('HTTP/1.1 403 Forbidden');
-        header('Content-Type: application/json');
-        
-        echo json_encode([
-            'detail' => $detail,
-            'error' => 'Forbidden'
-        ]);
-        
-        exit;
+    private function raiseForbiddenError(string $detail): never {
+        throw new HTTPException(403, $detail);
     }
 }

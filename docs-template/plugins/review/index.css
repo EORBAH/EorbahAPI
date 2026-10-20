@@ -1,0 +1,17 @@
+.docs-plugin-review {
+  margin: 0;
+  padding: 20px 22px;
+  border: 1px solid var(--docs-border);
+  border-radius: var(--docs-radius);
+  background: var(--docs-surface);
+}
+.docs-plugin-review-stars { color: var(--docs-warning); font-size: 15px; margin-bottom: 10px; letter-spacing: 2px; }
+.docs-plugin-review blockquote {
+  margin: 0 0 14px; padding: 0; border: 0;
+  color: var(--docs-text); font-size: 15px; line-height: 1.6;
+  font-family: var(--docs-serif); font-style: italic;
+}
+.docs-plugin-review figcaption { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.docs-plugin-review figcaption strong { color: var(--docs-text); }
+.docs-plugin-review figcaption span { color: var(--docs-muted); }
+.docs-plugin-review figcaption span::before { content: "· "; }

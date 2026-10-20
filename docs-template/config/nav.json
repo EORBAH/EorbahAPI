@@ -1,0 +1,186 @@
+{
+  "fr": [
+    {
+      "id": "accueil",
+      "title": "Accueil",
+      "icon": "ti ti-home",
+      "inSidebar": true,
+      "items": [
+        {
+          "id": "index",
+          "title": "Accueil",
+          "icon": "ti ti-home",
+          "file": "index.md"
+        },
+        {
+          "id": "installation",
+          "title": "Installation",
+          "icon": "ti ti-download",
+          "file": "installation.md"
+        },
+        {
+          "id": "first-steps",
+          "title": "Premiers pas",
+          "icon": "ti ti-flag-3",
+          "file": "first-steps.md"
+        }
+      ]
+    },
+    {
+      "id": "guide-du-cours",
+      "title": "Guide du cours",
+      "icon": "ti ti-book-2",
+      "inSidebar": true,
+      "items": [
+        {
+          "id": "routing",
+          "title": "Routage",
+          "icon": "ti ti-file-text",
+          "file": "routing.md"
+        },
+        {
+          "id": "path-params",
+          "title": "Paramètres de chemin",
+          "icon": "ti ti-file-text",
+          "file": "path-params.md"
+        },
+        {
+          "id": "query-params",
+          "title": "Paramètres de requête",
+          "icon": "ti ti-file-text",
+          "file": "query-params.md"
+        },
+        {
+          "id": "validations",
+          "title": "Validations",
+          "icon": "ti ti-file-text",
+          "file": "validations.md"
+        },
+        {
+          "id": "request-body",
+          "title": "Corps de requête",
+          "icon": "ti ti-file-text",
+          "file": "request-body.md"
+        },
+        {
+          "id": "nested-models",
+          "title": "Modèles imbriqués",
+          "icon": "ti ti-file-text",
+          "file": "nested-models.md"
+        },
+        {
+          "id": "forms",
+          "title": "Formulaires",
+          "icon": "ti ti-file-text",
+          "file": "forms.md"
+        },
+        {
+          "id": "files",
+          "title": "Fichiers",
+          "icon": "ti ti-file-text",
+          "file": "files.md"
+        },
+        {
+          "id": "headers",
+          "title": "En-têtes",
+          "icon": "ti ti-file-text",
+          "file": "headers.md"
+        },
+        {
+          "id": "cookies",
+          "title": "Cookies",
+          "icon": "ti ti-file-text",
+          "file": "cookies.md"
+        },
+        {
+          "id": "responses",
+          "title": "Réponses",
+          "icon": "ti ti-file-text",
+          "file": "responses.md"
+        }
+      ]
+    },
+    {
+      "id": "aller-plus-loin",
+      "title": "Aller plus loin",
+      "icon": "ti ti-rocket",
+      "inSidebar": true,
+      "items": [
+        {
+          "id": "dependencies",
+          "title": "Dépendances",
+          "icon": "ti ti-file-text",
+          "file": "dependencies.md"
+        },
+        {
+          "id": "security",
+          "title": "Sécurité",
+          "icon": "ti ti-file-text",
+          "file": "security.md"
+        },
+        {
+          "id": "middlewares",
+          "title": "Middlewares",
+          "icon": "ti ti-file-text",
+          "file": "middlewares.md"
+        },
+        {
+          "id": "controllers",
+          "title": "Contrôleurs",
+          "icon": "ti ti-file-text",
+          "file": "controllers.md"
+        },
+        {
+          "id": "static-files",
+          "title": "Fichiers statiques",
+          "icon": "ti ti-file-text",
+          "file": "static-files.md"
+        },
+        {
+          "id": "templates",
+          "title": "Templates Twig",
+          "icon": "ti ti-file-text",
+          "file": "templates.md"
+        },
+        {
+          "id": "errors",
+          "title": "Gestion des erreurs",
+          "icon": "ti ti-file-text",
+          "file": "errors.md"
+        },
+        {
+          "id": "rpc",
+          "title": "JSON-RPC",
+          "icon": "ti ti-file-text",
+          "file": "rpc.md"
+        },
+        {
+          "id": "testing",
+          "title": "Tests",
+          "icon": "ti ti-file-text",
+          "file": "testing.md"
+        },
+        {
+          "id": "runners",
+          "title": "Runners personnalisés",
+          "icon": "ti ti-file-text",
+          "file": "runners.md"
+        }
+      ]
+    },
+    {
+      "id": "reference",
+      "title": "Référence",
+      "icon": "ti ti-api",
+      "inSidebar": true,
+      "items": [
+        {
+          "id": "reference",
+          "title": "Référence API",
+          "icon": "ti ti-api",
+          "file": "reference.md"
+        }
+      ]
+    }
+  ]
+}

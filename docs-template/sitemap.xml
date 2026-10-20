@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://eorbah.github.io/EorbahAPI/#/fr/index</loc></url>
+  <url><loc>https://eorbah.github.io/EorbahAPI/#/fr/installation</loc></url>
+  <url><loc>https://eorbah.github.io/EorbahAPI/#/fr/first-steps</loc></url>
+  <url><loc>https://eorbah.github.io/EorbahAPI/#/fr/routing</loc></url>
+  <url><loc>https://eorbah.github.io/EorbahAPI/#/fr/path-params</loc></url>
+  <url><loc>https://eorbah.github.io/EorbahAPI/#/fr/query-params</loc></url>
+  <url><loc>https://eorbah.github.io/EorbahAPI/#/fr/validations</loc></url>
+  <url><loc>https://eorbah.github.io/EorbahAPI/#/fr/request-body</loc></url>
+  <url><loc>https://eorbah.github.io/EorbahAPI/#/fr/nested-models</loc></url>
+  <url><loc>https://eorbah.github.io/EorbahAPI/#/fr/forms</loc></url>
+  <url><loc>https://eorbah.github.io/EorbahAPI/#/fr/files</loc></url>
+  <url><loc>https://eorbah.github.io/EorbahAPI/#/fr/headers</loc></url>
+  <url><loc>https://eorbah.github.io/EorbahAPI/#/fr/cookies</loc></url>
+  <url><loc>https://eorbah.github.io/EorbahAPI/#/fr/responses</loc></url>
+  <url><loc>https://eorbah.github.io/EorbahAPI/#/fr/dependencies</loc></url>
+  <url><loc>https://eorbah.github.io/EorbahAPI/#/fr/security</loc></url>
+  <url><loc>https://eorbah.github.io/EorbahAPI/#/fr/middlewares</loc></url>
+  <url><loc>https://eorbah.github.io/EorbahAPI/#/fr/controllers</loc></url>
+  <url><loc>https://eorbah.github.io/EorbahAPI/#/fr/static-files</loc></url>
+  <url><loc>https://eorbah.github.io/EorbahAPI/#/fr/templates</loc></url>
+  <url><loc>https://eorbah.github.io/EorbahAPI/#/fr/errors</loc></url>
+  <url><loc>https://eorbah.github.io/EorbahAPI/#/fr/rpc</loc></url>
+  <url><loc>https://eorbah.github.io/EorbahAPI/#/fr/testing</loc></url>
+  <url><loc>https://eorbah.github.io/EorbahAPI/#/fr/runners</loc></url>
+  <url><loc>https://eorbah.github.io/EorbahAPI/#/fr/reference</loc></url>
+</urlset>

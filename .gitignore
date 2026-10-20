@@ -1,12 +1,17 @@
 /vendor/
 composer.lock
-/.archive/
+.archive/
 .env
 dump.rdb
+.phpunit.result.cache
 .php-cs-fixer.cache
-.vscode
+.vscode/
 NOTES.md
-feats/
+feats
 main.php
-.idea
 cache
+.idea
+.eorbahapi
+
+# site généré (CI)
+_site/

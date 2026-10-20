@@ -2,11 +2,12 @@
 
 namespace Eorbahapi\Middlewares;
 
-use Eorbahapi\Security\RateLimiter;
 use Eorbahapi\Request;
-use function Eorbahapi\Responses\JSONResponse;
+use Eorbahapi\Response;
+use Eorbahapi\Security\RateLimiter;
+use Eorbahapi\Responses\JSONResponse;
 
-class RateLimitingMiddleware
+class RateLimitingMiddleware implements MiddlewareInterface
 {
     private RateLimiter $rateLimiter;
     private int $maxRequests;
@@ -35,8 +36,7 @@ class RateLimitingMiddleware
         $this->customPrefix = $customPrefix;
     }
 
-    public function process($request, $response, $next) {
-        // Construction de la clé
+    public function __invoke(Request $request, Response $response, callable $next): mixed {
         if ($this->customPrefix !== null) {
             $key = $this->customPrefix;
         } else {
@@ -49,8 +49,8 @@ class RateLimitingMiddleware
 
         $isAllowed = $this->rateLimiter->checkRateLimit($key, $this->maxRequests, $this->timeWindow);
         if (!$isAllowed) {
-            
-            return JSONResponse([
+
+            return new JSONResponse([
                 'error' => [
                     'code' => '429',
                     'message' => 'Rate limit exceeded',

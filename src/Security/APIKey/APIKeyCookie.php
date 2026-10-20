@@ -1,7 +1,10 @@
 <?php
 
 namespace Eorbahapi\Security\APIKey;
+
 use Eorbahapi\Response;
+use Eorbahapi\Exceptions\HTTPException;
+use Eorbahapi\Request;
 
 class APIKeyCookie extends Response {
     private string $cookieName;
@@ -12,21 +15,23 @@ class APIKeyCookie extends Response {
         $this->autoError = $autoError;
     }
     
-    public function __invoke(): string {
-        if (!isset($_COOKIE[$this->cookieName])) {
+    public function __invoke(?Request $request = null): string {
+        $request ??= new Request();
+
+        $apiKey = $request->cookie($this->cookieName);
+
+        if ($apiKey === null) {
             if ($this->autoError) {
                 $this->raiseForbiddenError('Cookie API key missing');
             }
-            throw new \RuntimeException('API key cookie not found');
+            throw new HTTPException(403, 'API key cookie not found');
         }
-        
-        $apiKey = $_COOKIE[$this->cookieName];
         
         if (empty($apiKey) || !is_string($apiKey)) {
             if ($this->autoError) {
                 $this->raiseForbiddenError('Invalid API key format');
             }
-            throw new \RuntimeException('Invalid API key format');
+            throw new HTTPException(403, 'Invalid API key format');
         }
         
         return $apiKey;
@@ -39,7 +44,7 @@ class APIKeyCookie extends Response {
             if ($this->autoError) {
                 $this->raiseForbiddenError('Invalid API key');
             }
-            throw new \RuntimeException('Invalid API key');
+            throw new HTTPException(403, 'Invalid API key');
         }
         
         return $apiKey;
@@ -52,7 +57,7 @@ class APIKeyCookie extends Response {
             if ($this->autoError) {
                 $this->raiseForbiddenError('API key validation failed');
             }
-            throw new \RuntimeException('API key validation failed');
+            throw new HTTPException(403, 'API key validation failed');
         }
         
         return $apiKey;
@@ -74,11 +79,7 @@ class APIKeyCookie extends Response {
         $this->autoError = $autoError;
     }
     
-    private function raiseForbiddenError(string $detail): void {
-        $this->setStatusCode(403)->json([
-            'detail' => $detail,
-            'error' => 'Forbidden'
-        ]);
-        exit;
+    private function raiseForbiddenError(string $detail): never {
+        throw new HTTPException(403, $detail);
     }
 }

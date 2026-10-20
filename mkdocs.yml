@@ -1,0 +1,86 @@
+site_name: EorbahAPI
+site_description: Framework web PHP moderne pour construire des API — cours complet
+site_url: https://eor-bah545.github.io/EorbahAPI/
+repo_url: https://github.com/EORBAH/EorbahAPI
+repo_name: EORBAH/EorbahAPI
+docs_dir: docs
+edit_uri: edit/develop/docs/
+
+theme:
+  name: material
+  language: fr
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - content.code.copy
+    - content.code.annotate
+    - content.action.edit
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/weather-night
+        name: Passer au thème sombre
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/weather-sunny
+        name: Passer au thème clair
+
+plugins:
+  - search
+  - i18n:
+      docs_structure: folder
+      fallback_to_default: true
+      reconfigure_material: true
+      reconfigure_search: true
+      languages:
+        - locale: fr
+          name: Français
+          default: true
+        - locale: en
+          name: English
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+
+nav:
+  - Accueil: index.md
+  - Installation: installation.md
+  - Premiers pas: first-steps.md
+  - Guide du cours:
+      - Routage: routing.md
+      - Paramètres de chemin: path-params.md
+      - Paramètres de requête: query-params.md
+      - Validations: validations.md
+      - Corps de requête: request-body.md
+      - Modèles imbriqués: nested-models.md
+      - Formulaires: forms.md
+      - Fichiers: files.md
+      - En-têtes: headers.md
+      - Cookies: cookies.md
+      - Réponses: responses.md
+  - Aller plus loin:
+      - Dépendances: dependencies.md
+      - Sécurité: security.md
+      - Middlewares: middlewares.md
+      - Contrôleurs: controllers.md
+      - Fichiers statiques: static-files.md
+      - Templates Twig: templates.md
+      - Gestion des erreurs: errors.md
+      - JSON-RPC: rpc.md
+      - Tests: testing.md
+      - Runners personnalisés: runners.md
+  - Référence API: reference.md

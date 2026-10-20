@@ -5,14 +5,14 @@ namespace Eorbahapi\Security;
 use Eorbahapi\Security\RateLimiter;
 use Eorbahapi\Request;
 use Eorbahapi\Response;
-use function Eorbahapi\Responses\JSONResponse;
+use Eorbahapi\Responses\JSONResponse;
 
 class RateLimit
 {
 
-    private $rate_limiter;
-    private $request;
-    private $response;
+    private RateLimiter $rate_limiter;
+    private Request $request;
+    private Response $response;
 
     public function __construct()
     {
@@ -29,19 +29,20 @@ class RateLimit
      * @param int $timeWindow Période en secondes
      * @return bool True = autorisé, False = limité
      */
-    public function checkRateLimit(string $suffix = '', string $maxRequests, int $timeWindow, bool $default = true): bool {
+    public function checkRateLimit(string $suffix = "", int $maxRequests, int $timeWindow, bool $default = true): bool {
         $key = $this->request->getClientIP() . '-' . $suffix;
         $isExceded = $this->rate_limiter->checkRateLimit($key, $maxRequests, $timeWindow);
 
         if(!$isExceded && $default) {
             $this->response->status(429);
-            echo JSONResponse([
+            $res = new JSONResponse([
                 "response" => [
                     "code" =>"429",
                     "isExceded" => $isExceded,
                     "message" => "ratelimiting exceded"
                 ]
             ], 429);
+            $res->send();
             exit;
         }
 

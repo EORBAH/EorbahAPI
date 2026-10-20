@@ -2,7 +2,9 @@
 
 namespace Eorbahapi\Datastructures;
 
-// (interne, pour multipart/form-data)
+/**
+ *  interne for multipart/form-data
+ */
 class FormData {
     private $data = [];
 

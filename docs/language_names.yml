@@ -1,0 +1,7 @@
+# Langues cibles de la traduction automatique.
+# La langue source est le français (docs/fr).
+fr:
+  name: Français
+  default: true
+en:
+  name: English

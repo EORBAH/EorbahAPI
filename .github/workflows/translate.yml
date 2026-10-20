@@ -1,0 +1,90 @@
+name: Translate Documentation
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'docs/fr/**'
+      - 'scripts/translate.py'
+      - 'scripts/prompts/**'
+  pull_request:
+    paths:
+      - 'docs/**'
+  workflow_dispatch:
+    inputs:
+      lang:
+        description: "Langue cible (code, ou 'all')"
+        required: false
+        default: all
+      force:
+        description: "Retraduire même les pages à jour"
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check:
+    name: Vérifier les traductions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Vérifier que chaque page française existe dans toutes les langues
+        continue-on-error: true
+        run: python scripts/translate.py --lang all --check
+
+  translate:
+    name: Traduire
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Traduire les pages manquantes ou modifiées
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_BASE_URL: ${{ vars.LLM_BASE_URL || 'https://api.deepseek.com/v1' }}
+          LLM_MODEL: ${{ vars.LLM_MODEL || 'deepseek-chat' }}
+          TARGET_LANG: ${{ github.event.inputs.lang || 'all' }}
+          FORCE: ${{ github.event.inputs.force || 'false' }}
+        run: |
+          if [ -z "$LLM_API_KEY" ]; then
+            echo "::notice::Secret LLM_API_KEY absent : traduction ignorée (ajoutez-le pour l'activer)."
+            exit 0
+          fi
+          if [ "$FORCE" = "true" ]; then
+            python scripts/translate.py --lang "$TARGET_LANG" --force
+          else
+            python scripts/translate.py --lang "$TARGET_LANG"
+          fi
+
+      - name: Ouvrir une pull request avec les traductions
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: 'docs: traductions automatiques'
+          branch: docs/translations
+          delete-branch: true
+          title: 'docs: traductions automatiques'
+          body: |
+            Traductions générées automatiquement à partir de `docs/fr`.
+
+            - script : `scripts/translate.py`
+            - prompts : `scripts/prompts/`
+            - merci de relire les pages avant fusion (le modèle peut se tromper)
+          add-paths: |
+            docs/
+          labels: documentation, automated

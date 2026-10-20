@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- ===================================================================
+       SEO — valeurs par défaut statiques (crawlers, partage de lien).
+       js/seo.js les met à jour à chaque changement de page :
+       title, description, Open Graph, Twitter, canonical, JSON-LD.
+       Source de vérité : config/site.json → seo
+       =================================================================== -->
+  <title>EorbahAPI — Documentation</title>
+  <meta name="description" content="Cours complet du framework web PHP EorbahAPI : routage, paramètres validés par Svinx, sécurité, middlewares, tests et déploiement.">
+  <meta name="keywords" content="EorbahAPI, PHP, framework, API, routage, validation, Svinx, middlewares, tests, documentation">
+  <meta name="author" content="EORBAH">
+  <meta name="robots" content="index,follow">
+  <meta name="theme-color" content="#101110">
+  <link rel="canonical" href="https://eorbah.github.io/EorbahAPI/">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23101110'/%3E%3Ctext x='32' y='44' font-family='system-ui,sans-serif' font-size='34' font-weight='700' fill='%237dd3fc' text-anchor='middle'%3EE%3C/text%3E%3C/svg%3E">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="EorbahAPI">
+  <meta property="og:title" content="EorbahAPI — Documentation">
+  <meta property="og:description" content="Cours complet du framework web PHP EorbahAPI : routage, paramètres validés par Svinx, sécurité, middlewares, tests et déploiement.">
+  <meta property="og:url" content="https://eorbah.github.io/EorbahAPI/">
+  <meta property="og:locale" content="fr_FR">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="EorbahAPI — Documentation">
+  <meta name="twitter:description" content="Cours complet du framework web PHP EorbahAPI : routage, paramètres validés, sécurité, middlewares et tests.">
+
+  <!-- JSON-LD statique (complété par page par js/seo.js) -->
+  <script type="application/ld+json" data-seo="website">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "EorbahAPI",
+    "url": "https://eorbah.github.io/EorbahAPI/",
+    "description": "Cours complet du framework web PHP EorbahAPI : routage, paramètres validés par Svinx, sécurité, middlewares, tests et déploiement.",
+    "inLanguage": "fr",
+    "publisher": {
+      "@type": "Organization",
+      "name": "EORBAH",
+      "url": "https://github.com/EORBAH/EorbahAPI"
+    },
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://eorbah.github.io/EorbahAPI/#/fr/{search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  }
+  </script>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+  <link rel="stylesheet" href="css/core.css">
+
+  <!-- ===================================================================
+       CUSTOM CSS
+       Ajoute ici un lien vers ta propre feuille, ou écris directement
+       dans ce bloc. N'a pas besoin de toucher css/core.css ni root.css.
+       =================================================================== -->
+  <style id="custom-css">
+    /* :root { --docs-accent-strong: #ff6b4a; } */
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+</head>
+<body>
+
+  <!-- =====================================================================
+       HEADER
+       ===================================================================== -->
+  <header class="docs-header">
+    <button class="docs-icon-btn docs-mobile-menu-btn" id="menuButtonMobile"
+            aria-label="Ouvrir la navigation" aria-controls="docsSidebar" aria-expanded="false">
+      <i class="ti ti-menu-2"></i>
+    </button>
+
+    <a class="docs-brand" href="#top" aria-label="Accueil documentation">
+      <span class="docs-brand-mark" id="brandMark" aria-hidden="true"></span>
+      <span data-docs-brand>Documentation</span>
+    </a>
+
+    <div class="docs-header-spacer"></div>
+
+    <button class="docs-search-trigger" id="searchTrigger" aria-label="Rechercher">
+      <i class="ti ti-search"></i>
+      <span>Rechercher...</span>
+      <kbd>Ctrl K</kbd>
+    </button>
+
+    <nav class="docs-header-actions" aria-label="Actions">
+      <!-- Recherche (icône, toujours visible) -->
+      <button class="docs-icon-btn" id="searchButton" aria-label="Rechercher" title="Rechercher (Ctrl/Cmd + K)">
+        <i class="ti ti-search"></i>
+      </button>
+
+      <!-- MENU = plan complet du site (tous les fichiers, y compris Releases).
+           Différent de la sidebar de gauche, qui ne montre que la nav
+           contextuelle (sections #ancres de la catégorie en cours). -->
+      <button class="docs-icon-btn" id="siteMenuButton" aria-label="Menu du site"
+              title="Menu complet du site" aria-controls="siteMenu" aria-expanded="false">
+        <i class="ti ti-layout-sidebar-left-expand"></i>
+      </button>
+
+      <!-- Thème -->
+      <div class="docs-dropdown">
+        <button class="docs-icon-btn" aria-label="Changer de thème" title="Thème" aria-haspopup="menu">
+          <i class="ti ti-palette"></i>
+        </button>
+        <div class="docs-dropdown-panel" id="themeMenu" role="menu"></div>
+      </div>
+
+      <!-- Langue -->
+      <div class="docs-dropdown">
+        <button class="docs-icon-btn" id="langButton" aria-label="Changer de langue" title="Langue" aria-haspopup="menu">
+          <i class="ti ti-language"></i>
+        </button>
+        <div class="docs-dropdown-panel" id="langMenu" role="menu"></div>
+      </div>
+
+      <!-- Assistant -->
+      <button class="docs-icon-btn" id="assistantButton" aria-label="Assistant" title="Assistant">
+        <i class="ti ti-message-chatbot"></i>
+      </button>
+    </nav>
+  </header>
+
+  <div class="docs-app" id="top">
+    <!-- ===================================================================
+         SIDEBAR = "nav" contextuelle (sections avec ancres #introduction...)
+         Générée par js/nav.js à partir des groupes inSidebar=true de
+         config/nav.json. Ne contient PAS les Ressources/Changelog : ça,
+         c'est le rôle du menu complet ci-dessous.
+         =================================================================== -->
+    <aside class="docs-sidebar" id="docsSidebar" aria-label="Navigation"></aside>
+
+    <div class="docs-backdrop" id="docsBackdrop"></div>
+
+    <!-- ===================================================================
+         CONTENU — remplacé à chaque changement de page par js/app.js
+         =================================================================== -->
+    <main class="docs-main">
+      <div id="conteneur-docs"></div>
+    </main>
+
+    <!-- Sommaire de la page en cours uniquement -->
+    <aside class="docs-toc" id="docsToc" aria-label="Sommaire"></aside>
+  </div>
+
+  <!-- =====================================================================
+       FOOTER — entièrement personnalisable via config/site.json → footer
+       ===================================================================== -->
+  <footer class="docs-footer">
+    <div class="docs-footer-inner">
+      <div class="docs-footer-top">
+        <div class="docs-footer-brand">
+          <div class="docs-footer-brand-name" id="footerBrandName">Documentation</div>
+          <p class="docs-footer-tagline" id="footerTagline"></p>
+          <div class="docs-footer-social" id="footerSocial"></div>
+        </div>
+        <div id="footerColumns" style="display:contents"></div>
+      </div>
+      <div class="docs-footer-bottom">
+        <span id="footerCorporate"></span>
+        <div class="docs-footer-legal" id="footerLegal"></div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- =====================================================================
+       MENU DU SITE — plan complet (tous les groupes, y compris Ressources
+       / Changelog / Releases). Ouvert par #siteMenuButton dans le header.
+       ===================================================================== -->
+  <div class="docs-site-menu" id="siteMenu" aria-hidden="true">
+    <div class="docs-menu-panel" role="dialog" aria-modal="true" aria-label="Menu du site">
+      <div class="docs-menu-head">
+        <strong>Toute la documentation</strong>
+        <button class="docs-icon-btn" id="closeSiteMenu" aria-label="Fermer">
+          <i class="ti ti-x"></i>
+        </button>
+      </div>
+      <div id="siteMenuList"></div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       RECHERCHE
+       ===================================================================== -->
+  <div class="docs-search-overlay" id="docsSearch" aria-hidden="true">
+    <div class="docs-search-box" role="dialog" aria-modal="true" aria-label="Recherche">
+      <div class="docs-search-input-wrap">
+        <i class="ti ti-search"></i>
+        <input class="docs-search-input" id="docsSearchInput" type="search"
+               placeholder="Rechercher dans la documentation..." autocomplete="off">
+        <span class="docs-search-scope" id="docsSearchScope">Toute la doc</span>
+        <button class="docs-icon-btn" id="closeSearch" aria-label="Fermer"><i class="ti ti-x"></i></button>
+      </div>
+      <div class="docs-search-results" id="docsSearchResults"></div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       ASSISTANT
+       ===================================================================== -->
+  <div class="docs-assistant" id="docsAssistant" aria-hidden="true">
+    <section class="docs-assistant-panel" role="dialog" aria-modal="true" aria-label="Assistant documentation">
+      <header class="docs-assistant-head">
+        <div class="docs-assistant-icon"><i class="ti ti-book-2"></i></div>
+        <div><strong>AI assistant</strong><small>Documentation assistant</small></div>
+        <button class="docs-icon-btn docs-assistant-close" id="closeAssistant" aria-label="Fermer">
+          <i class="ti ti-x"></i>
+        </button>
+      </header>
+
+      <div class="docs-assistant-body" id="assistantBody">
+        <div class="docs-assistant-welcome">
+          <div class="big-icon"><i class="ti ti-book-2"></i></div>
+          <h2>Comment puis-je vous aider ?</h2>
+          <p>Posez une question sur cette documentation. Branche ton moteur d'IA dans js/app.js → sendAssistantMessage().</p>
+          <div class="docs-assistant-examples">
+            <button class="docs-assistant-example">Comment installer le projet ?</button>
+            <button class="docs-assistant-example">Comment configurer l'API ?</button>
+            <button class="docs-assistant-example">Donne-moi un exemple d'utilisation.</button>
+          </div>
+        </div>
+      </div>
+
+      <form class="docs-assistant-input" id="assistantForm">
+        <input id="assistantInput" placeholder="Posez une question..." autocomplete="off">
+        <button class="docs-send" type="submit" aria-label="Envoyer"><i class="ti ti-arrow-up"></i></button>
+      </form>
+    </section>
+  </div>
+
+  <!-- =====================================================================
+       SCRIPTS — ordre important : plugin-loader et markdown avant app.js
+       ===================================================================== -->
+  <script src="js/plugin-loader.js"></script>
+  <script src="js/markdown.js"></script>
+  <script src="js/scroll-lock.js"></script>
+  <script src="js/seo.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/theme.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/search.js"></script>
+
+  <!-- =====================================================================
+       CUSTOM JS — hooks pour ton propre code (ex: window.DocsConfigOverrides)
+       ===================================================================== -->
+  <script id="custom-js">
+    // Exemple : window.DocsConfigOverrides = { apiBase: "/api/docs" };
+  </script>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

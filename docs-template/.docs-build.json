@@ -1,0 +1,107 @@
+{
+  "languages": [
+    "fr"
+  ],
+  "pages": {
+    "fr/controllers.md": {
+      "source": "docs/fr/controllers.md",
+      "sha256": "2638e677b9024c8c62d5d34a526738089ff28470838ef4627b28432e6dcc514b"
+    },
+    "fr/cookies.md": {
+      "source": "docs/fr/cookies.md",
+      "sha256": "d95aa6527910d8bf912486866143d4e5b971e26ad0f8dc111f2b37839b2af92b"
+    },
+    "fr/dependencies.md": {
+      "source": "docs/fr/dependencies.md",
+      "sha256": "ed4c37c60b76a32de847959787328068702f92aeadb60de4454cd3b141fc09ef"
+    },
+    "fr/errors.md": {
+      "source": "docs/fr/errors.md",
+      "sha256": "3d6a5953f5d86e558375f83a59092a2089f591ebc9eaf477c93ba287d9d24b61"
+    },
+    "fr/files.md": {
+      "source": "docs/fr/files.md",
+      "sha256": "c6349ef9ca13b0a02253093d2869647f3c5b1670b1a71896ed36ecfe9922f03c"
+    },
+    "fr/first-steps.md": {
+      "source": "docs/fr/first-steps.md",
+      "sha256": "9a01f3b61cb0034a8fe59211a000e6f33892605d53c25d01ff2cda9c1481910d"
+    },
+    "fr/forms.md": {
+      "source": "docs/fr/forms.md",
+      "sha256": "7d8dadd880c70cbc273f878aafd28b174f46f64c37482c4ccafc1d0faae16616"
+    },
+    "fr/headers.md": {
+      "source": "docs/fr/headers.md",
+      "sha256": "fb4a9117cc810b9d3424b3edd542e0b96e43a4545f21c948056a06956a5f9162"
+    },
+    "fr/index.md": {
+      "source": "docs/fr/index.md",
+      "sha256": "3defe14ca8970622e4a5f60a35b1dde42c2677c220665186f308dfcdac15a153"
+    },
+    "fr/installation.md": {
+      "source": "docs/fr/installation.md",
+      "sha256": "46cdcad9edc693719902b6198fdbae904da01f97fab4a78fcad8cf42d3bac8ad"
+    },
+    "fr/middlewares.md": {
+      "source": "docs/fr/middlewares.md",
+      "sha256": "732507181b93f1343ef388034c469121e9d8f6134f92f149912b2d3b035b62f3"
+    },
+    "fr/nested-models.md": {
+      "source": "docs/fr/nested-models.md",
+      "sha256": "b09c2614c049393d0a4edfea00e95dbd996c4a2908f172af52b527c88bc49d63"
+    },
+    "fr/path-params.md": {
+      "source": "docs/fr/path-params.md",
+      "sha256": "2c1e0436fe85ef944548c9ed1a098f55a6567235851085273b257f395b873912"
+    },
+    "fr/query-params.md": {
+      "source": "docs/fr/query-params.md",
+      "sha256": "376088591362af22c693153496796d666e6ec336aafd4e2c9b738f9ae26a2271"
+    },
+    "fr/reference.md": {
+      "source": "docs/fr/reference.md",
+      "sha256": "168068d64c2dc62d87b7b8e2f16d5365cbcfa39f617f4c9c4354d86cb60930a8"
+    },
+    "fr/request-body.md": {
+      "source": "docs/fr/request-body.md",
+      "sha256": "551dfa247b16083a8158bae5bdaab6d430452f2b39151fb4442314ce28fbf14c"
+    },
+    "fr/responses.md": {
+      "source": "docs/fr/responses.md",
+      "sha256": "f93b169414ca9357e103b5cac1460ed2c364c6e1bfc429d8090567bbf6b986b3"
+    },
+    "fr/routing.md": {
+      "source": "docs/fr/routing.md",
+      "sha256": "f32f72529d160aef9029c4e6f6ca977e266436049a6acf0c9e47a1ed5ac3d136"
+    },
+    "fr/rpc.md": {
+      "source": "docs/fr/rpc.md",
+      "sha256": "f6c7139ccdb3fdea2c17bb54fb60b48301e479cb5c04fb60dbe47df67610ac2b"
+    },
+    "fr/runners.md": {
+      "source": "docs/fr/runners.md",
+      "sha256": "1479378cd7fa68c6fe3a9eea4cc89d4688901460f0168c847b0317c24c1be354"
+    },
+    "fr/security.md": {
+      "source": "docs/fr/security.md",
+      "sha256": "635573b34a876af84bc1c9103835ee2b81f00db2e728f7e8b45f8cd5c6ed31d2"
+    },
+    "fr/static-files.md": {
+      "source": "docs/fr/static-files.md",
+      "sha256": "d51e01da1f4d19dfa25a5f5dda4ab4c0b9b9b26c7ad6a222c18819a55bd08b05"
+    },
+    "fr/templates.md": {
+      "source": "docs/fr/templates.md",
+      "sha256": "47a07859e7ee06fce8d39df82ea1cdde23afb54aa9c19fb6e093679729a6a816"
+    },
+    "fr/testing.md": {
+      "source": "docs/fr/testing.md",
+      "sha256": "11b629600014b5c24ee0584798625ba2e87dd1bc379999c2a7ba1ac5ee444e4e"
+    },
+    "fr/validations.md": {
+      "source": "docs/fr/validations.md",
+      "sha256": "8e0ce294ea70d3a213822e761ae913f867fef6ff772f56aa8f6b6945e1cdace5"
+    }
+  }
+}

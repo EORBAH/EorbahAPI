@@ -1,5 +1,11 @@
 # Auto detect text files and normalize line endings to LF
-* text=auto
+* text=auto eol=lf
+
+# Fichier devant rester en CRLF
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
 
 # Documentation
 *.md text diff=markdown
@@ -26,12 +32,14 @@ dump.rdb export-ignore
 
 # Project root files
 public/ export-ignore
-examples/ export-ignore
+docs_src/ export-ignore
+docs-template/ export-ignore
+templates/ export-ignore
+scripts/ export-ignore
 main.php export-ignore
 
 # Documentation
 docs/ export-ignore
-README-EN.md export-ignore
 
 # Development
 .env export-ignore
@@ -41,4 +49,4 @@ composer.lock export-ignore
 
 # Runtime
 coverage/ export-ignore
-.phpunit.cache export-ignore
+.phpunit.result.cache export-ignore

@@ -2,6 +2,8 @@
 
 namespace Eorbahapi\Security\OAuth2;
 
+use Eorbahapi\Request;
+
 class OAuth2 {
     private string $tokenUrl;
     private array $scopes;
@@ -23,19 +25,18 @@ class OAuth2 {
         $this->description = $description;
     }
     
-    public function __invoke(): string {
-        // Similaire à HTTPBearer mais avec validation OAuth2 spécifique
-        $headers = getallheaders();
-        $normalizedHeaders = array_change_key_case($headers, CASE_LOWER);
-        
-        if (!isset($normalizedHeaders['authorization'])) {
+    public function __invoke(?Request $request = null): string {
+        $request ??= new Request();
+
+        $authHeader = $request->getHeader('Authorization');
+
+        if ($authHeader === null || $authHeader === '') {
             if ($this->autoError) {
                 $this->raiseUnauthorizedError('Not authenticated');
             }
             throw new \RuntimeException('Authorization header not found');
         }
         
-        $authHeader = $normalizedHeaders['authorization'];
         
         if (!is_string($authHeader) || empty($authHeader)) {
             if ($this->autoError) {
@@ -127,7 +128,7 @@ class OAuth2 {
         return ['read', 'write']; // Simulation
     }*/
     
-    private function raiseUnauthorizedError(string $detail): void {
+    private function raiseUnauthorizedError(string $detail): never {
         $wwwAuthenticate = 'Bearer';
         if ($this->tokenUrl) {
             $wwwAuthenticate .= ' tokenUrl="' . $this->tokenUrl . '"';
@@ -135,28 +136,11 @@ class OAuth2 {
         if (!empty($this->scopes)) {
             $wwwAuthenticate .= ' scope="' . implode(' ', $this->scopes) . '"';
         }
-        
-        header('HTTP/1.1 401 Unauthorized');
-        header('WWW-Authenticate: ' . $wwwAuthenticate);
-        header('Content-Type: application/json');
-        
-        echo json_encode([
-            'detail' => $detail,
-            'error' => 'Unauthorized'
-        ]);
-        
-        exit;
+
+        throw new \Eorbahapi\Exceptions\HTTPException(401, $detail, ['WWW-Authenticate' => $wwwAuthenticate]);
     }
     
-    private function raiseForbiddenError(string $detail): void {
-        header('HTTP/1.1 403 Forbidden');
-        header('Content-Type: application/json');
-        
-        echo json_encode([
-            'detail' => $detail,
-            'error' => 'Forbidden'
-        ]);
-        
-        exit;
+    private function raiseForbiddenError(string $detail): never {
+        throw new \Eorbahapi\Exceptions\HTTPException(403, $detail);
     }
 }

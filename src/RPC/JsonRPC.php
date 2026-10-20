@@ -1,16 +1,26 @@
 <?php
 
-namespace Eorbahapi\rpc;
+namespace Eorbahapi\RPC;
 
+use Eorbahapi\BaseMountedApplication;
 use Eorbahapi\Request;
 use Eorbahapi\Response;
-use Eorbahapi\DependencyResolver;
-use function Eorbahapi\Responses\JSONResponse;
+use Eorbahapi\Responses\JSONResponse;
+use Eorbahapi\Dependency\DependencyResolver;
+use Eorbahapi\Exceptions\ValidationException;
 
-class JsonRPC
+/**
+ * Serveur JSON-RPC 2.0 montable.
+ *
+ *     $rpc = new JsonRPC();
+ *     $rpc->add_method('user.create', fn (#[Body] CreateUser $user) => ...);
+ *     $app->mount('/rpc', $rpc);
+ *
+ * Le traitement remplit la réponse partagée (`process()`) : le pipeline
+ * d'EorbahAPI décide de l'envoi, ce qui rend le serveur testable via TestClient.
+ */
+class JsonRPC extends BaseMountedApplication
 {
-    private Request $request;
-    private Response $response;
     private array $methods = [];
     private array $options;
     private DependencyResolver $resolver;
@@ -22,29 +32,11 @@ class JsonRPC
             'description' => 'JSON-RPC server exposing local routes as tools',
         ], $options);
 
-        $this->request = new Request();
-        $this->response = new Response();
-        $this->resolver = new DependencyResolver($this->request, $this->response);
+        $this->resolver = new DependencyResolver($this->request ?? new Request(), $this->response ?? new Response());
     }
 
-    /**
-     * Permet à EorbahAPI d'injecter les instances Request/Response partagées.
-     */
-    public function setRequestResponse(Request $request, Response $response): void
+    public function process(): void
     {
-        $this->request = $request;
-        $this->response = $response;
-    }
-
-    /**
-     * Point d'entrée principal appelé par mount().
-     *
-     * @param Request  $request
-     * @param Response $response
-     */
-    public function handle(Request $request, Response $response): void
-    {
-        $this->setRequestResponse($request, $response);
         $data = $this->request->body();
 
         // Vérifications de base de la requête JSON‑RPC
@@ -71,18 +63,28 @@ class JsonRPC
 
         $callback = $this->methods[$method];
 
+        // Les `params` de l'enveloppe deviennent le corps de la requête : les
+        // attributs de paramètre (#[Body], #[Query]...) fonctionnent comme dans
+        // une route, et `Request::body()` expose les paramètres de la méthode.
+        $rpcRequest = $this->request->withBody(is_array($params) ? $params : []);
+        $this->resolver->setRequestResponse($rpcRequest, $this->response);
+
         try {
             // Le resolver construit les arguments en fonction des paramètres nommés
             // et des dépendances (type‑hints) de la fonction.
-            $args = $this->resolver->resolve($callback, $params);
+            $args = $this->resolver->resolve($callback, is_array($params) ? $params : []);
             $result = $callback(...$args);
 
-            // Envoi de la réponse de succès
-            echo JSONResponse([
+            // Réponse de succès
+            $this->response = new JSONResponse([
                 'jsonrpc' => '2.0',
                 'result' => $result,
                 'id' => $id,
             ]);
+        } catch (ValidationException $e) {
+            // Paramètres invalides : -32602 (Invalid params), avec le détail.
+            $detail = $e->getErrors()[0]['msg'] ?? $e->getMessage();
+            $this->sendError($id, -32602, 'Invalid params: ' . $detail);
         } catch (\Throwable $e) {
             // Erreur interne du serveur ou lors de l'exécution
             $this->sendError($id, -32603, 'Internal error: ' . $e->getMessage());
@@ -90,11 +92,11 @@ class JsonRPC
     }
 
     /**
-     * Envoie une réponse d'erreur JSON‑RPC.
+     * Remplit la réponse avec une erreur JSON‑RPC.
      */
     private function sendError($id, int $code, string $message): void
     {
-        echo JSONResponse([
+        $this->response = new JSONResponse([
             'jsonrpc' => '2.0',
             'error' => [
                 'code' => $code,
@@ -105,17 +107,9 @@ class JsonRPC
     }
 
     /**
-     * Compatibilité avec la signature run($http_code, $handler) de EorbahAPI.
-     */
-    public function run($http_code = "404", $handler = null): void
-    {
-        $this->handle($this->request, $this->response);
-    }
-
-    /**
      * Enregistre une méthode JSON‑RPC.
      *
-     * @param string   $method   Nom de la méthode (ex: "user.create")
+     * @param string   $method   Nom de la méthode (ex: "user.create").
      * @param callable $callback Fonction ou méthode à appeler.
      */
     public function add_method(string $method, callable $callback): void

@@ -2,6 +2,9 @@
 
 namespace Eorbahapi\Security\APIKey;
 
+use Eorbahapi\Exceptions\HTTPException;
+use Eorbahapi\Request;
+
 class APIKeyQuery {
     private string $queryParamName;
     private bool $autoError;
@@ -11,21 +14,23 @@ class APIKeyQuery {
         $this->autoError = $autoError;
     }
     
-    public function __invoke(): string {
-        if (!isset($_GET[$this->queryParamName])) {
+    public function __invoke(?Request $request = null): string {
+        $request ??= new Request();
+
+        $apiKey = $request->query($this->queryParamName);
+
+        if ($apiKey === null) {
             if ($this->autoError) {
                 $this->raiseForbiddenError('API key query parameter missing');
             }
-            throw new \RuntimeException('API key query parameter not found');
+            throw new HTTPException(403, 'API key query parameter not found');
         }
-        
-        $apiKey = $_GET[$this->queryParamName];
         
         if (empty($apiKey) || !is_string($apiKey)) {
             if ($this->autoError) {
                 $this->raiseForbiddenError('Invalid API key format');
             }
-            throw new \RuntimeException('Invalid API key format');
+            throw new HTTPException(403, 'Invalid API key format');
         }
         
         return $apiKey;
@@ -38,7 +43,7 @@ class APIKeyQuery {
             if ($this->autoError) {
                 $this->raiseForbiddenError('Invalid API key');
             }
-            throw new \RuntimeException('Invalid API key');
+            throw new HTTPException(403, 'Invalid API key');
         }
         
         return $apiKey;
@@ -51,7 +56,7 @@ class APIKeyQuery {
             if ($this->autoError) {
                 $this->raiseForbiddenError('API key validation failed');
             }
-            throw new \RuntimeException('API key validation failed');
+            throw new HTTPException(403, 'API key validation failed');
         }
         
         return $apiKey;
@@ -65,15 +70,7 @@ class APIKeyQuery {
         $this->autoError = $autoError;
     }
     
-    private function raiseForbiddenError(string $detail): void {
-        header('HTTP/1.1 403 Forbidden');
-        header('Content-Type: application/json');
-        
-        echo json_encode([
-            'detail' => $detail,
-            'error' => 'Forbidden'
-        ]);
-        
-        exit;
+    private function raiseForbiddenError(string $detail): never {
+        throw new HTTPException(403, $detail);
     }
 }
