@@ -1,8 +1,16 @@
 name: Documentation site
 
-# Génère le site statique (docs-template) à partir du cours (docs/fr), le publie
-# sur GitHub Pages et propose une pull request avec les fichiers générés pour
-# que le dépôt reste à jour.
+# Construit le site MkDocs (docs/ → build/) et le publie sur GitHub Pages.
+#
+# Mise en service (une seule fois) :
+#   1. Settings → Pages → Source = « GitHub Actions » ;
+#   2. pousser sur main (ou lancer ce workflow manuellement).
+#
+# Comportement :
+#   - push sur main ou develop  → construit le site ;
+#   - push sur main             → publie build/ sur GitHub Pages ;
+#   - pull request              → construit seulement (vérification) ;
+#   - workflow_dispatch         → construit, puis publie si lancé depuis main.
 
 on:
   push:
@@ -10,21 +18,22 @@ on:
     paths:
       - 'docs/**'
       - 'mkdocs.yml'
-      - 'scripts/build_docs_site.py'
+      - 'scripts/build_docs.py'
       - 'scripts/docs_start.sh'
-      - 'docs-template/**'
+      - 'requirements-docs.txt'
+      - '.github/workflows/docs.yml'
   pull_request:
     paths:
       - 'docs/**'
       - 'mkdocs.yml'
       - 'scripts/**'
-      - 'docs-template/**'
+      - 'requirements-docs.txt'
   workflow_dispatch:
 
 permissions:
-  contents: write      # créer la pull request des fichiers générés
-  pages: write         # publier sur GitHub Pages
-  id-token: write      # OIDC requis par actions/deploy-pages
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
   group: docs-site-${{ github.ref }}
@@ -32,7 +41,7 @@ concurrency:
 
 jobs:
   build:
-    name: Générer le site
+    name: Construire le site
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -41,59 +50,38 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: requirements-docs.txt
 
-      - name: Générer docs-template depuis docs/fr
-        run: python scripts/build_docs_site.py
+      - name: Installer MkDocs
+        run: pip install -r requirements-docs.txt
 
-      - name: Vérifier que le site est à jour
-        if: github.event_name == 'push'
-        run: python scripts/build_docs_site.py --check
+      - name: Construire le site (docs/ → build/)
+        run: python scripts/build_docs.py --strict
 
-      - name: Valider le JSON généré
+      - name: Vérifier l'artefact
         run: |
-          python -c "import json,pathlib; [json.loads(p.read_text(encoding='utf-8')) for p in pathlib.Path('docs-template/config').glob('*.json')]; print('JSON valide')"
-          python -c "import pathlib; files=sorted(pathlib.Path('docs-template/content').glob('*/*.md')); assert files, 'aucune page'; assert all(p.read_text(encoding='utf-8').strip() for p in files), 'page vide'; print(len(files), 'pages non vides')"
+          test -f build/index.html
+          test -f build/sitemap.xml
+          test -f build/search/search_index.json
+          echo "pages HTML : $(find build -name '*.html' | wc -l)"
 
-      - name: Préparer l'artefact Pages
-        run: |
-          rm -rf _site
-          mkdir -p _site
-          cp -R docs-template/. _site/
-          rm -f _site/.docs-build.json
-          test -f _site/index.html
-          test -f _site/config/nav.json
+      - name: Configurer GitHub Pages
+        if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@v5
 
       - name: Upload de l'artefact Pages
+        if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
         with:
-          path: _site
-
-      - name: Proposer une pull request avec le site généré
-        if: github.event_name == 'push' && github.ref_name != 'gh-pages'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          commit-message: 'docs: régénère le site de documentation'
-          branch: docs/site
-          delete-branch: true
-          title: 'docs: régénère le site de documentation'
-          body: |
-            Site généré automatiquement depuis `docs/fr` par
-            `scripts/build_docs_site.py`.
-
-            - pages : `docs-template/content/fr/`
-            - navigation : `docs-template/config/nav.json`
-            - configuration : `docs-template/config/site.json`
-
-            Rien à relire côté contenu : les pages viennent du cours, lui-même
-            vérifié par `tests/ExamplesTest.php`.
-          add-paths: |
-            docs-template/
-          labels: documentation, automated
+          path: build
 
   deploy:
     name: Publier sur GitHub Pages
     needs: build
-    if: github.event_name != 'pull_request'
+    if: |
+      github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+      || github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
