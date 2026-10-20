@@ -4,6 +4,13 @@ site_url: https://eorbah.github.io/EorbahAPI/
 repo_url: https://github.com/EORBAH/EorbahAPI
 repo_name: EORBAH/EorbahAPI
 docs_dir: docs
+
+# Fichiers de travail qui ne doivent pas être publiés :
+# - language_names.yml : langues utilisées par scripts/translate.py ;
+# - .manifest.json : empreintes des traductions (docs/<lang>/.manifest.json).
+exclude_docs: |
+  language_names.yml
+  **/.manifest.json
 edit_uri: edit/develop/docs/
 
 theme:
@@ -39,10 +46,38 @@ plugins:
         - locale: fr
           name: Français
           default: true
-        # Ajoutez la langue ici (et le dossier docs/en/) une fois les
-        # traductions générées :
-        # - locale: en
-        #   name: English
+        - locale: en
+          name: English
+          nav_translations:
+            Accueil: Home
+            Installation: Installation
+            Premiers pas: First steps
+            Guide du cours: Course guide
+            Routage: Routing
+            Paramètres de chemin: Path parameters
+            Paramètres de requête: Query parameters
+            Validations: Validations
+            Corps de requête: Request body
+            Modèles imbriqués: Nested models
+            Formulaires: Forms
+            Fichiers: Files
+            En-têtes: Headers
+            Cookies: Cookies
+            Réponses: Responses
+            Aller plus loin: Going further
+            Dépendances: Dependencies
+            Sécurité: Security
+            Middlewares: Middlewares
+            Contrôleurs: Controllers
+            Fichiers statiques: Static files
+            Templates Twig: Twig templates
+            Gestion des erreurs: Error handling
+            JSON-RPC: JSON-RPC
+            Tests: Testing
+            Runners personnalisés: Custom runners
+            Référence API: API reference
+            Notes de version: Release notes
+            Journal des modifications: Changelog
 
 markdown_extensions:
   - admonition

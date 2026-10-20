@@ -49,6 +49,7 @@ SOURCE_LANG = "fr"
 SOURCE_DIR = DOCS / SOURCE_LANG
 LANGUAGES_FILE = DOCS / "language_names.yml"
 PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
+MKDOCS_CONFIG = ROOT / "mkdocs.yml"
 MANIFEST_NAME = ".manifest.json"
 MAX_ATTEMPTS = 3
 
@@ -111,6 +112,23 @@ def resolve_languages(requested: str) -> list[Language]:
         raise SystemExit(f"Langue inconnue : {requested} (disponibles : {known})")
 
     return selected
+
+
+def mkdocs_declares(language: Language) -> bool:
+    """Vrai si la langue est déclarée dans le bloc `i18n` de mkdocs.yml."""
+    if not MKDOCS_CONFIG.is_file():
+        return False
+
+    text = MKDOCS_CONFIG.read_text(encoding="utf-8")
+    return re.search(rf"^\s*-?\s*locale:\s*{re.escape(language.code)}\s*$", text, re.MULTILINE) is not None
+
+
+def mkdocs_hint(language: Language) -> str:
+    """Extrait `mkdocs.yml` à ajouter pour publier cette langue."""
+    return (
+        f"  - locale: {language.code}\n"
+        f"    name: {language.name}\n"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -403,6 +421,18 @@ def main(argv: list[str] | None = None) -> int:
                 "translated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             }
             write_manifest(target_dir, manifest)
+
+    languages_not_in_mkdocs = [lang for lang in languages if not mkdocs_declares(lang)]
+
+    if languages_not_in_mkdocs:
+        print("")
+        print("À faire pour publier ces langues :")
+        print("  1. décommentez / ajoutez le bloc ci-dessous dans mkdocs.yml (plugins → i18n → languages) :")
+        for language in languages_not_in_mkdocs:
+            print("")
+            print("".join("    " + line + "\n" for line in mkdocs_hint(language).splitlines()).rstrip())
+        print("")
+        print("  2. reconstruisez le site : python scripts/build_docs.py --strict")
 
     if failures:
         print("\nTraductions à relire :", file=sys.stderr)

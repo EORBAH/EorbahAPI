@@ -42,6 +42,7 @@ Ce site est un **cours progressif**, dans l'esprit de la documentation de FastAP
 
 Chaque chapitre s'appuie sur un fichier réel de `docs_src/`. Ces fichiers sont **exécutés par la suite de tests** (`tests/ExamplesTest.php`) : si un exemple du cours ne fonctionne plus, les tests échouent. La documentation ne peut pas mentir.
 
+
 ## Par où commencer ?
 
 | Si vous voulez… | Lisez |
