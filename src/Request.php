@@ -328,15 +328,22 @@ class Request {
     /**
      * Summary of getClientIP
      */
-    public function getClientIP()
+    public function getClientIP(array $trustedProxies = []): string
     {
-        if (!empty($this->server('HTTP_CLIENT_IP'))) {
-            return $this->server('HTTP_CLIENT_IP');
-        } elseif (!empty($this->server('HTTP_X_FORWARDED_FOR'))) {
-            return $this->server('HTTP_X_FORWARDED_FOR');
-        } else {
-            return $this->server('REMOTE_ADDR');
+        $remote = (string) $this->server('REMOTE_ADDR');
+
+        if (!in_array($remote, $trustedProxies, true)) {
+            return $remote;
         }
+
+        $chain = array_reverse(array_map('trim', explode(',', (string) $this->server('HTTP_X_FORWARD_FOR'))));
+
+        foreach ($chain as $ip) {
+            if (filter_var($ip, FILTER_VALIDATE_IP) && !in_array($ip, $trustedProxies, true)) {
+                return $ip;
+            }
+        }
+        return $remote;
     }
 
     /**

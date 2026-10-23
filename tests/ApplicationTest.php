@@ -37,7 +37,7 @@ class ProcessStyleMiddleware
 {
     public static bool $called = false;
 
-    public function process(Request $request, Response $response, callable $next): mixed
+    public function __invoke(Request $request, Response $response, callable $next): mixed
     {
         self::$called = true;
         $response->headers['X-Processed'] = 'yes';
@@ -51,7 +51,7 @@ class ProcessStyleMiddleware
  */
 class StopMiddleware
 {
-    public function process(Request $request, Response $response, callable $next): mixed
+    public function __invoke(Request $request, Response $response, callable $next): mixed
     {
         return new JSONResponse(['stopped' => true], 409);
     }

@@ -61,6 +61,7 @@ contrat.
 Les scénarios de l'exemple décrivent ce comportement :
 
 ```php
+<?php
     public static function scenarios(): array
     {
         return [

@@ -106,7 +106,7 @@ class ClassScopedController
  */
 class LegacyController
 {
-    #[\Eorbahapi\Routing\Get('/legacy')]
+    #[Get('/legacy')]
     public function index()
     {
         return ['legacy' => true];

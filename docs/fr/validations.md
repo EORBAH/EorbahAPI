@@ -27,7 +27,7 @@ final class QueryValidationsExample extends DocsExample
         $app = new EorbahAPI();
 
         // Bornes numériques : ge = >=, le = <=, gt = >, lt = <.
-        $app->get('/limit', function (#[Query(ge: 1, le: 100)] int $limit = 10) {
+        $app->get('/limit', function (#[Query(gte: 1, lte: 100)] int $limit = 10) {
             return ['limit' => $limit];
         });
 
@@ -97,6 +97,7 @@ défaut de l'attribut est essayé avant celui de PHP.
 ### Les scénarios de l'exemple
 
 ```php
+<?php
 public static function scenarios(): array
 {
     return [

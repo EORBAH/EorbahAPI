@@ -45,7 +45,7 @@ final class Customer extends BaseModel
 
     public EmailStr $email;
 
-    #[Field(ge: 18, le: 130)]
+    #[Field(gte: 18, lte: 130)]
     public int $age = 18;
 
     public Address $address;

@@ -30,10 +30,10 @@ use Svinx\Validator\Field;
  */
 final class RpcSumParams extends BaseModel
 {
-    #[Field(ge: 0)]
+    #[Field(gte: 0)]
     public int $a = 0;
 
-    #[Field(ge: 0)]
+    #[Field(gte: 0)]
     public int $b = 0;
 }
 
@@ -88,6 +88,7 @@ Seul `#[Query]` continue de lire la chaîne de requête HTTP, pas `params`.
 ## Ce qui se passe
 
 ```php
+<?php
 public static function scenarios(): array
 {
     return [

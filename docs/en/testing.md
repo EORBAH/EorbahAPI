@@ -32,7 +32,7 @@ final class TestingExample extends DocsExample
     {
         $app = new EorbahAPI();
 
-        $app->get('/items', fn (#[Query(ge: 1)] int $page = 1) => ['page' => $page]);
+        $app->get('/items', fn (#[Query(gte: 1)] int $page = 1) => ['page' => $page]);
 
         $app->post('/login', fn (#[Body(name: 'user', min_length: 3)] string $user) => [
             'logged' => $user,

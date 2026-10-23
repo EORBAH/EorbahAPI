@@ -65,3 +65,9 @@ Terminologie de référence. Chaque langue peut avoir son propre fichier
 `ValidationException`, `RequestValidationError`, `ParamTypes`, `HTTPBearer`,
 `HTTPBasic`, `APIKeyHeader`, `APIKeyQuery`, `APIKeyCookie`, `OAuth2`, `JWT`,
 `CORSMiddleware`, `RateLimitingMiddleware`, et tous les chemins de fichiers.
+
+Traduire les commentaires dans les block de code... exemple:
+```php
+-- // premiers pas d'exemple
+++ // first steps example
+```

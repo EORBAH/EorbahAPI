@@ -125,3 +125,11 @@ nav:
       - Journal des modifications: release-notes/changelog.md
       - v0.1.0-beta: release-notes/v.0.1.0-beta.md
       - v0.1.0: release-notes/v.0.1.0.md
+      - v0.1.1: release-notes/v.0.1.1.md
+
+extra:
+  social:
+  - icon: octicons/mark-github-24
+    link: https://github.com/EORBAH/EorbahAPI
+  - icon: fontawesome/brands/x-twitter
+    link: https://x.com/eor_bah545

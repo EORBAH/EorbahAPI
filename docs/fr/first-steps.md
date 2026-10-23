@@ -76,6 +76,7 @@ l'application sans serveur HTTP, ou de la brancher sur un autre transport
 ## Les scénarios de l'exemple
 
 ```php
+<?php
 public static function scenarios(): array
 {
     return [

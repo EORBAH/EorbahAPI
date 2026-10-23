@@ -87,6 +87,7 @@ et aux progressions. La signature est
 `new StreamingResponse(\Generator $generator, int $status = 200, array $headers = [])`.
 
 ```php
+<?php
 $app->get('/chunks', fn () => new StreamingResponse((static function (): \Generator {
     yield 'a';
     yield 'b';

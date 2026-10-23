@@ -105,15 +105,6 @@ class DatastructuresTest extends TestCase
 
         $this->assertSame('<b>Jean</b>', $form->get('name'));
         $this->assertSame(['name', 'age'], array_keys($form->all()));
-        $this->assertSame('&lt;b&gt;Jean&lt;/b&gt;', $form->xssClean('<b>Jean</b>'));
-
-        $sanitized = $form->sanitizeInput([
-            'name' => ['type' => 'string', 'max_length' => 3, 'xss_clean' => false],
-            'age' => ['type' => 'int', 'xss_clean' => false],
-        ]);
-
-        $this->assertSame('<b>', $sanitized['name']);
-        $this->assertSame(30, $sanitized['age']);
     }
 
     #[Test]

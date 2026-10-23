@@ -31,7 +31,7 @@ final class Product extends BaseModel
     #[Field(gt: 0)]
     public float $price;
 
-    #[Field(ge: 0, le: 1000)]
+    #[Field(gte: 0, le: 1000)]
     public int $stock = 0;
 }
 ```
@@ -39,6 +39,7 @@ final class Product extends BaseModel
 Puis l'application, avec les trois façons de lire le corps :
 
 ```php
+<?php
 /**
  * Corps de requête : validation d'un modèle complet ou d'un champ unique.
  */

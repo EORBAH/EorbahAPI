@@ -42,10 +42,6 @@ class APIRouter
         public readonly array $tags = []
     ) {}
 
-    // ------------------------------------------------------------------
-    // Enregistrement
-    // ------------------------------------------------------------------
-
     public function get(string $route, callable $callback, array $middlewares = []): void
     {
         $this->add_api_route($route, ['GET'], $callback, $middlewares);
@@ -118,9 +114,6 @@ class APIRouter
         }
     }
 
-    // ------------------------------------------------------------------
-    // Résolution
-    // ------------------------------------------------------------------
 
     /**
      * Cherche la route correspondant à une URI et une méthode.
@@ -225,8 +218,7 @@ class APIRouter
     }
 
     /**
-     * Appelle un middleware, quel que soit son style : `process()`,
-     * `__invoke()` (MiddlewareInterface) ou `handle()`.
+     * Appelle un middleware, quel que soit son style: `__invoke()` (MiddlewareInterface).
      */
     public static function invokeMiddleware(
         object $instance,
@@ -234,14 +226,6 @@ class APIRouter
         Response $response,
         callable $next
     ): mixed {
-        if (method_exists($instance, 'process')) {
-            return $instance->process($request, $response, $next);
-        }
-
-        if (method_exists($instance, 'handle')) {
-            return $instance->handle($request, $response, $next);
-        }
-
         if (is_callable($instance)) {
             return $instance($request, $response, $next);
         }

@@ -88,6 +88,7 @@ Les deux méthodes de rendu renvoient une **chaîne HTML** :
 ## Ce qui se passe
 
 ```php
+<?php
 public static function scenarios(): array
 {
     return [
@@ -113,6 +114,7 @@ Pour l'annoncer explicitement, retournez un `Eorbahapi\Responses\HTMLResponse`
 `setContentType: false`) :
 
 ```php
+<?php
 use Eorbahapi\Responses\HTMLResponse;
 
 $app->get('/page', function (TwigTemplates $twig) {

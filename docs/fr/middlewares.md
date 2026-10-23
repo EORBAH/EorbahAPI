@@ -78,6 +78,7 @@ final class MiddlewaresController
 Et l'application qui les branche :
 
 ```php
+<?php
 final class MiddlewaresExample extends DocsExample
 {
     public static function app(): EorbahAPI

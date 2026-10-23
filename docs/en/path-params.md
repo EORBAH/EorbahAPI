@@ -25,7 +25,7 @@ final class PathParamsExample extends DocsExample
         $app = new EorbahAPI();
 
         // `{id}` est converti en int et doit être >= 1.
-        $app->get('/users/{id}', function (#[Path(ge: 1)] int $id) {
+        $app->get('/users/{id}', function (#[Path(gte: 1)] int $id) {
             return ['id' => $id, 'type' => get_debug_type($id)];
         });
 

@@ -69,6 +69,7 @@ chapitres suivants montrent comment obtenir un vrai `int`.
 ### Les scénarios de l'exemple
 
 ```php
+<?php
 public static function scenarios(): array
 {
     return [

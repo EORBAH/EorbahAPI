@@ -38,49 +38,13 @@ class FormData {
         return $this->data;
     }
 
-    /**
-     * Summary of xssClean
-     * @param mixed $value
-     * @return array<array|string>|string
-     */
-    public function xssClean($value = null) {
-        $data = $value ?? $this->data;
-        if (is_array($data)) {
-            return array_map([$this, 'xssClean'], $data);
+    public static function escape(mixed $value): mixed {
+        if (is_array($value)) {
+            return array_map([self::class, 'escape'], $value);
         }
-
-        return htmlspecialchars($data, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-    }
-
-    /**
-     * Summary of sanitizeInput
-     * @param array $rules
-     * @return array
-     */
-    public function sanitizeInput(array $rules): array {
-        $sanitized = [];
-
-        foreach ($rules as $field => $rule) {
-            $value = $this->data[$field] ?? null;
-            if ($rule['type'] === 'string') {
-                $value = (string) $value;
-                if (isset($rule['max_length'])) {
-                    $value = substr($value, 0, $rule['max_length']);
-                }
-            } elseif ($rule['type'] === 'int') {
-                $value = filter_var($value, FILTER_VALIDATE_INT);
-            } elseif ($rule['type'] === 'email') {
-                $value = filter_var($value, FILTER_SANITIZE_EMAIL);
-                $value = filter_var($value, FILTER_VALIDATE_EMAIL) ? $value : null;
-            }
-
-            if ($value !== null && ($rule['xss_clean'] ?? true)) {
-                $value = $this->xssClean($value);
-            }
-
-            $sanitized[$field] = $value;
+        if (!is_string($value)) {
+            return $value;
         }
-
-        return $sanitized;
+        return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, 'UTF-8');
     }
 }

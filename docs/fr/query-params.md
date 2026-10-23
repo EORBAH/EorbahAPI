@@ -82,6 +82,7 @@ refusé — Svinx attend un tableau, pas une chaîne.
 ### Les scénarios de l'exemple
 
 ```php
+<?php
 public static function scenarios(): array
 {
     return [
