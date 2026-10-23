@@ -42,7 +42,8 @@ chapitre du cours qui la détaille.
 
 ## `Eorbahapi\Request`
 
-```text
+```php
+<?php
 new Request(
     body: array|string|null,   // corps décodé ou JSON brut
     params: array,             // paramètres de route

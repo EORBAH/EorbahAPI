@@ -2,18 +2,24 @@
 
 require __DIR__ . '/vendor/autoload.php';
 
-use Eorbahapi\Params\{Query, Depends, Path, Header, Body};
+use Eorbahapi\Exceptions\UserWarning;
 use Eorbahapi\Templating\TwigTemplates;
+use Eorbahapi\Middlewares\CORSMiddleware;
 use Eorbahapi\{EorbahAPI, Response, StaticFiles};
+use Eorbahapi\Params\{Query, Depends, Path, Header, Body};
 use Eorbahapi\Responses\{JSONResponse, HTMLResponse, RedirectResponse, EventStreamResponse};
 
 $app = new EorbahAPI(debug: true);
+
+$app->get('/', function() {
+    return new HTMLResponse("<h1>Hello world</h1>");
+});
 
 function TemplateResponse() {
    return new TwigTemplates(__DIR__.'/templates');
 }
 
-$app->get('/', function(
+$app->get('/twig', function(
     #[Depends('TemplateResponse')] $template
 ) {
     return $template->TemplateResponse('index.html.twig', ["name" => "oumar"]);

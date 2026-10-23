@@ -16,10 +16,7 @@ use Eorbahapi\Params\{Path, Query};
 
 $app = new EorbahAPI();
 
-$app->get('/items/{id}', function (
-    #[Path(ge: 1)] int $id,
-    #[Query(ge: 1, le: 100)] int $limit = 10,
-) {
+$app->get('/items/{id}', function (#[Path(gte: 1)] int $id, #[Query(gte: 1, le: 100)] int $limit = 10) {
     return ['id' => $id, 'limit' => $limit];
 });
 
@@ -29,6 +26,29 @@ $app->run();
 ```console
 $ curl "http://localhost:8000/items/7?limit=3"
 {"id":7,"limit":3}
+```
+
+```php
+<?php
+
+use Eorbahapi\EorbahAPI;
+
+$app = new EorbahAPI()
+
+$app->get("/", function () {
+    return ["Hello" => "World"];
+});
+
+$app->get("/items/{item_id}", function (int $item_id, ?string $q) {
+    return ["item_id" => $item_id, "q" => $q];
+});
+
+$app->run();
+```
+
+```console
+$ curl "http://localhost:8000/items/7?q=query"
+{"id":7,"q":"query"}
 ```
 
 ## Un cours, pas une liste de fonctions

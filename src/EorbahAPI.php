@@ -64,10 +64,6 @@ class EorbahAPI
         $handlers->overrideExceptionHandlers($this);
     }
 
-    // ------------------------------------------------------------------
-    // Cycle de vie
-    // ------------------------------------------------------------------
-
     /**
      * Traite une requête et retourne la réponse, sans l'envoyer.
      *
@@ -249,10 +245,6 @@ class EorbahAPI
         return $this->response;
     }
 
-    // ------------------------------------------------------------------
-    // Middlewares
-    // ------------------------------------------------------------------
-
     /**
      * Chaîne les middlewares globaux autour du traitement de la requête.
      */
@@ -325,9 +317,6 @@ class EorbahAPI
         return $this;
     }
 
-    // ------------------------------------------------------------------
-    // Routage
-    // ------------------------------------------------------------------
 
     public function get(string $route, callable $callback, array $middlewares = []): void
     {
@@ -496,6 +485,7 @@ class EorbahAPI
      */
     public function include_routes(string $routes_class, ?string $prefix = null, array $args = []): self
     {
+        trigger_error("`include_routes` est deprecier il a été renommer `include_controller`");
         return $this->include_controller($routes_class, $prefix, $args);
     }
 

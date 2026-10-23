@@ -99,6 +99,7 @@ l'originale : c'est ce que fait `mount()` quand il retire le préfixe avant de
 confier la requête à la sous-application.
 
 ```php
+<?php
 $request = new Request(server: ['REQUEST_URI' => '/static/assets/logo.svg']);
 
 $sub = $request->withUri('/assets/logo.svg');

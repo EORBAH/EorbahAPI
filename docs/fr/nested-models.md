@@ -39,6 +39,7 @@ final class Address extends BaseModel
 c'est la déclaration ci-dessous qui fait le lien.
 
 ```php
+<?php
 /**
  * Client : un modèle qui en contient un autre.
  */
@@ -49,7 +50,7 @@ final class Customer extends BaseModel
 
     public EmailStr $email;
 
-    #[Field(ge: 18, le: 130)]
+    #[Field(gte: 18, le: 130)]
     public int $age = 18;
 
     public Address $address;
@@ -57,6 +58,7 @@ final class Customer extends BaseModel
 ```
 
 ```php
+<?php
 /**
  * Modèles imbriqués : un modèle dans un autre modèle.
  */

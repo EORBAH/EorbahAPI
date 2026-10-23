@@ -29,7 +29,7 @@ final class Product extends BaseModel
     #[Field(gt: 0)]
     public float $price;
 
-    #[Field(ge: 0, le: 1000)]
+    #[Field(gte: 0, lte: 1000)]
     public int $stock = 0;
 }
 ```

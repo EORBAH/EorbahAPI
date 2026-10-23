@@ -15,8 +15,8 @@ final class QueryValidationsExample extends DocsExample
     {
         $app = new EorbahAPI();
 
-        // Bornes numériques : ge = >=, le = <=, gt = >, lt = <.
-        $app->get('/limit', function (#[Query(ge: 1, le: 100)] int $limit = 10) {
+        // Bornes numériques : gte = >=, lte = <=, gt = >, lt = <.
+        $app->get('/limit', function (#[Query(gte: 1, lte: 100)] int $limit = 10) {
             return ['limit' => $limit];
         });
 
@@ -38,7 +38,7 @@ final class QueryValidationsExample extends DocsExample
         });
 
         // Valeur par défaut portée par l'attribut (sans défaut PHP).
-        $app->get('/page', function (#[Query(default: 1, ge: 1)] int $page) {
+        $app->get('/page', function (#[Query(default: 1, gte: 1)] int $page) {
             return ['page' => $page];
         });
 

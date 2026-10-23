@@ -37,7 +37,7 @@ final class FormExample extends DocsExample
 
         // Un modèle peut recevoir un formulaire complet.
         $app->post('/profile', function (
-            #[Form(ge: 18, le: 130)] int $age,
+            #[Form(gte: 18, le: 130)] int $age,
             #[Form(choices: ['fr', 'en'])] string $lang = 'fr',
         ) {
             return ['age' => $age, 'lang' => $lang];

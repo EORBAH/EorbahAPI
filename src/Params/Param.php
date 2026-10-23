@@ -9,7 +9,7 @@ use Svinx\Validator\FieldInfo;
  * Base commune des paramètres de route.
  *
  * Un `Param` est un `FieldInfo` de Svinx\Validator : il porte donc les mêmes
- * contraintes (`gt`, `ge`, `lt`, `le`, `multiple_of`, `min_length`,
+ * contraintes (`gt`, `gte`, `lt`, `lte`, `multiple_of`, `min_length`,
  * `max_length`, `pattern`, `choices`, `default`, `default_factory`...) et il est
  * directement utilisable par `Type::withConstraints()` pour valider la valeur.
  *
@@ -18,7 +18,7 @@ use Svinx\Validator\FieldInfo;
  *    placeholder de chemin) ; à défaut, le nom du paramètre PHP est utilisé ;
  *  - la `location()`, c'est-à-dire l'endroit où lire la valeur.
  *
- *     $app->get('/users', function (#[Query(ge: 1, le: 100)] int $limit = 10) {
+ *     $app->get('/users', function (#[Query(gte: 1, lte: 100)] int $limit = 10) {
  *         // ?limit=42  => 42 (int)
  *     });
  *
@@ -46,6 +46,8 @@ abstract class Param extends FieldInfo
         float|int|null $ge = null,
         float|int|null $lt = null,
         float|int|null $le = null,
+        float|int|null $gte = null, // alias recommender
+        float|int|null $lte = null, // alias recommender
         float|int|null $multiple_of = null,
         ?int $min_length = null,
         ?int $max_length = null,
@@ -60,9 +62,9 @@ abstract class Param extends FieldInfo
             title: $title,
             description: $description,
             gt: $gt,
-            ge: $ge,
+            ge: $gte ?? $ge,
             lt: $lt,
-            le: $le,
+            le: $lte ?? $le,
             multiple_of: $multiple_of,
             min_length: $min_length,
             max_length: $max_length,

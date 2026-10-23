@@ -69,6 +69,7 @@ Les options du constructeur `new StaticFiles($directory, $options)` :
 ## Ce qui se passe
 
 ```php
+<?php
 public static function scenarios(): array
 {
     return [
