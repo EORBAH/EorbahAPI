@@ -2,23 +2,12 @@
 
 namespace Eorbahapi\Dependency;
 
-use Eorbahapi\Request;
-use Eorbahapi\Response;
-
 /**
- * Contrat des dépendances résolues par `#[Depends]`.
+ * Contrat historique des dépendances.
  *
- * Une classe implémentant cette interface reçoit la requête et la réponse
- * courantes ; la valeur retournée est injectée dans le paramètre.
- *
- *     class CurrentUser implements DependencyInterface
- *     {
- *         public function resolve(Request $request, Response $response): mixed
- *         {
- *             return $request->getHeader('X-User');
- *         }
- *     }
+ * Il hérite de `Eorbahapi\Contracts\DependencyInterface` : les dépendances
+ * existantes respectent donc déjà le contrat figé.
  */
-interface DependencyInterface {
-    public function resolve(Request $request, Response $response): mixed;
+interface DependencyInterface extends \Eorbahapi\Contracts\DependencyInterface
+{
 }

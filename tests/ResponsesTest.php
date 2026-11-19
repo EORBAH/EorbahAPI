@@ -103,12 +103,17 @@ class ResponsesTest extends TestCase
     }
 
     #[Test]
-    public function file_response_is_a_response(): void
+    public function file_response_serves_a_file(): void
     {
-        $response = new FileResponse('contenu', 200, ['Content-Type' => 'text/plain']);
+        $path = sys_get_temp_dir() . '/eorbah_fr_' . uniqid('', true) . '.txt';
+        file_put_contents($path, 'contenu');
+
+        $response = new FileResponse($path, 200, ['Content-Type' => 'text/plain']);
 
         $this->assertInstanceOf(Response::class, $response);
-        $this->assertSame('contenu', $response->body);
+        $this->assertSame('contenu', $response->contents());
+
+        @unlink($path);
     }
 
     #[Test]

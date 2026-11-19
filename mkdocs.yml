@@ -71,10 +71,15 @@ plugins:
             Contrôleurs: Controllers
             Fichiers statiques: Static files
             Templates Twig: Twig templates
+            Documentation OpenAPI: OpenAPI documentation
+            Cache: Cache
             Gestion des erreurs: Error handling
             JSON-RPC: JSON-RPC
             Tests: Testing
             Runners personnalisés: Custom runners
+            Tâches d'arrière-plan: Background tasks
+            Journalisation: Logging
+            Utilitaires et statuts: Utilities and status
             Référence API: API reference
             Notes de version: Release notes
             Journal des modifications: Changelog
@@ -109,6 +114,7 @@ nav:
       - En-têtes: headers.md
       - Cookies: cookies.md
       - Réponses: responses.md
+      - Tâches d'arrière-plan: background-tasks.md
   - Aller plus loin:
       - Dépendances: dependencies.md
       - Sécurité: security.md
@@ -116,10 +122,16 @@ nav:
       - Contrôleurs: controllers.md
       - Fichiers statiques: static-files.md
       - Templates Twig: templates.md
+      - Documentation OpenAPI: openapi.md
+      - Cache: cache.md
+      - Contrats et adaptateurs: contracts.md
+      - WebSockets: websockets.md
       - Gestion des erreurs: errors.md
       - JSON-RPC: rpc.md
       - Tests: testing.md
       - Runners personnalisés: runners.md
+      - Journalisation: logger.md
+      - Utilitaires et statuts: utilities.md
   - Référence API: reference.md
   - Notes de version:
       - Journal des modifications: release-notes/changelog.md

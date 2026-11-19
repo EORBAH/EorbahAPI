@@ -2,127 +2,101 @@
 
 ## Ce que vous allez apprendre
 
-Lire un en-tête HTTP depuis un paramètre de handler avec `#[Header]` : la
-recherche insensible à la casse, la convention FastAPI qui transforme
-`user_agent` en `User-Agent`, le nom explicite, les contraintes de validation
-de Svinx et la réponse `422` renvoyée quand un en-tête obligatoire manque.
+Lire un en-tête HTTP avec `#[Header]`, gérer la casse et la convention de nommage,
+et utiliser les en-têtes pour l'authentification ou le contenu.
 
-## Le code
-
-`docs_src/HeadersExample.php` :
+## Déclarer un en-tête
 
 ```php
 <?php
 
-namespace Eorbahapi\Examples;
+require __DIR__ . '/vendor/autoload.php';
 
 use Eorbahapi\EorbahAPI;
 use Eorbahapi\Params\Header;
 
-/**
- * En-têtes HTTP.
- */
-final class HeadersExample extends DocsExample
-{
-    public static function app(): EorbahAPI
-    {
-        $app = new EorbahAPI();
+$app = new EorbahAPI();
 
-        // `token` est cherché sous le nom `token` puis `Token` (insensible à la casse).
-        $app->get('/token', function (#[Header] string $token) {
-            return ['token' => $token];
-        });
+$app->get('/me', function (#[Header('X-Api-Key', min_length: 8)] string $apiKey) {
+    return ['key' => $apiKey];
+});
 
-        // Nom explicite, contraintes Svinx appliquées à la valeur.
-        $app->get('/api-key', function (#[Header('X-Api-Key', min_length: 8)] string $key) {
-            return ['key' => $key];
-        });
-
-        // Convention FastAPI : `user_agent` lit l'en-tête `User-Agent`.
-        $app->get('/agent', function (#[Header] string $user_agent) {
-            return ['agent' => $user_agent];
-        });
-
-        return $app;
-    }
-}
+$app->run();
 ```
 
-Un en-tête se déclare comme n'importe quel autre paramètre : le **type PHP**
-décide de la conversion, l'**attribut** décide de la source. `Header` vit dans le
-namespace `Eorbahapi\Params` et s'importe par
-`use Eorbahapi\Params\Header;`.
+```console
+$ curl "http://127.0.0.1:8000/me" -H "X-Api-Key: secret-123"
+{"key":"secret-123"}
+```
 
-Trois écritures suffisent pour tout couvrir :
+Un en-tête requis absent produit une **422** (`loc: ["header", "X-Api-Key"]`).
 
-| Écriture | En-tête lu |
-| --- | --- |
-| `#[Header] string $token` | `Token` (ou `token`, la casse est ignorée) |
-| `#[Header] string $user_agent` | `User-Agent` (`_` converti en `-`) |
-| `#[Header('X-Api-Key')] string $key` | `X-Api-Key` exactement |
+## Casse et nommage
 
-## Ce qui se passe
-
-Les scénarios de l'exemple décrivent ce comportement :
+La recherche est insensible à la casse et convertit les `_` PHP en `-` HTTP :
 
 ```php
 <?php
-    public static function scenarios(): array
-    {
-        return [
-            self::scenario('GET', '/token', [
-                'headers' => ['Token' => 'abc'],
-            ], json: ['token' => 'abc']),
 
-            self::scenario('GET', '/api-key', [
-                'headers' => ['X-Api-Key' => 'secret-123'],
-            ], json: ['key' => 'secret-123']),
-
-            self::scenario('GET', '/api-key', [
-                'headers' => ['X-Api-Key' => 'court'],
-            ], status: 422, contains: 'value_error'),
-
-            self::scenario('GET', '/agent', [
-                'headers' => ['User-Agent' => 'EorbahBot/1.0'],
-            ], json: ['agent' => 'EorbahBot/1.0']),
-
-            self::scenario('GET', '/token', [], status: 422, contains: 'missing'),
-        ];
-    }
+$app->get('/client', function (
+    #[Header] ?string $user_agent = null,
+    #[Header] string $accept = 'application/json',
+) {
+    return ['ua' => $user_agent, 'accept' => $accept];
+});
 ```
 
-| Requête | Statut | Corps / en-têtes |
-| --- | --- | --- |
-| `GET /token` avec `Token: abc` | 200 | `{"token":"abc"}` |
-| `GET /api-key` avec `X-Api-Key: secret-123` | 200 | `{"key":"secret-123"}` |
-| `GET /api-key` avec `X-Api-Key: court` | 422 | `value_error` : 5 caractères pour `min_length: 8` |
-| `GET /agent` avec `User-Agent: EorbahBot/1.0` | 200 | `{"agent":"EorbahBot/1.0"}` |
-| `GET /token` sans en-tête | 422 | `missing` : le paramètre `header 'token'` est requis |
+- `$user_agent` lit `User-Agent` (ou `user_agent` si le client envoie ce nom) ;
+- `$accept` a une valeur par défaut, donc l'en-tête est optionnel ;
+- le nom exposé peut être fixé : `#[Header('X-Request-Id')] string $requestId`.
 
-Une erreur de validation ne renvoie jamais de page HTML : le corps est un JSON
-`{"error": true, "status": 422, "message": ..., "details": [...]}`, où chaque
-entrée de `details` porte `loc` (`["header", "token"]`), `type` (`missing` ou
-`value_error`) et `msg`. Les contraintes testées ici sont celles de
-`Svinx\Validator` : `min_length`, `max_length`, `pattern`, `ge`, `choices`…
-elles s'écrivent en argument nommé de l'attribut.
+## Contraintes
 
-!!! tip "La casse et les tirets sont gérés"
-    Les noms d'en-têtes HTTP sont insensibles à la casse. Le framework compare
-    donc les noms en minuscules et tente aussi la variante `_` → `-` : un client
-    qui envoie `token`, `Token` ou `TOKEN` alimente le même paramètre, et
-    `#[Header] string $user_agent` lit bien `User-Agent`.
+Les contraintes de Svinx s'appliquent comme pour les autres paramètres :
 
-!!! warning "Un nom explicite fige le nom sur le fil"
-    Dès que vous passez un nom à l'attribut (`#[Header('X-Api-Key')]`), le nom
-    du paramètre PHP n'est plus utilisé : `$key` lit `X-Api-Key`, pas `key`.
-    C'est la seule façon d'être sûr du nom envoyé par un client tiers.
+```php
+<?php
+
+$app->get('/secure', function (
+    #[Header('Authorization', min_length: 7)] string $authorization,
+) {
+    return ['ok' => true];
+});
+```
+
+Voir [Validations](validations.md).
+
+## En-têtes de réponse
+
+Pour poser un en-tête dans la réponse, utilisez `Response` :
+
+```php
+<?php
+
+use Eorbahapi\Request;
+use Eorbahapi\Response;
+
+$app->get('/trace', function (Request $request, Response $response) {
+    $response->headers['X-Trace-Id'] = 'abc-123';
+
+    return ['ok' => true];
+});
+```
+
+Un handler peut aussi retourner une `Response` avec ses en-têtes (voir
+[Réponses](responses.md)).
+
+!!! tip "Authentification"
+    `#[Header]` est la brique de base. Pour un schéma complet (challenge 401,
+    validation du jeton, documentation OpenAPI), utilisez
+    `#[Security(HTTPBearer::class)]` — voir [Sécurité](security.md).
 
 ## Récapitulatif
 
-- `#[Header]` se place sur un paramètre de handler, comme `#[Query]` ou `#[Path]` ;
-- la recherche est insensible à la casse, et `_` devient `-` (convention FastAPI) ;
-- `#[Header('X-Api-Key')]` impose le nom exact de l'en-tête ;
-- les contraintes Svinx (`min_length`, `pattern`, `choices`…) valident la valeur ;
-- en-tête absent et valeur invalide produisent une `422` avec `missing` / `value_error`.
+- `#[Header]` lit un en-tête de requête, insensible à la casse ;
+- `_` devient `-` (convention FastAPI) ;
+- une valeur par défaut rend l'en-tête optionnel ;
+- les contraintes Svinx s'appliquent (longueur, motif, choix…) ;
+- les en-têtes de réponse se posent sur `Response`.
 
 [Suivant : Cookies](cookies.md){ .md-button }

@@ -2,133 +2,167 @@
 
 ## Ce que vous allez apprendre
 
-Composer des modèles : un modèle `Svinx\Validator` peut être la propriété d'un
-autre modèle. Vous verrez la validation récursive, les alias (`full_name`),
-les types dédiés comme `EmailStr`, et comment une erreur dans un sous-modèle
-remonte en `422`.
+Composer des modèles : un objet dans un objet, une liste de modèles, un modèle
+optionnel, et les options de configuration d'un modèle Svinx.
 
-## Le code
+## Un modèle dans un modèle
 
-`docs_src/NestedBodyExample.php` définit deux modèles, puis une route :
+Un modèle peut déclarer une propriété dont le type est un autre `BaseModel` :
 
 ```php
 <?php
-
-namespace Eorbahapi\Examples;
 
 use Eorbahapi\EorbahAPI;
 use Eorbahapi\Params\Body;
 use Svinx\Validator\BaseModel;
 use Svinx\Validator\Field;
-use Svinx\Validator\Validators\EmailStr;
 
-/**
- * Adresse, utilisée comme modèle imbriqué.
- */
-final class Address extends BaseModel
+final class Adresse extends BaseModel
 {
     #[Field(min_length: 2)]
-    public string $city;
+    public string $ville;
 
     #[Field(pattern: '/^[0-9]{5}$/')]
-    public string $zip;
+    public string $code_postal;
 }
+
+final class Client extends BaseModel
+{
+    #[Field(min_length: 2)]
+    public string $nom;
+
+    public Adresse $adresse;
+}
+
+$app = new EorbahAPI();
+
+$app->post('/clients', function (#[Body] Client $client) {
+    return ['client' => $client->model_dump()];
+});
 ```
 
-`Address` est un modèle ordinaire. Rien ne le destine encore à être imbriqué :
-c'est la déclaration ci-dessous qui fait le lien.
+```console
+$ curl -X POST "http://127.0.0.1:8000/clients" \
+    -H 'Content-Type: application/json' \
+    -d '{"nom":"Oumar","adresse":{"ville":"Paris","code_postal":"75001"}}'
+{"client":{"nom":"Oumar","adresse":{"ville":"Paris","code_postal":"75001"}}}
+```
+
+L'erreur d'un sous-champ remonte avec son chemin complet
+(`loc: ["body", "adresse", "code_postal"]`).
+
+## Une liste de modèles
+
+PHP ne permet pas de typer `array` par ses éléments ; utilisez un `TypeAdapter`
+pour valider une liste de modèles :
 
 ```php
 <?php
-/**
- * Client : un modèle qui en contient un autre.
- */
-final class Customer extends BaseModel
+
+use Svinx\Validator\BaseModel;
+use Svinx\Validator\Field;
+use Svinx\Validator\TypeAdapter;
+use Svinx\Validator\Typing\Type;
+
+final class Ligne extends BaseModel
 {
-    #[Field(alias: 'full_name', min_length: 2, max_length: 40)]
-    public string $name;
+    #[Field(min_length: 1)]
+    public string $produit;
 
-    public EmailStr $email;
-
-    #[Field(gte: 18, le: 130)]
-    public int $age = 18;
-
-    public Address $address;
+    #[Field(gt: 0)]
+    public int $quantite;
 }
+
+$lignes = TypeAdapter::of(Type::list(Type::model(Ligne::class)));
+
+$valides = $lignes->validate([
+    ['produit' => 'Clavier', 'quantite' => 2],
+    ['produit' => 'Souris', 'quantite' => 1],
+]);
+// $valides contient des instances de Ligne
 ```
+
+La même liste peut entrer dans un modèle avec un champ `array`, puis être
+validée dans un `#[FieldValidator]` ou dans le handler.
+
+## Modèle optionnel
+
+Un modèle nullable accepte `null` :
 
 ```php
 <?php
-/**
- * Modèles imbriqués : un modèle dans un autre modèle.
- */
-final class NestedBodyExample extends DocsExample
+
+final class Profil extends BaseModel
 {
-    public static function app(): EorbahAPI
+    public ?Adresse $adresse = null;
+}
+```
+
+Sans `null`, la clé `adresse` est requise : une requête qui l'omet produit un
+422.
+
+## Alias et configuration
+
+`Field(alias: ...)` expose un autre nom sur le fil ; `Config` règle le
+comportement global du modèle :
+
+```php
+<?php
+
+use Svinx\Validator\Config;
+
+final class Produit extends BaseModel
+{
+    public static function model_config(): Config
     {
-        $app = new EorbahAPI();
-
-        $app->post('/customers', function (#[Body] Customer $customer) {
-            return ['customer' => $customer->model_dump()];
-        });
-
-        return $app;
+        return new Config(
+            extra: Config::EXTRA_FORBID,        // refuse les champs inconnus
+            str_strip_whitespace: true,         // nettoie les chaînes
+            alias_generator: static fn (string $champ): string => strtolower($champ),
+        );
     }
+
+    #[Field(min_length: 2)]
+    public string $Nom;
 }
 ```
 
-Le lien entre les deux modèles est le **type de la propriété** : parce que
-`$address` est déclaré `Address`, et `Address` étend `BaseModel`, le validateur
-construit récursivement un modèle à partir de l'objet JSON `address`. Il n'y a
-aucune configuration à écrire.
+Options principales de `Config` :
 
-Trois choses valent d'être soulignées dans `Customer` :
+| Option | Effet |
+| --- | --- |
+| `extra` | `ignore` (défaut), `forbid`, `allow` |
+| `populate_by_name` | accepte le nom de propriété et l'alias |
+| `alias_generator` | callable `(string $champ): string` |
+| `str_strip_whitespace` | retire les espaces autour des chaînes |
+| `str_to_lower` / `str_to_upper` | normalise la casse |
+| `title` | titre du modèle dans le schéma JSON |
 
-- `#[Field(alias: 'full_name')]` : le JSON utilise `full_name`, la propriété
-  PHP reste `$name` — plus lisible des deux côtés ;
-- `public EmailStr $email;` : pas besoin de `#[Field]`, le type
-  `Svinx\Validator\Validators\EmailStr` valide l'adresse à lui seul ;
-- `#[Field(pattern: '/^[0-9]{5}$/')]` sur `zip` : cinq chiffres, exactement.
+## Schéma du modèle
 
-`model_dump()` traverse les frontières du modèle : il ressort l'alias
-`full_name`, l'âge, et l'objet `address` complet.
+`model_schema()` retourne un schéma JSON exploitable (et utilisé par OpenAPI) :
 
-## Ce qui se passe
+```php
+<?php
 
-| Requête | Statut | Corps |
-| --- | --- | --- |
-| `POST /customers` · `{"full_name":"Jean Dupont","email":"jean@example.com","age":30,"address":{"city":"Paris","zip":"75001"}}` | 200 | `{"customer":{"full_name":"Jean Dupont","email":"jean@example.com","age":30,"address":{"city":"Paris","zip":"75001"}}}` |
-| `POST /customers` · même corps avec `"zip":"75"` | 422 | `{"error":true,…,"details":[{"loc":["body","customer"],"type":"value_error","msg":"Le champ 'zip' ne correspond pas au pattern attendu"}]}` |
+Client::model_schema();
+// ['title' => 'Client', 'type' => 'object', 'properties' => [...], 'required' => [...]]
+```
 
-Dans les deux cas, `loc` vaut `["body", "customer"]` : l'erreur est imputée au
-paramètre, et `msg` nomme le champ fautif — ici `zip`, un champ du **sous-modèle**.
+Les modèles imbriqués y apparaissent comme des objets ou des références selon
+le contexte.
 
-!!! note "Ce que le sous-modèle ajoute"
-    Quelques variantes utiles, toutes en `422` :
-
-    - `zip` absent de `address` : `Le champ 'zip' est requis.` ;
-    - `address` absent : `Le champ 'address' est requis.` ;
-    - `email` mal formé : `EmailStr invalide : … n'est pas une adresse email valide.` ;
-    - `age` à `12` : `Le champ 'age' doit être >= 18`.
-
-    À l'inverse, `age` absent donne `18` (valeur par défaut de la propriété) :
-    la réponse contient alors `"age":18` même si le JSON ne l'envoyait pas.
-    La requête qui envoie `"name"` au lieu de `"full_name"` passe aussi, car
-    `populate_by_name` est actif par défaut : l'alias est simplement prioritaire.
-
-!!! tip "Modèle imbriqué ou modèle séparé ?"
-    Découpez tôt : un sous-modèle comme `Address` est réutilisable dans
-    `Customer`, `Supplier`, `Invoice`… Chaque niveau garde ses propres
-    contraintes et ses propres messages, et vous pouvez tester `Address` seul
-    avec `Address::model_validate([...])` ou `model_validate_json()`.
+!!! tip "Documentation automatique"
+    Un modèle imbriqué devient automatiquement un composant
+    `components.schemas` dans la documentation OpenAPI — voir
+    [Documentation OpenAPI](openapi.md).
 
 ## Récapitulatif
 
-- une propriété typée par un `BaseModel` déclenche la validation récursive ;
-- `#[Field(alias: 'full_name')]` découple le nom sur le fil et le nom de propriété ;
-- `EmailStr` et `pattern` valident sans `#[Field]` ou presque ;
-- une erreur dans un sous-modèle remonte en `422` avec `loc = [body, paramètre]`
-  et `msg` nommant le champ fautif ;
-- `model_dump()` sérialise en profondeur, alias compris.
+- une propriété typée `BaseModel` est validée récursivement ;
+- les listes de modèles se valident avec `TypeAdapter` et `Type::list()` ;
+- `?Adresse` rend la sous-structure optionnelle ;
+- `Config` règle les champs inconnus, les alias et la normalisation ;
+- `model_schema()` décrit le modèle pour la documentation.
 
 [Suivant : Formulaires](forms.md){ .md-button }

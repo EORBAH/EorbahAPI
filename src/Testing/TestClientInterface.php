@@ -15,7 +15,7 @@ namespace Eorbahapi\Testing;
  *     $response->status();   // 201
  *     $response->json();     // ['id' => 1, 'name' => 'Jean']
  */
-interface TestClientInterface
+interface TestClientInterface extends \Eorbahapi\Contracts\TestClientInterface
 {
     public function request(string $method, string $uri, array $options = []): TestResponse;
 

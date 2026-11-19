@@ -4,6 +4,14 @@ namespace Eorbahapi;
 
 class Response
 {
+    /**
+     * Cookies posés sur la réponse : utilisés par les adaptateurs de serveur
+     * (Swoole, tests) qui ne passent pas par `setcookie()`.
+     *
+     * @var list<array{name: string, value: string, options: array<string, mixed>}>
+     */
+    public array $cookies = [];
+
     public function __construct(
         public string|array|null $body = null,
         public int $status = 200,
@@ -98,23 +106,23 @@ class Response
         }
     }
 
-    public function setHeader($name, $value)
+    public function setHeader(string $name, string $value)
     {
         header("$name: $value");
         return $this;
     }
 
-    public function header($name, $value)
+    public function header(string $name, string $value)
     {
         return $this->setHeader($name, $value);
     }
 
-    public function removeHeader($name)
+    public function removeHeader(string $name)
     {
         header_remove($name);
     }
 
-    public function cookie(string $name, $value, array $options = []): void
+    public function cookie(string $name, mixed $value, array $options = []): void
     {
         $defaultOptions = [
             'expires' => 0,
@@ -140,25 +148,80 @@ class Response
             ]
         );
 
+        $this->cookies[] = ['name' => $name, 'value' => (string) $value, 'options' => $options];
+
         $_COOKIE[$name] = $value;
     }
 
-    public function clearCookie($name)
+    public function clearCookie(string $name)
     {
-        if (isset($_COOKIE[$name])) {
-            setcookie(
-                $name,
-                '',
-                [
-                    'expires' => time() - 3600,
-                    'path' => '/',
-                    'domain' => '',
-                    'secure' => true,
-                    'httponly' => true,
-                    'samesite' => 'Strict'
-                ]
-            );
-            unset($_COOKIE[$name]);
+        $options = [
+            'expires' => time() - 3600,
+            'path' => '/',
+            'domain' => '',
+            'secure' => true,
+            'httponly' => true,
+            'samesite' => 'Strict',
+        ];
+
+        setcookie($name, '', $options);
+        $this->cookies[] = ['name' => $name, 'value' => '', 'options' => $options];
+
+        unset($_COOKIE[$name]);
+    }
+
+    /**
+     * En-têtes `Set-Cookie` correspondant aux cookies posés.
+     *
+     * Utile aux adaptateurs de serveur qui n'exécutent pas le SAPI PHP
+     * (Swoole) : ils peuvent transmettre ces en-têtes tels quels.
+     *
+     * @return list<string>
+     */
+    public function cookie_headers(): array
+    {
+        $headers = [];
+
+        foreach ($this->cookies as $cookie) {
+            $options = $cookie['options'] + [
+                'expires' => 0,
+                'path' => '/',
+                'domain' => '',
+                'secure' => true,
+                'httponly' => true,
+                'samesite' => 'Strict',
+            ];
+
+            $header = $cookie['name'] . '=' . rawurlencode($cookie['value']);
+
+            if ((int) $options['expires'] > 0) {
+                $header .= '; Expires=' . gmdate('D, d M Y H:i:s \G\M\T', (int) $options['expires']);
+                $header .= '; Max-Age=' . max(0, (int) $options['expires'] - time());
+            }
+
+            if ((string) $options['path'] !== '') {
+                $header .= '; Path=' . $options['path'];
+            }
+
+            if ((string) $options['domain'] !== '') {
+                $header .= '; Domain=' . $options['domain'];
+            }
+
+            if ($options['secure']) {
+                $header .= '; Secure';
+            }
+
+            if ($options['httponly']) {
+                $header .= '; HttpOnly';
+            }
+
+            if ((string) $options['samesite'] !== '') {
+                $header .= '; SameSite=' . $options['samesite'];
+            }
+
+            $headers[] = $header;
         }
+
+        return $headers;
     }
 }

@@ -40,10 +40,6 @@ class Request {
         private ?array $headers = null,
     ) {}
 
-    // ------------------------------------------------------------------
-    // Surcharges injectées
-    // ------------------------------------------------------------------
-
     /**
      * Valeur de `$_SERVER` (injectée ou réelle).
      */
@@ -304,7 +300,7 @@ class Request {
     /**
      * Définit une valeur dans la session.
      */
-    public function setSessionValue(string $key, $value): void
+    public function setSessionValue(string $key, mixed $value): void
     {
         $_SESSION[$key] = $value;
     }

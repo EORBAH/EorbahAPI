@@ -2,39 +2,64 @@
 
 require __DIR__ . '/vendor/autoload.php';
 
-use Eorbahapi\Exceptions\UserWarning;
-use Eorbahapi\Templating\TwigTemplates;
-use Eorbahapi\Middlewares\CORSMiddleware;
-use Eorbahapi\{EorbahAPI, Response, StaticFiles};
-use Eorbahapi\Params\{Query, Depends, Path, Header, Body};
-use Eorbahapi\Responses\{JSONResponse, HTMLResponse, RedirectResponse, EventStreamResponse};
+use Eorbahapi\EorbahAPI;
+use Eorbahapi\Websockets\WebSocket;
+use Eorbahapi\Websockets\WebSocketServer;
+
+use Eorbahapi\Server\ESGIAppRunner;
+use Eorbahapi\Adapter\Server\SwooleServerAdapter;
+use Eorbahapi\Responses\FileResponse;
+use Eorbahapi\Responses\HTMLResponse;
 
 $app = new EorbahAPI(debug: true);
 
-$app->get('/', function() {
-    return new HTMLResponse("<h1>Hello world</h1>");
+$app->get('/', fn(): HTMLResponse => new HTMLResponse(
+<<<'HTML'
+<!DOCTYPE html>
+<html>
+<body>
+<script>
+  const ws = new WebSocket("ws://localhost:8000/ws/echo");
+
+  ws.onopen = () => {
+    console.log("✅ Connecté");
+    ws.send("Bonjour serveur !");
+  };
+
+  ws.onmessage = (event) => {
+    console.log("📩 Reçu :", event.data);
+  };
+
+  ws.onerror = (err) => console.error("❌ Erreur :", err);
+  ws.onclose = () => console.log("🔌 Fermé");
+</script>
+</body>
+</html>
+
+HTML
+));
+$app->get('/health', fn(): array => ['status' => 'ok_2']);
+
+$app->websocket('/ws/echo', static function (WebSocket $websocket): void {
+    $websocket->send('connecté au serveur d\'écho');
+
+    while (($message = $websocket->receive()) !== null) {
+        $websocket->send('écho : ' . $message);
+    }
 });
 
-function TemplateResponse() {
-   return new TwigTemplates(__DIR__.'/templates');
+if (PHP_SAPI == "cli") {
+    $arguments = $_SERVER['argv'] ?? [];
+
+    $runner = new ESGIAppRunner();
+    $runner->run(
+        $app,
+        '0.0.0.0',
+        8000,
+        true,
+        new SwooleServerAdapter(workers: 4),
+    );
+    exit(0);
 }
-
-$app->get('/twig', function(
-    #[Depends('TemplateResponse')] $template
-) {
-    return $template->TemplateResponse('index.html.twig', ["name" => "oumar"]);
-});
-
-$app->get('/items/{id}', function (
-    #[Path(ge: 1)] int $id,
-    #[Query(ge: 1, le: 100)] int $limit = 10,
-    #[Header('X-Trace', min_length: 2)] ?string $trace = null,
-) {
-    return [$id, $limit, $trace];
-});
-
-$app->default_route(http_code: 404, handler: function (Response $response) {
-    return new JSONResponse(["error" => "404 ROUTE NOT FOUND"]);
-});
 
 $app->run();

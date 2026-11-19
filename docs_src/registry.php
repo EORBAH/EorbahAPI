@@ -46,4 +46,7 @@ return [
     \Eorbahapi\Examples\RunnersExample::class,
     \Eorbahapi\Examples\ErrorsExample::class,
     \Eorbahapi\Examples\RpcExample::class,
+    \Eorbahapi\Examples\OpenapiExample::class,
+    \Eorbahapi\Examples\CacheExample::class,
+    \Eorbahapi\Examples\WebsocketExample::class,
 ];

@@ -37,9 +37,6 @@ class Logger {
 
         $logLine = json_encode($logEntry) . PHP_EOL;
 
-        /**
-         * Traitement deslogs
-         */
         error_log($logLine);
     }
 

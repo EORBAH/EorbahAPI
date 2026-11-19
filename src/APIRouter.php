@@ -3,6 +3,7 @@
 namespace Eorbahapi;
 
 use Eorbahapi\Dependency\DependencyResolver;
+use Eorbahapi\Responses\FileResponse;
 
 /**
  * Routeur HTTP autonome.
@@ -214,7 +215,13 @@ class APIRouter
             };
         }
 
-        return self::toResponse($next(), $response);
+        $result = self::toResponse($next(), $response);
+
+        if ($result instanceof FileResponse) {
+            $result->withRequest($request);
+        }
+
+        return $result;
     }
 
     /**
@@ -233,20 +240,22 @@ class APIRouter
         return $next();
     }
 
-    // ------------------------------------------------------------------
-    // Aides partagées
-    // ------------------------------------------------------------------
 
     /**
      * Normalise le retour d'un handler en `Response`.
      *
      *  - `Response` : renvoyée telle quelle ;
-     *  - `array` / `object` : encodé en JSON dans le corps ;
+     *  - `array` / `object` : rendu par `$responseClass` (JSON par défaut) ;
      *  - `'redirect:code:url'` : statut + en-tête `Location` ;
      *  - scalaire : corps de la réponse ;
      *  - `null` / `true` / `false` : réponse inchangée.
+     *
+     * `$responseClass` est la classe chargée de rendre les données structurées
+     * (tableau ou objet). `EorbahAPI` y passe sa classe configurée
+     * (`EorbahAPI::$response_class`, `JSONResponse` par défaut) ; sans elle, le
+     * comportement JSON historique s'applique.
      */
-    public static function toResponse(mixed $result, Response $response): Response
+    public static function toResponse(mixed $result, Response $response, ?string $responseClass = null): Response
     {
         if ($result instanceof Response) {
             return $result;
@@ -272,7 +281,12 @@ class APIRouter
         }
 
         if (is_array($result) || is_object($result)) {
+            if ($responseClass !== null) {
+                return self::renderData($responseClass, $result, $response);
+            }
+
             $response->body = json_encode($result);
+            $response->headers['Content-Type'] ??= 'application/json';
 
             return $response;
         }
@@ -282,6 +296,36 @@ class APIRouter
         }
 
         return $response;
+    }
+
+    /**
+     * Rend des données structurées avec la classe de réponse demandée.
+     *
+     * Le contrat attendu est celui de `JSONResponse` :
+     * `__construct(mixed $data, int $status = 200, array $headers = [])`.
+     * Une classe incompatible (par exemple `HTMLResponse` avec un tableau)
+     * produit une erreur explicite plutôt qu'une réponse vide.
+     *
+     * @throws \InvalidArgumentException
+     */
+    private static function renderData(string $class, mixed $data, Response $response): Response
+    {
+        if (!class_exists($class) || !is_a($class, Response::class, true)) {
+            throw new \InvalidArgumentException(
+                "La classe de réponse [$class] doit étendre " . Response::class . '.'
+            );
+        }
+
+        try {
+            return new $class($data, $response->status, $response->headers);
+        } catch (\TypeError $error) {
+            throw new \InvalidArgumentException(
+                "La classe de réponse [$class] ne peut pas rendre une valeur de type "
+                . get_debug_type($data) . '.',
+                0,
+                $error
+            );
+        }
     }
 
     /**

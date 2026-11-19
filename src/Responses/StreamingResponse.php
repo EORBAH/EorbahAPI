@@ -18,6 +18,14 @@ class StreamingResponse extends Response
         );
     }
 
+    /**
+     * Générateur de la réponse, exposé pour les adaptateurs de serveur.
+     */
+    public function generator(): \Generator
+    {
+        return $this->generator;
+    }
+
     public function send(): void
     {
         http_response_code($this->status);

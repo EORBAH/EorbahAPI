@@ -2,135 +2,147 @@
 
 ## Ce que vous allez apprendre
 
-Réceptionner les paramètres d'une URL (`?page=2`), choisir entre résolution
-automatique par nom et attribut `#[Query]`, gérer valeurs par défaut, paramètre
-obligatoire, paramètre nullable et listes (`?tags[]=php&tags[]=api`).
+Lire la query string avec `#[Query]`, gérer les valeurs optionnelles et les
+valeurs par défaut, renommer un paramètre et valider les entrées.
 
-## Le code
-
-`docs_src/QueryParamsExample.php` :
+## Déclarer un paramètre de requête
 
 ```php
 <?php
 
-namespace Eorbahapi\Examples;
+require __DIR__ . '/vendor/autoload.php';
 
 use Eorbahapi\EorbahAPI;
 use Eorbahapi\Params\Query;
 
-final class QueryParamsExample extends DocsExample
-{
-    public static function app(): EorbahAPI
-    {
-        $app = new EorbahAPI();
+$app = new EorbahAPI();
 
-        // Sans attribut : les paramètres de l'URL sont résolus par leur nom.
-        $app->get('/search', function (string $q = 'tout', int $page = 1) {
-            return ['q' => $q, 'page' => $page];
-        });
+$app->get('/items', function (#[Query] int $page = 1) {
+    return ['page' => $page];
+});
 
-        // `skip`/`limit` avec des valeurs par défaut PHP.
-        $app->get('/items', function (#[Query] int $skip = 0, #[Query] int $limit = 10) {
-            return ['skip' => $skip, 'limit' => $limit];
-        });
-
-        // Paramètre obligatoire (aucun défaut).
-        $app->get('/required', function (#[Query] string $token) {
-            return ['token' => $token];
-        });
-
-        // Paramètre optionnel nullable.
-        $app->get('/optional', function (#[Query] ?string $name = null) {
-            return ['name' => $name];
-        });
-
-        // Liste : `?tags[]=php&tags[]=api`.
-        $app->get('/tags', function (#[Query] array $tags = []) {
-            return ['tags' => $tags];
-        });
-
-        return $app;
-    }
-}
+$app->run();
 ```
 
-## Ce qui se passe
+```console
+$ curl "http://127.0.0.1:8000/items?page=3"
+{"page":3}
+```
 
-Trois routes sur cinq se passent d'attribut : `?q=php&page=2` remplit
-`string $q` et `int $page` parce que le framework résout chaque paramètre **par
-son nom** dans `Request::params()` — les paramètres de route, complétés par la
-chaîne de requête. C'est la forme la plus courte, pratique pour des filtres.
+Sans `?page=`, la valeur par défaut `1` est utilisée.
 
-L'attribut `Eorbahapi\Params\Query` rend le paramètre explicite. Il apporte deux
-choses de plus : la valeur peut porter un **défaut** (`default:`) et elle est
-validée par `Svinx\Validator` avec les mêmes contraintes que `#[Path]`.
+## Paramètres optionnels
 
-L'ordre de résolution d'une valeur absente est toujours le même :
-
-1. le défaut porté par l'attribut (`#[Query(default: 1)]`) ;
-2. le défaut PHP de la fonction (`int $limit = 10`) ;
-3. `null` si le type l'autorise (`?string $name = null`) ;
-4. sinon une erreur `422` de type `missing`.
-
-C'est exactement ce que montrent `/items` (défauts PHP), `/required` (aucun
-défaut, donc obligatoire) et `/optional` (nullable).
-
-Pour les listes, la convention est celle des formulaires HTML :
-`?tags[]=php&tags[]=api` remplit `array $tags = []`. Un `?tags=php` unique est
-refusé — Svinx attend un tableau, pas une chaîne.
-
-### Les scénarios de l'exemple
+Un paramètre typé nullable ou avec valeur par défaut est optionnel :
 
 ```php
 <?php
-public static function scenarios(): array
-{
-    return [
-        self::scenario('GET', '/search?q=php&page=2', json: ['q' => 'php', 'page' => 2]),
-        self::scenario('GET', '/search', json: ['q' => 'tout', 'page' => 1]),
-        self::scenario('GET', '/items?skip=5&limit=2', json: ['skip' => 5, 'limit' => 2]),
-        self::scenario('GET', '/items', json: ['skip' => 0, 'limit' => 10]),
-        self::scenario('GET', '/required?token=abc', json: ['token' => 'abc']),
-        self::scenario('GET', '/required', status: 422, contains: 'missing'),
-        self::scenario('GET', '/optional', json: ['name' => null]),
-        self::scenario('GET', '/tags?tags[]=php&tags[]=api', json: ['tags' => ['php', 'api']]),
-    ];
-}
+
+$app->get('/search', function (
+    #[Query(min_length: 2)] ?string $q = null,
+    #[Query(le: 100)] int $limit = 10,
+) {
+    return ['q' => $q, 'limit' => $limit];
+});
 ```
 
-| Requête | Statut | Corps |
-| --- | --- | --- |
-| `GET /search?q=php&page=2` | 200 | `{"q":"php","page":2}` |
-| `GET /search` | 200 | `{"q":"tout","page":1}` |
-| `GET /items?skip=5&limit=2` | 200 | `{"skip":5,"limit":2}` |
-| `GET /items` | 200 | `{"skip":0,"limit":10}` |
-| `GET /required?token=abc` | 200 | `{"token":"abc"}` |
-| `GET /required` | 422 | `{"error":true,"status":422,"message":"Request validation error","details":[{"loc":["query","token"],"type":"missing","msg":"Le paramètre query 'token' est requis."}]}` |
-| `GET /optional` | 200 | `{"name":null}` |
-| `GET /tags?tags[]=php&tags[]=api` | 200 | `{"tags":["php","api"]}` |
+```console
+$ curl "http://127.0.0.1:8000/search"
+{"q":null,"limit":10}
+$ curl "http://127.0.0.1:8000/search?q=clavier&limit=5"
+{"q":"clavier","limit":5}
+```
 
-!!! tip "La coercition des chaînes est laxiste, la validation ne l'est pas"
-    Une URL ne transporte que du texte : `#[Query] int $limit` reçoit `"2"` et le
-    convertit en `2`, `float` accepte `"2.5"`, `bool` accepte `"true"` et `"1"`.
-    En revanche, une valeur non convertible (`?limit=abc`) ne devient pas `0` :
-    elle produit un `422` avec un message du type
-    `int attendu, string donné ('abc')`.
+!!! warning "Ordre des paramètres PHP"
+    Placez les paramètres requis avant les optionnels. PHP 8.3+ déprécie un
+    paramètre optionnel déclaré avant un paramètre requis, et la réflexion perd
+    alors la valeur par défaut.
 
-!!! warning "Sans attribut, il n'y a pas de validation"
-    Un paramètre nu (`int $page = 1`) est converti par un simple cast PHP : la
-    contrainte de type n'est pas vérifiée et `?page=x` donne silencieusement
-    `0`. Dès que vous voulez un refus explicite, des bornes ou une valeur par
-    défaut documentée, déclarez `#[Query]` — ou passez aux
-    [Validations](validations.md).
+## Renommer un paramètre
+
+Le nom exposé diffère parfois du nom PHP :
+
+```php
+<?php
+
+$app->get('/items', function (#[Query('q', min_length: 2)] ?string $recherche = null) {
+    return ['recherche' => $recherche];
+});
+// ?q=clavier  -> recherche = "clavier"
+```
+
+Le premier argument de l'attribut est le nom sur le fil ; `name:` est un alias
+nommé équivalent.
+
+## Booléens et tableaux
+
+Les valeurs HTTP sont des chaînes, coercées vers le type déclaré :
+
+```php
+<?php
+
+$app->get('/items', function (
+    #[Query] bool $actif = false,
+    #[Query] array $tags = [],
+) {
+    return ['actif' => $actif, 'tags' => $tags];
+});
+```
+
+```console
+$ curl "http://127.0.0.1:8000/items?actif=1&tags=a&tags=b"
+{"actif":true,"tags":["a","b"]}
+```
+
+Un tableau peut aussi être validé élément par élément avec
+`#[Query] array $ids` puis un modèle, ou avec les validateurs Svinx.
+
+## Validation
+
+Les contraintes du paragraphe précédent s'appliquent de la même façon :
+
+```php
+<?php
+
+$app->get('/items', function (
+    #[Query(gte: 1, le: 100)] int $limit = 10,
+) {
+    return ['limit' => $limit];
+});
+```
+
+```console
+$ curl -i "http://127.0.0.1:8000/items?limit=0"
+HTTP/1.1 422 Unprocessable Entity
+{"error":true,"status":422,"message":"Request validation error","details":[{"loc":["query","limit"],"type":"value_error","msg":"Le paramètre query 'limit' doit être >= 1"}]}
+```
+
+Voir [Validations](validations.md) pour la liste complète des contraintes et des
+types.
+
+## Query string brute
+
+Pour lire la chaîne telle quelle (par exemple pour une signature) :
+
+```php
+<?php
+
+use Eorbahapi\Request;
+
+$app->get('/webhook', function (Request $request) {
+    return ['query' => $request->query_string()];
+});
+```
+
+`$request->query()` retourne le tableau complet ; `$request->query('clé')` une
+seule valeur.
 
 ## Récapitulatif
 
-- un paramètre sans attribut est résolu par son nom dans la requête ;
-- `#[Query]` (namespace `Eorbahapi\Params\Query`) rend le paramètre explicite et validé ;
-- défaut de l'attribut, puis défaut PHP, puis `null` si le type l'autorise ;
-- aucun défaut et pas de `null` autorisé : `422` de type `missing` ;
-- un paramètre optionnel nullable s'écrit `#[Query] ?string $name = null` ;
-- les listes passent par `?tags[]=a&tags[]=b` ;
-- les chaînes sont converties vers `int`, `float`, `bool` en mode laxiste de Svinx.
+- `#[Query]` lit un paramètre de la query string ;
+- une valeur par défaut ou un type nullable rend le paramètre optionnel ;
+- `#[Query('nom')]` renomme le paramètre exposé ;
+- booléens et tableaux sont coercés depuis les chaînes ;
+- les contraintes produisent des 422 localisées (`["query","nom"]`).
 
 [Suivant : Validations](validations.md){ .md-button }

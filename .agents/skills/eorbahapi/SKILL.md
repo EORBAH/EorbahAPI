@@ -65,8 +65,9 @@ dans le pipeline** : c'est ce qui rend l'ensemble testable.
 4. **Les middlewares gardent leur signature** `(Request $request, Response
    $response, callable $next)` ; `$next()` retourne une valeur normalisable en
    `Response`. `process()`, `__invoke()` et `handle()` sont acceptés.
-5. **Les exemples de `docs_src/` sont la source de vérité** : ils sont exécutés
-   par `tests/ExamplesTest.php`. Toute page de doc cite un fichier réel.
+5. **Les pages du cours contiennent du code autonome et réutilisable** (pas de
+   classes `*Example` recopiées) ; `docs_src/` reste la suite de régression
+   exécutée par `tests/ExamplesTest.php`.
 6. **Le français est la langue source de la documentation** ; les traductions
    sont générées par `scripts/translate.py`, jamais éditées à la main.
 7. **Compatibilité** : les anciens attributs `Eorbahapi\Routing\{Route,Get,...}`
@@ -81,7 +82,15 @@ dans le pipeline** : c'est ce qui rend l'ensemble testable.
 | `src/Request.php` | Requête, avec sources injectables (`server`, `query`, `postData`, `cookies`, `files`, `headers`, `body`) |
 | `src/Response.php` | Réponse de base (`body`, `status`, `headers`, `send()`) |
 | `src/Responses/` | `JSONResponse`, `HTMLResponse`, `RedirectResponse`, `StreamingResponse`, `EventStreamResponse`, `FileResponse` |
-| `src/Dependency/` | `DependencyResolver`, `DependencyInterface` |
+| `src/Dependency/` | `DependencyResolver`, `DependencyInterface`, `ParameterDescriptor` |
+| `src/Cache/` | `CacheManager`, `CacheInterface`, `FileCache` (fichiers PHP, façon Twig), `ArrayCache`, `NullCache` |
+| `src/Openapi/` | `OpenApiBuilder` (routes → spec 3.1), `Docs` (Swagger UI, ReDoc, OAuth2), `Utils`, `Models\*` |
+| `src/Contracts/` | Contrats figés (`RequestInterface`, `ResponseInterface`, `ESGIAppInterface`, WebSocket…) |
+| `src/Adapter/` | Adaptateurs HTTP, application, cache, serveur, `UploadFile` |
+| `src/Server/` | `ESGIAppRunner` (Swoole ou adaptateur minimal) |
+| `src/Websockets/` | Protocole RFC 6455, `WebSocketRouter`, `WebSocketServer` |
+| `src/BackgroundTasks.php` | Tâches exécutées après la réponse (`BackgroundTasksMiddleware`) |
+| `src/Logger.php`, `src/Status.php`, `src/Utils.php` | Journalisation JSON, constantes HTTP, utilitaires |
 | `src/Params/` | Attributs de paramètre + `ParamTypes` (enum) |
 | `src/Routing/Attributes/` | `Route`, `Get`, `Post`, `Put`, `Patch`, `Delete`, `Head`, `Options`, `Middleware` |
 | `src/Middlewares/` | `MiddlewareInterface`, `CORSMiddleware`, `SessionMiddleware`, `TrustedHostMiddleware`, `RateLimitingMiddleware` |
@@ -90,7 +99,7 @@ dans le pipeline** : c'est ce qui rend l'ensemble testable.
 | `src/StaticFiles.php` | Application montée qui sert un répertoire |
 | `src/RPC/JsonRPC.php` | Serveur JSON-RPC 2.0 monté |
 | `src/Templating/TwigTemplates.php` | Rendu Twig |
-| `docs_src/` | 22 exemples exécutables (`Eorbahapi\Examples\*Example`) + `registry.php` |
+| `docs_src/` | 26 exemples exécutables (`Eorbahapi\Examples\*Example`) + `registry.php` |
 | `docs/fr/` | Cours source (français) |
 | `tests/` | PHPUnit : un fichier par brique + `ExamplesTest` |
 | `scripts/` | `translate.py`, `prompts/`, `README.md` |

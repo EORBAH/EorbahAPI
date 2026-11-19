@@ -2,149 +2,194 @@
 
 ## Ce que vous allez apprendre
 
-Protéger un paramètre de handler avec `#[Security]` : schémas HTTP Bearer et
-Basic, clés d'API, OAuth2, jetons JWT — et le comportement exact en cas
-d'authentification manquante.
+Protéger une route avec des schémas de sécurité prêts à l'emploi : Bearer,
+Basic, clés d'API, OAuth2, JWT, et comprendre la documentation automatique des
+schémas dans OpenAPI.
 
-## Le code
-
-`docs_src/SecurityExample.php` :
+## Bearer et Basic
 
 ```php
 <?php
 
-namespace Eorbahapi\Examples;
-
-use Eorbahapi\EorbahAPI;
 use Eorbahapi\Params\Security;
-use Eorbahapi\Security\APIKey\APIKeyQuery;
 use Eorbahapi\Security\HTTP\HTTPAuthorizationCredentials;
-use Eorbahapi\Security\HTTP\HTTPBasic;
 use Eorbahapi\Security\HTTP\HTTPBearer;
 
-/**
- * Sécurité : schémas HTTP Bearer, Basic et clé d'API.
- *
- * `#[Security]` exécute le schéma désigné et injecte sa valeur ; une
- * authentification manquante lève une `HTTPException` 401 ou 403, convertie en
- * réponse JSON par les gestionnaires d'exceptions par défaut.
- */
-final class SecurityExample extends DocsExample
-{
-    public static function app(): EorbahAPI
-    {
-        $app = new EorbahAPI();
-
-        // Bearer : le jeton est exposé via HTTPAuthorizationCredentials.
-        $app->get('/bearer', function (#[Security(HTTPBearer::class)] HTTPAuthorizationCredentials $credentials) {
-            return ['scheme' => $credentials->getScheme(), 'token' => $credentials->getCredentials()];
-        });
-
-        // Basic : les identifiants sont décodés (username:password).
-        $app->get('/basic', function (#[Security(HTTPBasic::class)] HTTPAuthorizationCredentials $credentials) {
-            return ['credentials' => $credentials->getCredentials()];
-        });
-
-        // Clé d'API passée en paramètre de requête.
-        $app->get('/api-key', function (#[Security(APIKeyQuery::class)] string $key) {
-            return ['key' => $key];
-        });
-
-        return $app;
-    }
-
-    public static function scenarios(): array
-    {
-        return [
-            self::scenario('GET', '/bearer', [
-                'headers' => ['Authorization' => 'Bearer mon-jeton'],
-            ], json: ['scheme' => 'Bearer', 'token' => 'mon-jeton']),
-
-            self::scenario('GET', '/bearer', [], status: 401, headers: ['WWW-Authenticate' => 'Bearer']),
-
-            self::scenario('GET', '/basic', [
-                'headers' => ['Authorization' => 'Basic ' . base64_encode('oumar:secret')],
-            ], json: ['credentials' => 'oumar:secret']),
-
-            self::scenario('GET', '/api-key?api_key=secret', json: ['key' => 'secret']),
-
-            self::scenario('GET', '/api-key', status: 403),
-        ];
-    }
-}
+$app->get('/me', function (
+    #[Security(HTTPBearer::class)] HTTPAuthorizationCredentials $credentials,
+) {
+    return [
+        'scheme' => $credentials->getScheme(),
+        'token' => $credentials->getCredentials(),
+    ];
+});
 ```
 
-## Ce qui se passe
+```console
+$ curl "http://127.0.0.1:8000/me" -H "Authorization: Bearer abc.def"
+{"scheme":"Bearer","token":"abc.def"}
+```
 
-| Requête | Statut | Corps |
-| --- | --- | --- |
-| `GET /bearer` + `Authorization: Bearer mon-jeton` | 200 | `{"scheme":"Bearer","token":"mon-jeton"}` |
-| `GET /bearer` sans en-tête | 401 (`WWW-Authenticate: Bearer`) | `{"error":true,"status":401,"message":"Authorization header missing"}` |
-| `GET /basic` + `Authorization: Basic b3VtYXI6c2VjcmV0` | 200 | `{"credentials":"oumar:secret"}` |
-| `GET /api-key?api_key=secret` | 200 | `{"key":"secret"}` |
-| `GET /api-key` | 403 | `{"error":true,"status":403,"message":"API key query parameter missing"}` |
+Sans en-tête, la réponse est une **401** avec `WWW-Authenticate: Bearer`. Le
+contrôle du jeton (validité, expiration, scopes) reste à votre charge.
 
-### Ce que fait `#[Security]`
+`HTTPBasic` suit le même modèle (`Authorization: Basic base64(user:pass)`) et
+décode les identifiants dans `getCredentials()`.
 
-`Eorbahapi\Params\Security` désigne un schéma de sécurité dans son premier
-argument. Le schéma est exécuté, et sa valeur de retour est injectée dans le
-paramètre : un `HTTPBearer` produit un `HTTPAuthorizationCredentials`, un
-`APIKeyQuery` produit la chaîne lue dans la requête. Si l'argument est omis, la
-classe déclarée dans le type du paramètre sert de schéma. Les schémas reçoivent
-la `Request` courante, jamais les superglobales : ils restent testables avec
-`TestClient`.
+### Clés d'API
 
-`scopes` est conservé comme métadonnée OAuth2 : il documente les portées
-demandées, mais aucun contrôle automatique n'est effectué — la vérification des
-portées appartient au schéma lui-même.
+| Schéma | Défaut |
+| --- | --- |
+| `APIKeyHeader` | en-tête `X-API-Key` |
+| `APIKeyQuery` | query `api_key` |
+| `APIKeyCookie` | cookie `api_key` |
 
-### Les schémas livrés
+```php
+<?php
 
-Tous vivent sous `Eorbahapi\Security\` ; la colonne « valeur injectée » indique
-ce que reçoit le paramètre du handler.
+use Eorbahapi\Params\Security;
+use Eorbahapi\Security\APIKey\APIKeyHeader;
 
-| Schéma | Valeur injectée | Échec |
-| --- | --- | --- |
-| `HTTP\HTTPBearer` | `HTTPAuthorizationCredentials` | 401 + `WWW-Authenticate` |
-| `HTTP\HTTPBasic` | `HTTPAuthorizationCredentials` (identifiants décodés) | 401 + `WWW-Authenticate` |
-| `APIKey\APIKeyQuery` | la clé (paramètre `api_key` par défaut) | 403 |
-| `APIKey\APIKeyHeader` | la clé (en-tête `X-API-Key` par défaut) | 403 |
-| `APIKey\APIKeyCookie` | la clé (cookie `api_key` par défaut) | 403 |
-| `OAuth2\OAuth2` | le jeton brut de l'en-tête `Bearer` | 401 + `WWW-Authenticate` |
-| `OAuth2\OAuth2PasswordBearer` | l'instance du schéma (`resolve()` garde requête et réponse) | à votre charge (`validatePasswordGrant()`) |
+$app->get('/key', function (
+    #[Security(APIKeyHeader::class)] string $apiKey,
+) {
+    return ['key' => $apiKey];
+});
+```
 
-`HTTPAuthorizationCredentials` expose `getScheme()`, `getCredentials()`,
-`isBearer()`, `isBasic()`, `isScheme($nom)` et `toArray()` ; `HTTPBasic` fournit
-en plus `encodeCredentials()` et `decodeCredentials()`.
+Pour un nom d'en-tête personnalisé, sous-classez le schéma (`__construct` du
+schéma reçoit le nom) ou lisez l'en-tête avec `#[Header]`.
 
-### Les jetons JWT
+## OAuth2 et jetons
 
-`Eorbahapi\Security\JWTAuth\JWT` (basé sur `firebase/php-jwt`) est construit avec
-un secret et un algorithme (`HS256` par défaut) : `sign($payload, $secret, $options)`
-accepte `['expiresIn' => '1h']`, `verify($token)` retourne le payload et lève
-`JsonWebTokenError` / `TokenExpiredError` / `NotBeforeError`, `decode($token)` lit
-le payload sans vérifier la signature, `isExpired($token)` répond sans vérifier la
-signature non plus, et `tokenPair($userData, $accessExpiresIn, $refreshExpiresIn)`
-génère la paire `access_token` / `refresh_token`.
+`OAuth2` fournit la base (`tokenUrl`, `scopes`, nom du schéma) ; les variantes
+`OAuth2PasswordBearer`, `OAuth2AuthorizationCodeBearer` et `OpenIdConnect`
+ajoutent le flux.
 
-!!! warning "Clés d'API : 403, pas 401"
-    Un schéma de clé d'API lève une `HTTPException` 403 et n'ajoute pas
-    d'en-tête `WWW-Authenticate` : le client n'a pas de mécanisme
-    d'authentification à renégocier. Les schémas HTTP (Bearer, Basic, OAuth2)
-    lèvent un 401 avec le défi correspondant.
+`OAuth2PasswordBearer` s'utilise avec un fournisseur d'utilisateurs :
 
-!!! tip "Désactiver le comportement automatique"
-    Chaque schéma accepte `autoError: false` : au lieu de lever l'exception, il
-    laisse votre code décider. Le constructeur permet aussi de renommer la clé
-    (`new APIKeyHeader('X-Token')`) ou de fixer le `realm` d'un `HTTPBasic`.
+```php
+<?php
+
+use Eorbahapi\Security\OAuth2\OAuth2PasswordBearer;
+use Eorbahapi\Security\OAuth2\UserInterface;
+use Eorbahapi\Security\OAuth2\UserProviderInterface;
+
+final class Utilisateur implements UserInterface
+{
+    public function __construct(private string $id, private string $nom) {}
+
+    public function getIdentifier(): string { return $this->id; }
+    public function getUsername(): string { return $this->nom; }
+}
+
+final class Fournisseur implements UserProviderInterface
+{
+    public function findUserByCredentials(string $username, string $password): ?UserInterface
+    {
+        return $username === 'oumar' && $password === 'secret'
+            ? new Utilisateur('1', 'oumar')
+            : null;
+    }
+}
+
+$oauth2 = new OAuth2PasswordBearer(
+    userProvider: new Fournisseur(),
+    jwtSecret: str_repeat('k', 32),
+    tokenUrl: '/token',
+);
+```
+
+Endpoint de jeton :
+
+```php
+<?php
+
+use Eorbahapi\Params\Form;
+
+$app->post('/token', function (
+    #[Form] string $username,
+    #[Form] string $password,
+) use ($oauth2) {
+    return $oauth2->validatePasswordGrant($username, $password);
+});
+// {"access_token":"…","token_type":"bearer","expires_in":3600}
+```
+
+Vérification dans une route protégée :
+
+```php
+<?php
+
+use Eorbahapi\Params\Header;
+
+$app->get('/profil', function (
+    #[Header('Authorization')] string $authorization,
+) use ($oauth2) {
+    $token = str_starts_with($authorization, 'Bearer ')
+        ? substr($authorization, 7)
+        : '';
+
+    $payload = $oauth2->verifyToken($token);
+
+    return ['utilisateur' => $payload?->username];
+});
+```
+
+`OAuth2AuthorizationCodeBearer($authorizationUrl, $tokenUrl, …)` documente un
+flux code ; `OpenIdConnect($issuer, $clientId, …)` branche un fournisseur OIDC.
+
+## JWT
+
+```php
+<?php
+
+use Eorbahapi\Security\JWTAuth\JWT;
+
+$jwt = new JWT(str_repeat('k', 32), 'HS256');
+
+$token = $jwt->sign(['sub' => '1'], null, ['expiresIn' => 3600]);
+$payload = $jwt->verify($token);   // lève TokenExpiredError si expiré
+$paire = $jwt->tokenPair(['sub' => '1']); // access + refresh
+```
+
+Une clé HS256 doit faire **au moins 32 octets** (`firebase/php-jwt` v7).
+
+## Nonce CSP
+
+`Nonce` génère un nonce et pose l'en-tête `Content-Security-Policy` :
+
+```php
+<?php
+
+use Eorbahapi\Security\Nonce;
+
+$nonce = new Nonce();
+// header: script-src 'self' 'nonce-…'; …
+$nonce->nonce; // valeur à insérer dans les balises <script nonce="…">
+```
+
+## Documentation
+
+Les schémas `HTTPBearer`, `HTTPBasic` et `APIKey*` sont documentés
+automatiquement dans `components.securitySchemes` et chaque opération protégée
+déclare son `security`. Swagger UI affiche alors le bouton **Authorize** — voir
+[Documentation OpenAPI](openapi.md).
+
+!!! warning "401 ou 403 ?"
+    Un schéma qui ne trouve pas ses identifiants renvoie **401** avec le
+    challenge attendu. Une fois authentifié, un refus métier est plutôt un
+    **403** (`throw new HTTPException(403, …)`).
 
 ## Récapitulatif
 
-- `#[Security(Schema::class)]` exécute le schéma et injecte sa valeur ;
-- `HTTPBearer` et `HTTPBasic` injectent un `HTTPAuthorizationCredentials` ;
-- les schémas de clé d'API lisent `APIKeyQuery`, `APIKeyHeader` ou `APIKeyCookie` ;
-- `OAuth2PasswordBearer` s'appuie sur `JWTAuth\JWT` pour signer et vérifier les jetons ;
-- l'échec produit un 401 avec `WWW-Authenticate` (Bearer, Basic) ou un 403 (clé d'API) ;
-- `scopes` reste une métadonnée : la logique de portée appartient au schéma.
+- `#[Security(HTTPBearer::class)]` injecte les identifiants et renvoie 401 si
+  l'en-tête manque ;
+- `HTTPBasic` et les schémas `APIKey*` suivent le même principe ;
+- OAuth2 repose sur `OAuth2PasswordBearer`/`AuthorizationCodeBearer`/
+  `OpenIdConnect` ;
+- `JWT` signe, vérifie et produit des paires de jetons ;
+- `Nonce` gère le nonce CSP ;
+- les schémas connus sont documentés automatiquement dans OpenAPI.
 
 [Suivant : Middlewares](middlewares.md){ .md-button }

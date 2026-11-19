@@ -1,6 +1,14 @@
 {
   "source_language": "fr",
   "files": {
+    "background-tasks.md": {
+      "source_hash": "16e1599f5129c8669ab51c725ec957929f6ef0e292c1c0b646319438c6179d9d",
+      "translated_at": "2026-11-04T18:04:44Z"
+    },
+    "cache.md": {
+      "source_hash": "96c51789842957d1d060993b53de894a730e5c99341112373a7a0198bebdb63e",
+      "translated_at": "2026-11-03T19:34:15Z"
+    },
     "controllers.md": {
       "source_hash": "99e793792e613cb3ff1c102be45754912eb58a078893c1d4f4f008549200a1cf",
       "translated_at": "2026-10-20T21:47:25Z"
@@ -41,6 +49,10 @@
       "source_hash": "d0db2adf52ec49f59a2ebe1ad66b615bebe3c9504b74415f3c3d5c670fbc4956",
       "translated_at": "2026-10-20T21:49:58Z"
     },
+    "logger.md": {
+      "source_hash": "2e10c3d94d26dd8015b5b2618f5817044be3f825a680366292dee52ffebabc03",
+      "translated_at": "2026-11-04T18:04:45Z"
+    },
     "middlewares.md": {
       "source_hash": "5e30741167cd943165e013cf308aa7439cbcc015da79e82cfa6a9c724de98f86",
       "translated_at": "2026-10-20T21:50:04Z"
@@ -48,6 +60,10 @@
     "nested-models.md": {
       "source_hash": "4477ffe83ffec37bf3ba27ef732b0b8c13492368b10e25dfd922d3a89d01e935",
       "translated_at": "2026-10-20T21:50:09Z"
+    },
+    "openapi.md": {
+      "source_hash": "a166ab990e93c7c74275c56d7114d376fe1713e6f2df0dc4c5851f6869019f5e",
+      "translated_at": "2026-11-03T19:34:15Z"
     },
     "path-params.md": {
       "source_hash": "9222d8f897319abb2d0d6e8410f043307f60ffc9ffffe9d297377ca910623577",
@@ -96,6 +112,10 @@
     "testing.md": {
       "source_hash": "5385f696225859b6500c8d653a580fd230dc09ba2b38b96f7fcb4557546d765d",
       "translated_at": "2026-10-20T21:51:50Z"
+    },
+    "utilities.md": {
+      "source_hash": "e34ba6d42c8628f6a054e6b187b3169e542db440093f16fa1a6d602bbfd52878",
+      "translated_at": "2026-11-04T18:04:45Z"
     },
     "validations.md": {
       "source_hash": "0b5daa4c71737f40a890df18463c43417463b2528f27e5aebda02da86368c15d",
