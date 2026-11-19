@@ -2,123 +2,127 @@
 
 ## Ce que vous allez apprendre
 
-Créer une application, enregistrer des routes, retourner du JSON, choisir le
-statut HTTP — et comprendre les deux points d'entrée : `run()` et `handle()`.
+Créer une application, enregistrer des routes, renvoyer du JSON et comprendre les
+deux points d'entrée : `run()` et `handle()`.
 
 ## Une application minimale
 
-`docs_src/FirstStepsExample.php` :
+Tout tient dans un fichier `main.php` :
 
 ```php
 <?php
 
-namespace Eorbahapi\Examples;
+require __DIR__ . '/vendor/autoload.php';
 
 use Eorbahapi\EorbahAPI;
 
-final class FirstStepsExample extends DocsExample
-{
-    public static function app(): EorbahAPI
-    {
-        $app = new EorbahAPI(title: 'Premiers pas', description: 'Mon premier service');
+$app = new EorbahAPI(
+    title: 'Premiers pas',
+    description: 'Mon premier service',
+);
 
-        $app->get('/', function () {
-            return ['message' => 'Bonjour EorbahAPI'];
-        });
+$app->get('/', function () {
+    return ['message' => 'Bonjour EorbahAPI'];
+});
 
-        $app->get('/health', function () {
-            return ['status' => 'ok'];
-        });
+$app->get('/health', function () {
+    return ['status' => 'ok'];
+});
 
-        return $app;
-    }
-}
+$app->run();
 ```
 
-Deux routes, deux handlers. Le constructeur accepte un titre, une description et
-un mode `debug` : ces informations servent à la documentation et au rendu des
-erreurs.
+Le constructeur accepte les métadonnées de l'application (`title`,
+`description`, `version`…) : elles alimentent la documentation OpenAPI et les
+pages d'erreur.
+
+!!! tip "La documentation est déjà là"
+    Toute application expose automatiquement `/openapi.json`, `/docs` (Swagger
+    UI) et `/redoc`. Les adresses et métadonnées se règlent dans le
+    constructeur — voir [Documentation OpenAPI](openapi.md).
+
+## Lancer le serveur
+
+```console
+$ php -S 127.0.0.1:8000 public/index.php
+```
+
+`public/index.php` contient simplement :
+
+```php
+<?php
+
+require_once dirname(__DIR__) . '/main.php';
+```
+
+```console
+$ curl "http://127.0.0.1:8000/health"
+{"status":"ok"}
+```
 
 ## Ce que renvoie un handler
 
-Un handler peut retourner :
+Un handler peut retourner plusieurs formes ; le framework les normalise en
+`Response`.
 
-| Type retourné | Résultat |
+| Retour | Résultat |
 | --- | --- |
-| `array` / `object` | corps JSON (`Content-Type` non forcé) |
-| `Response` | la réponse telle quelle |
+| `array` / `object` | corps JSON, `Content-Type: application/json` |
+| `Response` | la réponse telle quelle (statut et en-têtes compris) |
 | `string` | corps texte |
-| `'redirect:code:url'` | redirection (statut + en-tête `Location`) |
-| `null` / `true` | la réponse en cours, inchangée |
+| `'redirect:code:url'` | redirection : statut + en-tête `Location` |
+| `null` / `true` / `false` | la réponse en cours, inchangée |
 
 ```php
+<?php
+
 $app->get('/auto', fn () => ['ok' => true]);                       // {"ok":true}
 $app->get('/text', fn () => 'bonjour');                            // bonjour
 $app->get('/created', fn () => new JSONResponse(['ok' => true], 201));
 $app->get('/go', fn () => 'redirect:301:/auto');
 ```
 
+Pour un contrôle fin (statut, en-têtes, cookies), retournez un objet de
+`Eorbahapi\Responses` — voir [Réponses](responses.md).
+
 ## `run()` et `handle()`
 
 ```php
+<?php
+
 $app->run();                                   // lit la requête réelle, envoie la réponse
-$response = $app->handle(new Request(server: [
+
+$response = $app->handle(new Request(server: [  // construit la réponse, ne l'envoie pas
     'REQUEST_METHOD' => 'GET',
     'REQUEST_URI' => '/',
-]));                                           // construit la réponse, ne l'envoie pas
-$app->run($request);                           // lit une requête fournie, envoie la réponse
+]));
+
+$app->run($request);                           // lit une requête fournie et l'envoie
 ```
 
-`handle()` est le cœur du framework : c'est lui qui permet de tester
-l'application sans serveur HTTP, ou de la brancher sur un autre transport
+`handle()` est le cœur du framework : c'est lui qui rend l'application testable
+sans socket HTTP et qui permet de brancher un autre transport
 ([Runners personnalisés](runners.md)).
 
-## Les scénarios de l'exemple
-
-```php
-<?php
-public static function scenarios(): array
-{
-    return [
-        self::scenario('GET', '/', json: ['message' => 'Bonjour EorbahAPI']),
-        self::scenario('GET', '/health', json: ['status' => 'ok']),
-        self::scenario('GET', '/inconnu', status: 404, contains: 'Not Found'),
-    ];
-}
-```
-
-| Requête | Statut | Corps |
-| --- | --- | --- |
-| `GET /` | 200 | `{"message":"Bonjour EorbahAPI"}` |
-| `GET /health` | 200 | `{"status":"ok"}` |
-| `GET /inconnu` | 404 | `Not Found` |
-
-## Exécuter l'exemple vous-même
-
 ```php
 <?php
 
-require 'vendor/autoload.php';
-
-use Eorbahapi\Examples\FirstStepsExample;
 use Eorbahapi\Testing\TestClient;
 
-$client = new TestClient(FirstStepsExample::app());
+$client = new TestClient($app);
+$response = $client->get('/health');
 
-$response = $client->get('/');
-echo $response->status();       // 200
-echo $response->text();         // {"message":"Bonjour EorbahAPI"}
+$response->status();   // 200
+$response->json();     // ['status' => 'ok']
 ```
-
-!!! tip "Deux façons de servir"
-    - `php -S localhost:8000 -t public` pour le navigateur et `curl` ;
-    - `TestClient` pour les tests : pas de port, pas de socket, pas de latence.
 
 ## Récapitulatif
 
 - une application est un objet `EorbahAPI` ;
-- `$app->get($chemin, $handler)` enregistre une route (idem `post`, `put`, `patch`, `delete`, `head`, `options`) ;
-- un handler retourne des données, un `Response` ou une chaîne ;
-- `run()` sert le HTTP, `handle()` sert tout le reste.
+- `$app->get($chemin, $handler)` enregistre une route (`post`, `put`, `patch`,
+  `delete`, `head`, `options` fonctionnent de la même façon) ;
+- un handler retourne des données, une `Response` ou une chaîne ;
+- `run()` sert le HTTP, `handle()` sert tout le reste (tests, CLI, runners) ;
+- la documentation Swagger/ReDoc est disponible sans configuration.
 
 [Suivant : Routage](routing.md){ .md-button }

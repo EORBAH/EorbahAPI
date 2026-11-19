@@ -2,11 +2,24 @@
 
 namespace Eorbahapi;
 
+use Eorbahapi\Cache\CacheManager;
 use Eorbahapi\Dependency\DependencyResolver;
 use Eorbahapi\Exceptions\EorbahAPIError;
+use Eorbahapi\Openapi\Docs;
+use Eorbahapi\Openapi\OpenApiBuilder;
+use Eorbahapi\Responses\FileResponse;
+use Eorbahapi\Responses\HTMLResponse;
 use Eorbahapi\Responses\JSONResponse;
 use Eorbahapi\Routing\Attributes\Middleware as MiddlewareAttribute;
 use Eorbahapi\Routing\Route;
+use Eorbahapi\Websockets\WebSocketRouter;
+use Eorbahapi\Adapter\Http\RequestAdapter;
+use Eorbahapi\Adapter\Http\ResponseAdapter;
+use Eorbahapi\Contracts\ESGIAppInterface;
+use Eorbahapi\Contracts\RequestInterface;
+use Eorbahapi\Contracts\ResponseInterface;
+use Eorbahapi\Request;
+use Eorbahapi\Response;
 
 /**
  * Application HTTP.
@@ -25,7 +38,7 @@ use Eorbahapi\Routing\Route;
  *     $app->run();                                   // production
  *     $response = $app->handle($customRequest);      // runner personnalisé
  */
-class EorbahAPI
+class EorbahAPI implements ESGIAppInterface
 {
     /** Routeur des routes de l'application. */
     public APIRouter $router;
@@ -43,19 +56,190 @@ class EorbahAPI
     public Request $request;
     public Response $response;
 
+    /** Classe qui rend les retours `array` / `object` (`JSONResponse` par défaut). */
+    public string $response_class;
+
     private DependencyResolver $resolver;
 
+    /** Façade de cache (désactivée par défaut). */
+    private CacheManager $cacheManager;
+
+    /** @var array<string, array<string, mixed>|null> Routes déjà appariées (cache mémoire). */
+    private array $routeCache = [];
+
+    /** @var list<string> Routes de documentation, exclues du schéma OpenAPI. */
+    private array $docsRoutes = [];
+
+    /** Routes WebSocket, servies par `WebSocketServer` ou un adaptateur dédié. */
+    private WebSocketRouter $websocketRouter;
+
     public function __construct(
-        public ?string $title = null,
-        public ?string $description = null,
+        public string $title = 'EorbahAPI',
+        public string $description = '',
         public bool $debug = false,
         ?string $prefix = '',
+        public bool $cache = false,
+        public ?string $cache_dir = null,
+        public ?int $cache_ttl = null,
+        public ?string $summary = null,
+        public string $version = '0.1.0',
+        public ?string $terms_of_service = null,
+        public ?array $contact = null,
+        public ?array $license_info = null,
+        public ?string $openapi_url = '/openapi.json',
+        public ?array $openapi_tags = null,
+        public ?array $openapi_external_docs = null,
+        string $default_response_class = JSONResponse::class,
+        public ?string $docs_url = '/docs',
+        public ?string $redoc_url = '/redoc',
+        public ?string $swagger_ui_oauth2_redirect_url = '/docs/oauth2-redirect',
+        public ?array $swagger_ui_init_oauth = null,
+        public ?array $swagger_ui_parameters = null,
     ) {
+        self::assertResponseClass($default_response_class);
+
+        $this->response_class = $default_response_class;
+
         $this->request = new Request();
         $this->response = new Response();
         $this->router = new APIRouter($prefix);
+        $this->websocketRouter = new WebSocketRouter();
         $this->resolver = new DependencyResolver($this->request, $this->response);
+        $this->cacheManager = new CacheManager($cache, null, $cache_dir, $cache_ttl ?? 0);
         $this->registerDefaultExceptionHandlers();
+        $this->registerDocumentationRoutes();
+    }
+
+    /**
+     * Imlementation ESGI
+     * @param RequestInterface $request
+     * @param ResponseInterface $response
+     * @return ResponseAdapter|ResponseInterface
+     */
+    public function __invoke(RequestInterface $request, ResponseInterface $response): ResponseInterface
+    {
+        $concreteRequest = $request instanceof RequestAdapter
+            ? $request->unwrap()
+            : new Request(
+                body: $request->getBody(),
+                params: $request->getPathParams(),
+                server: $request->getServerParams(),
+                query: $request->getQueryParams(),
+                headers: $request->getHeaders(),
+            );
+
+        $concreteResponse = $response instanceof ResponseAdapter
+            ? $response->unwrap()
+            : new Response($response->body(), $response->status(), $response->headers());
+
+        $result = $this->handle($concreteRequest, $concreteResponse);
+
+        $response->setStatus($result->status);
+        $response->setBody($result->body);
+
+        foreach ($result->headers as $name => $value) {
+            $response->setHeader((string) $name, (string) $value);
+        }
+
+        // Les cookies posés par l'application sont reportés sur l'adaptateur
+        // (Swoole et autres serveurs ne passent pas par `setcookie()`).
+        if ($response instanceof ResponseAdapter && $result instanceof Response) {
+            $target = $response->unwrap();
+
+            if ($target !== $result && $result->cookies !== []) {
+                $target->cookies = array_merge($target->cookies, $result->cookies);
+            }
+        }
+
+        return $response;
+    }
+
+    /**
+     * Enregistre les routes de documentation déclarées par le constructeur.
+     *
+     * Les options FastAPI-style (`openapi_url`, `docs_url`, `redoc_url`,
+     * `swagger_ui_oauth2_redirect_url`) sont appliquées ici : `openapi_url: null`
+     * désactive la spécification et, par conséquent, Swagger UI et ReDoc.
+     */
+    private function registerDocumentationRoutes(): void
+    {
+        if ($this->openapi_url === null) {
+            return;
+        }
+
+        // `null` désactive la page ; `openapi_routes()` reçoit `false` pour ne
+        // pas retomber sur ses valeurs par défaut.
+        $docsUrl = $this->docs_url ?? false;
+        $redocUrl = $this->redoc_url ?? false;
+
+        $oauth2Redirect = $this->docs_url === null || $this->swagger_ui_oauth2_redirect_url === null
+            ? false
+            : $this->swagger_ui_oauth2_redirect_url;
+
+        $this->openapi_routes(
+            '',
+            [],
+            openapi_url: $this->openapi_url,
+            docs_url: $docsUrl,
+            redoc_url: $redocUrl,
+            oauth2_redirect_url: $oauth2Redirect,
+            swagger_options: $this->swaggerOptions(),
+        );
+    }
+
+    /**
+     * Métadonnées OpenAPI déduites du constructeur (`info`, `tags`, `externalDocs`).
+     *
+     * @return array<string, mixed>
+     */
+    public function openapi_options(): array
+    {
+        return array_filter([
+            'title' => $this->title,
+            'description' => $this->description,
+            'version' => $this->version,
+            'summary' => $this->summary,
+            'terms_of_service' => $this->terms_of_service,
+            'contact' => $this->contact,
+            'license' => $this->license_info,
+            'tags' => $this->openapi_tags,
+            'external_docs' => $this->openapi_external_docs,
+        ], static fn (mixed $value): bool => $value !== null && $value !== '' && $value !== []);
+    }
+
+    /**
+     * Options par défaut des pages Swagger UI.
+     *
+     * @return array<string, mixed>
+     */
+    private function swaggerOptions(): array
+    {
+        return array_filter([
+            'swagger_ui_init_oauth' => $this->swagger_ui_init_oauth,
+            'swagger_ui_parameters' => $this->swagger_ui_parameters,
+        ], static fn (mixed $value): bool => $value !== null && $value !== []);
+    }
+
+    /**
+     * Change la classe qui rend les retours `array` / `object`.
+     *
+     *     $app->set_response_class(EnvelopeResponse::class);
+     */
+    public function set_response_class(string $class): self
+    {
+        self::assertResponseClass($class);
+        $this->response_class = $class;
+
+        return $this;
+    }
+
+    private static function assertResponseClass(string $class): void
+    {
+        if (!class_exists($class) || !is_a($class, Response::class, true)) {
+            throw new EorbahAPIError(
+                "La classe de réponse [$class] doit étendre " . Response::class . '.'
+            );
+        }
     }
 
     private function registerDefaultExceptionHandlers(): void
@@ -81,7 +265,12 @@ class EorbahAPI
             return $this->handleExceptionAsResponse($e);
         }
 
-        $response = APIRouter::toResponse($result, $this->response);
+        $response = APIRouter::toResponse($result, $this->response, $this->response_class);
+
+        // Une réponse fichier a besoin de la requête pour Range/If-None-Match.
+        if ($response instanceof FileResponse) {
+            $response->withRequest($this->request);
+        }
 
         // Les middlewares positionnent leurs en-têtes sur la réponse partagée
         // ($this->response). Si le handler a produit un autre objet Response,
@@ -91,6 +280,12 @@ class EorbahAPI
                 if (!array_key_exists($name, $response->headers)) {
                     $response->headers[$name] = $value;
                 }
+            }
+
+            // Les cookies posés sur la réponse partagée (via l'injection de
+            // `Response`) doivent survivre au rendu par la classe de réponse.
+            if ($response->cookies !== [] || $this->response->cookies !== []) {
+                $response->cookies = array_merge($this->response->cookies, $response->cookies);
             }
         }
 
@@ -126,7 +321,7 @@ class EorbahAPI
         }
 
         // 2. Route de l'application.
-        $match = $this->router->match($uri, $method);
+        $match = $this->matchRoute($uri, $method);
 
         if ($match !== null) {
             $this->request->params(path: $match['params']);
@@ -154,6 +349,36 @@ class EorbahAPI
         $this->response->body = 'Not Found';
 
         return $this->response;
+    }
+
+    /**
+     * Cherche la route correspondant à la requête, avec un cache mémoire
+     * lorsque le cache de l'application est activé.
+     *
+     * Le cache évite de relancer les expressions régulières des routes
+     * paramétrées à chaque requête d'un runner persistant. Il est borné pour
+     * qu'une URL très variable (identifiants, slugs) ne fasse pas grossir la
+     * mémoire indéfiniment.
+     *
+     * @return array{callback: callable, middlewares: array, params: array<string, string>}|null
+     */
+    private function matchRoute(string $uri, string $method): ?array
+    {
+        if (!$this->cacheManager->enabled()) {
+            return $this->router->match($uri, $method);
+        }
+
+        $key = strtoupper($method) . ' ' . $uri;
+
+        if (array_key_exists($key, $this->routeCache)) {
+            return $this->routeCache[$key];
+        }
+
+        if (count($this->routeCache) >= 1024) {
+            $this->routeCache = [];
+        }
+
+        return $this->routeCache[$key] = $this->router->match($uri, $method);
     }
 
     /**
@@ -366,6 +591,31 @@ class EorbahAPI
         $this->router->add_api_route($route, $methods, $callback, $middlewares);
     }
 
+    /**
+     * Enregistre une route WebSocket.
+     *
+     *     $app->websocket('/ws/rooms/{room}', function (WebSocket $ws) {
+     *         $ws->send('bienvenue dans ' . $ws->params()['room']);
+     *     });
+     *
+     * Ces routes ne passent pas par le pipeline HTTP : elles sont servies par
+     * `Eorbahapi\Websockets\WebSocketServer` (ou un adaptateur WebSocket).
+     */
+    public function websocket(string $route, callable $handler): self
+    {
+        $this->websocketRouter->add($route, $handler);
+
+        return $this;
+    }
+
+    /**
+     * Routes WebSocket enregistrées.
+     */
+    public function websocket_routes(): WebSocketRouter
+    {
+        return $this->websocketRouter;
+    }
+
     public function default_route(int $http_code = 404, ?callable $handler = null) {
         $this->default_route['http_code'] = $http_code;
         $this->default_route['handler'] = $handler;
@@ -529,9 +779,6 @@ class EorbahAPI
         return $middlewares;
     }
 
-    // ------------------------------------------------------------------
-    // Montage de sous-applications
-    // ------------------------------------------------------------------
 
     /**
      * Monte une sous-application sur un préfixe d'URL.
@@ -568,14 +815,355 @@ class EorbahAPI
     }
 
     // ------------------------------------------------------------------
-    // Conteneur et exceptions
+    // Cache
     // ------------------------------------------------------------------
 
-    /** */
+    /**
+     * Façade de cache de l'application.
+     *
+     * Elle reste utilisable même lorsque le cache est désactivé : `remember()`
+     * recalcule alors la valeur à chaque appel (`NullCache`), si bien que le
+     * code applicatif n'a pas à connaître la configuration.
+     *
+     *     $spec = $app->cache_manager()->remember('spec', fn () => $app->openapi());
+     */
+    public function cache_manager(): CacheManager
+    {
+        return $this->cacheManager;
+    }
+
+    /**
+     * Remplace la façade de cache, par exemple pour injecter un magasin
+     * existant (Redis, `ArrayCache` en test…).
+     *
+     *     $app->set_cache_manager(new CacheManager(true, store: new ArrayCache()));
+     */
+    public function set_cache_manager(CacheManager $manager): self
+    {
+        $this->cacheManager = $manager;
+
+        return $this;
+    }
+
+    // ------------------------------------------------------------------
+    // Documentation OpenAPI
+    // ------------------------------------------------------------------
+
+    /**
+     * Spécification OpenAPI 3.1 de l'application.
+     *
+     * Les routes, leurs paramètres (attributs `Eorbahapi\Params`) et leurs
+     * modèles Svinx sont introspectés automatiquement. Lorsque
+     * `EorbahAPI(cache: true)` est utilisé, le résultat est mis en cache fichier
+     * et n'est recalculé qu'après modification des routes ou de leurs fichiers.
+     *
+     * @param array<string, mixed> $options Options du générateur (titre, version…).
+     * @return array<string, mixed>
+     */
+    public function openapi(array $options = []): array
+    {
+        $options = array_replace($this->openapi_options(), $options);
+
+        $builder = new OpenApiBuilder($this, $options);
+
+        if (!$this->cacheManager->enabled()) {
+            return $builder->build();
+        }
+
+        return $this->cacheManager->remember(
+            'openapi-' . $builder->fingerprint(),
+            static fn (): array => $builder->build()
+        );
+    }
+
+    /**
+     * Spécification OpenAPI sérialisée en JSON.
+     *
+     * @param array<string, mixed> $options Options du générateur.
+     */
+    public function openapi_json(array $options = [], bool $pretty = true): string
+    {
+        $json = (string) json_encode(
+            $this->openapi($options),
+            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+            | ($pretty ? JSON_PRETTY_PRINT : 0)
+            | JSON_THROW_ON_ERROR
+        );
+
+        return $pretty ? $json . "\n" : $json;
+    }
+
+    /**
+     * Écrit la spécification OpenAPI dans un fichier `.json`.
+     *
+     *     $app->write_openapi('public/openapi.json');
+     *
+     * @param array<string, mixed> $options Options du générateur.
+     * @return string Chemin du fichier écrit.
+     */
+    public function write_openapi(string $path = 'openapi.json', array $options = []): string
+    {
+        $json = $this->openapi_json($options);
+        $directory = dirname($path);
+
+        if ($directory !== '' && $directory !== '.' && !is_dir($directory)) {
+            @mkdir($directory, 0775, true);
+        }
+
+        if (@file_put_contents($path, $json) === false) {
+            throw new EorbahAPIError("Impossible d'écrire le fichier OpenAPI [$path].");
+        }
+
+        return $path;
+    }
+
+    /**
+     * Page Swagger UI, pour essayer les routes depuis le navigateur.
+     *
+     * @param array<string, mixed> $options `openapi_url`, `oauth2_redirect_url`,
+     *                                      `title`, et les URL des fichiers CDN.
+     */
+    public function docs(array $options = []): HTMLResponse
+    {
+        $options = array_replace($this->swaggerOptions(), $options);
+
+        $openapiUrl = (string) ($options['openapi_url'] ?? $this->openapi_url ?? '/openapi.json');
+        $oauth2Url = $options['oauth2_redirect_url'] ?? $this->swagger_ui_oauth2_redirect_url;
+
+        return new HTMLResponse(Docs::get_swagger_ui_html(
+            $openapiUrl,
+            $options['title'] ?? $this->title,
+            $oauth2Url === null ? null : (string) $oauth2Url,
+            $options
+        ));
+    }
+
+    /**
+     * Page ReDoc, pour lire la spécification confortablement.
+     *
+     * @param array<string, mixed> $options `openapi_url`, `title`, CDN.
+     */
+    public function redoc(array $options = []): HTMLResponse
+    {
+        $openapiUrl = (string) ($options['openapi_url'] ?? $this->openapi_url ?? '/openapi.json');
+
+        return new HTMLResponse(Docs::get_redoc_html(
+            $openapiUrl,
+            $options['title'] ?? $this->title,
+            $options
+        ));
+    }
+
+    /**
+     * Page de retour du flux OAuth2 de Swagger UI.
+     */
+    public function swagger_ui_oauth2_redirect_html(): HTMLResponse
+    {
+        return new HTMLResponse(Docs::get_swagger_ui_oauth2_redirect_html());
+    }
+
+    /**
+     * Enregistre les routes de documentation.
+     *
+     * La voie principale reste le constructeur (`openapi_url`, `docs_url`,
+     * `redoc_url`, `swagger_ui_oauth2_redirect_url`) : ces routes sont déjà
+     * enregistrées à la création de l'application. Cette méthode sert au
+     * placement avancé (préfixe commun, options propres à chaque route) ou
+     * après avoir désactivé la documentation automatique (`openapi_url: null`).
+     *
+     *     // Emplacements par défaut, sous un préfixe commun :
+     *     $app->openapi_routes('/api');
+     *     // /api/openapi.json, /api/docs, /api/docs/oauth2-redirect, /api/redoc
+     *
+     *     // Emplacements personnalisés (chemins relatifs au préfixe) :
+     *     $app->openapi_routes(
+     *         '/api',
+     *         openapi_url: '/spec.json',
+     *         docs_url: '/swagger',
+     *         redoc_url: '/reference',
+     *         oauth2_redirect_url: '/swagger/oauth2',
+     *     );
+     *     // /api/spec.json, /api/swagger, /api/swagger/oauth2, /api/reference
+     *
+     *     // Sans préfixe : chemins à la racine de l'application.
+     *     $app->openapi_routes('', docs_url: '/documentation', redoc_url: '/reference');
+     *
+     * Chaque chemin accepte `false` pour ne pas être enregistré. Sans
+     * spécification (`openapi_url: false`), les pages qui la lisent (Swagger UI,
+     * ReDoc) ne sont pas enregistrées non plus. Le préfixe de l'application
+     * (`new EorbahAPI(prefix: '/v1')`) est appliqué au final à toutes ces
+     * routes. Elles n'apparaissent jamais dans la spécification générée.
+     *
+     * Chaque route accepte ses propres options, fusionnées au tableau `$options`
+     * commun :
+     *
+     *     $app->openapi_routes(
+     *         '/api',
+     *         openapi_options: ['title' => 'Catalogue', 'version' => '2.4.0'],
+     *         swagger_options: ['title' => 'Catalogue — essayer', 'swagger_js_url' => '…'],
+     *         redoc_options: ['title' => 'Catalogue — lire', 'redoc_js_url' => '…'],
+     *     );
+     *
+     * @param array<string, mixed> $options              Options communes aux trois routes.
+     * @param string|false|null    $openapi_url          Chemin du JSON (défaut `/openapi.json`).
+     * @param string|false|null    $docs_url             Chemin de Swagger UI (défaut `/docs`).
+     * @param string|false|null    $redoc_url            Chemin de ReDoc (défaut `/redoc`).
+     * @param string|false|null    $oauth2_redirect_url  Chemin du retour OAuth2
+     *                                                   (défaut `<docs_url>/oauth2-redirect`).
+     * @param array<string, mixed> $openapi_options      Options du générateur (`title`, `version`,
+     *                                                   `description`, `servers`, `operations`, `components`…).
+     * @param array<string, mixed> $swagger_options      Options de Swagger UI (`title`,
+     *                                                   `swagger_js_url`, `swagger_css_url`,
+     *                                                   `swagger_preset_url`, `favicon_url`…).
+     * @param array<string, mixed> $redoc_options        Options de ReDoc (`title`, `redoc_js_url`,
+     *                                                   `favicon_url`…).
+     */
+    public function openapi_routes(
+        string $prefix = '',
+        array $options = [],
+        string|false|null $openapi_url = null,
+        string|false|null $docs_url = null,
+        string|false|null $redoc_url = null,
+        string|false|null $oauth2_redirect_url = null,
+        array $openapi_options = [],
+        array $swagger_options = [],
+        array $redoc_options = [],
+    ): self {
+        $base = trim($prefix, '/') === '' ? '' : '/' . trim($prefix, '/');
+
+        $specRelative = self::documentation_path($openapi_url, '/openapi.json');
+        $docsRelative = self::documentation_path($docs_url, '/docs');
+        $redocRelative = self::documentation_path($redoc_url, '/redoc');
+
+        $oauthRelative = self::documentation_path(
+            $oauth2_redirect_url,
+            ($docsRelative ?? '/docs') . '/oauth2-redirect'
+        );
+
+        // Sans page Swagger UI, le retour OAuth2 par défaut n'a plus de sens.
+        if ($docsRelative === null && $oauth2_redirect_url === null) {
+            $oauthRelative = null;
+        }
+
+        $appPrefix = $this->router->prefix ?? '';
+
+        // Chemin enregistré sur le routeur (le préfixe de l'application y est
+        // ajouté par `add_api_route()`).
+        $routePath = function (?string $relative) use ($base): ?string {
+            if ($relative === null) {
+                return null;
+            }
+
+            return $this->router->normalizePath($base . $relative);
+        };
+
+        // Chemin public (avec préfixe d'application), utilisé dans les pages
+        // de documentation et pour masquer ces routes du schéma OpenAPI.
+        $publicPath = function (?string $relative) use ($appPrefix, $base): ?string {
+            if ($relative === null) {
+                return null;
+            }
+
+            return $this->router->normalizePath($appPrefix . $base . $relative);
+        };
+
+        $specRoute = $routePath($specRelative);
+        $docsRoute = $routePath($docsRelative);
+        $oauth2Route = $routePath($oauthRelative);
+        $redocRoute = $routePath($redocRelative);
+
+        $specUrl = $publicPath($specRelative);
+        $oauth2Url = $publicPath($oauthRelative);
+
+        // Sans spécification, les pages de documentation n'auraient rien à afficher.
+        if ($specRoute === null || $specUrl === null) {
+            return $this;
+        }
+
+        $builderOptions = array_replace($options, $openapi_options);
+        $swaggerOptions = array_replace($options, $swagger_options);
+        $redocOptions = array_replace($options, $redoc_options);
+
+        $sharedTitle = $options['title'] ?? $this->title;
+        $swaggerTitle = $swaggerOptions['title'] ?? $sharedTitle;
+        $redocTitle = $redocOptions['title'] ?? $sharedTitle;
+
+        $this->get($specRoute, fn (): JSONResponse => new JSONResponse($this->openapi($builderOptions)));
+
+        if ($docsRoute !== null) {
+            $this->get($docsRoute, function () use ($specUrl, $oauth2Url, $swaggerTitle, $swaggerOptions): HTMLResponse {
+                return new HTMLResponse(Docs::get_swagger_ui_html($specUrl, $swaggerTitle, $oauth2Url, $swaggerOptions));
+            });
+        }
+
+        if ($oauth2Route !== null) {
+            $this->get(
+                $oauth2Route,
+                static fn (): HTMLResponse => new HTMLResponse(Docs::get_swagger_ui_oauth2_redirect_html())
+            );
+        }
+
+        if ($redocRoute !== null) {
+            $this->get($redocRoute, function () use ($specUrl, $redocTitle, $redocOptions): HTMLResponse {
+                return new HTMLResponse(Docs::get_redoc_html($specUrl, $redocTitle, $redocOptions));
+            });
+        }
+
+        $this->docsRoutes = array_values(array_unique([
+            ...$this->docsRoutes,
+            ...array_values(array_filter(
+                [$specUrl, $publicPath($docsRelative), $oauth2Url, $publicPath($redocRelative)],
+                static fn (?string $path): bool => $path !== null
+            )),
+        ]));
+
+        return $this;
+    }
+
+    /**
+     * Normalise un chemin de documentation.
+     *
+     * `false` désactive la route, `null` garde la valeur par défaut, une chaîne
+     * devient un chemin commençant par `/` (le préfixe de `openapi_routes()`
+     * puis celui de l'application sont ajoutés ensuite).
+     */
+    private static function documentation_path(string|false|null $value, string $default): ?string
+    {
+        if ($value === false) {
+            return null;
+        }
+
+        $path = '/' . ltrim($value ?? $default, '/');
+
+        return $path === '/' ? '/' : rtrim($path, '/');
+    }
+
+    /**
+     * Routes de documentation enregistrées (exclues du schéma OpenAPI).
+     *
+     * @return list<string>
+     */
+    public function documentation_routes(): array
+    {
+        return $this->docsRoutes;
+    }
+
+    /**
+     * Sous-applications montées : [préfixe => application].
+     *
+     * @return array<string, mixed>
+     */
+    public function mounted_apps(): array
+    {
+        return $this->mountedApps;
+    }
+
+
+
     public function disable(string $name)
     {
         switch ($name) {
-            case 'X-Powered-By':
+            case 'headers':
                 $this->response->removeHeader('X-Powered-By');
                 break;
 
@@ -641,4 +1229,6 @@ class EorbahAPI
             ['Content-Type' => 'application/json; charset=UTF-8']
         );
     }
+
+
 }

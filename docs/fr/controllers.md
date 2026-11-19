@@ -2,168 +2,183 @@
 
 ## Ce que vous allez apprendre
 
-Regrouper des routes dans une classe : les attributs `#[Get]`, `#[Post]`,
-`#[Route]`, le montage avec `include_controller()`, et l'usage direct du router
-`Eorbahapi\APIRouter`.
+Organiser les routes dans des classes avec les attributs, attacher des
+middlewares par classe ou par méthode, et modulariser l'application avec des
+routers.
 
-## Le code
+## Un contrôleur
 
-`docs_src/ControllersExample.php` :
+Les attributs remplacent les appels `$app->get()` :
 
 ```php
 <?php
 
-namespace Eorbahapi\Examples;
-
 use Eorbahapi\EorbahAPI;
-use Eorbahapi\Routing\Attributes\Delete;
 use Eorbahapi\Routing\Attributes\Get;
-use Eorbahapi\Routing\Attributes\Middleware;
 use Eorbahapi\Routing\Attributes\Post;
-use Eorbahapi\Routing\Attributes\Route;
+use Eorbahapi\Routing\Attributes\Delete;
 
-/**
- * Contrôleur utilisant les attributs de route.
- */
-final class ItemsController
+final class ArticlesController
 {
-    #[Get('/items')]
-    public function index()
+    #[Get('/articles')]
+    public function index(): array
     {
-        return ['items' => ['a', 'b']];
+        return ['articles' => []];
     }
 
-    #[Post('/items')]
-    public function store()
+    #[Get('/articles/{id}')]
+    public function show(int $id): array
+    {
+        return ['id' => $id];
+    }
+
+    #[Post('/articles')]
+    public function store(): array
     {
         return ['created' => true];
     }
 
-    #[Get('/items/{id}')]
-    public function show(\Eorbahapi\Request $request)
+    #[Delete('/articles/{id}')]
+    public function destroy(int $id): array
     {
-        return ['id' => $request->param('id')];
-    }
-
-    #[Delete('/items/{id}')]
-    public function destroy(\Eorbahapi\Request $request)
-    {
-        return ['deleted' => $request->param('id')];
-    }
-
-    // Une même méthode sur plusieurs verbes.
-    #[Route('/ping', methods: ['GET', 'POST'])]
-    #[Middleware(RequestIdMiddleware::class)]
-    public function ping()
-    {
-        return ['pong' => true];
-    }
-
-    // Méthode publique sans attribut : pas une route.
-    public function helper(): string
-    {
-        return 'pas une route';
+        return ['deleted' => $id];
     }
 }
 
-/**
- * Contrôleurs : `include_controller()` et attributs de route.
- */
-final class ControllersExample extends DocsExample
+$app = new EorbahAPI();
+$app->include_controller(new ArticlesController());
+
+$app->run();
+```
+
+`include_controller($instance, $prefix, $args)` monte toutes les méthodes
+publiques portant un attribut de route. Un préfixe s'ajoute aux chemins :
+
+```php
+$app->include_controller(new ArticlesController(), '/api');
+// GET /api/articles, GET /api/articles/{id}, …
+```
+
+Les paramètres des méthodes sont résolus comme ceux des callbacks (attributs
+`#[Path]`, `#[Query]`, `#[Body]`…).
+
+## Middlewares de contrôleur
+
+`#[Middleware]` se pose sur la classe (toutes les routes) ou sur une méthode :
+
+```php
+<?php
+
+use Eorbahapi\Middlewares\RateLimitingMiddleware;
+use Eorbahapi\Routing\Attributes\Get;
+use Eorbahapi\Routing\Attributes\Middleware;
+
+#[Middleware(RateLimitingMiddleware::class, args: ['maxRequests' => 30])]
+final class SecuredController
 {
-    public static function app(): EorbahAPI
+    #[Get('/public')]
+    public function public(): array
     {
-        $app = new EorbahAPI();
-
-        // Toutes les routes du contrôleur sont montées sous /api.
-        $app->include_controller(new ItemsController(), prefix: '/api');
-
-        return $app;
+        return ['ok' => true];
     }
 
-    public static function scenarios(): array
+    #[Get('/private')]
+    #[Middleware(SomeAuthMiddleware::class)]
+    public function private(): array
     {
-        return [
-            self::scenario('GET', '/api/items', json: ['items' => ['a', 'b']]),
-            self::scenario('POST', '/api/items', json: ['created' => true]),
-            self::scenario('GET', '/api/items/42', json: ['id' => '42']),
-            self::scenario('DELETE', '/api/items/42', json: ['deleted' => '42']),
-            self::scenario('GET', '/api/ping', json: ['pong' => true]),
-            self::scenario('POST', '/api/ping', json: ['pong' => true]),
-            self::scenario('GET', '/api/helper', status: 404),
-            self::scenario('GET', '/items', status: 404),
-        ];
+        return ['ok' => true];
     }
 }
 ```
 
-## Ce qui se passe
+Les middlewares de classe s'exécutent avant ceux de méthode.
 
-| Requête | Statut | Corps |
-| --- | --- | --- |
-| `GET /api/items` | 200 | `{"items":["a","b"]}` |
-| `POST /api/items` | 200 | `{"created":true}` |
-| `GET /api/items/42` | 200 | `{"id":"42"}` |
-| `DELETE /api/items/42` | 200 | `{"deleted":"42"}` |
-| `GET /api/ping` | 200 | `{"pong":true}` |
-| `POST /api/ping` | 200 | `{"pong":true}` |
-| `GET /api/helper` | 404 | `Not Found` |
-| `GET /items` | 404 | `Not Found` |
+## Routers réutilisables
 
-### Une méthode, un attribut
+Un `APIRouter` isole un groupe de routes (version, module) :
 
-Les attributs de `Eorbahapi\Routing\Attributes` sont `Get`, `Post`, `Put`,
-`Patch`, `Delete`, `Head`, `Options` — chacun fixe son verbe — et `Route`, qui
-accepte `methods: ['GET', 'POST']` pour partager un handler entre plusieurs
-verbes. Tous héritent de `Eorbahapi\Routing\Route` : les classes qui utilisent
-l'ancien emplacement `Eorbahapi\Routing\{Get, Post…}` sont reconnues de la même
-façon.
+```php
+<?php
 
-Le handler est une méthode publique du contrôleur : les paramètres sont résolus
-comme ceux d'une closure (voir [Dépendances](dependencies.md)).
+use Eorbahapi\APIRouter;
 
-### Le montage
+$api = new APIRouter('/v1');
+$api->get('/ping', fn () => ['pong' => true]);
+$api->post('/items', fn () => ['created' => true]);
 
-`$app->include_controller(new ItemsController(), prefix: '/api')` enregistre
-chaque méthode publique portant un attribut de route, préfixée par `/api`. Sans
-préfixe, `/items` serait servi directement. Une méthode publique sans attribut
-n'est jamais montée : `helper()` répond 404, et le préfixe n'existe pas pour
-`/items` sans `/api`.
+$app->include_router($api);
+// GET /v1/ping, POST /v1/items
+```
 
-`include_controller()` retourne `$this` et accepte à la place d'une instance le
-nom de la classe, avec les arguments de son constructeur :
-`$app->include_controller(ItemsController::class, '/api', [new Logger('debug')])`.
-`include_routes()` est l'alias historique de `include_controller()`.
+`include_router($router, $routerClass, $args, $prefix)` accepte aussi une classe
+exposant `__register_routes()` :
 
-### Le router, sans attributs
+```php
+<?php
 
-`$app->router` est un `Eorbahapi\APIRouter`. Il expose `get`, `post`, `put`,
-`patch`, `delete`, `head`, `options` et `add_api_route($chemin, $methodes,
-$callback, $middlewares)`, tous utilisables directement pour construire des
-routes sans contrôleur — utile pour les routes générées ou conditionnelles :
-`$app->router->add_api_route('/health', ['GET'], fn () => ['status' => 'ok'])`.
-`include_router($router, prefix: '/v2')` monte un `APIRouter` complet sous un
-préfixe.
+final class V1Router
+{
+    public function __construct(public APIRouter $router)
+    {
+        $this->__register_routes();
+    }
 
-!!! tip "Les middlewares voyagent avec la méthode"
-    `#[Middleware(RequestIdMiddleware::class)]` sur une méthode s'applique à
-    toutes les routes qu'elle déclare ; sur la classe, il s'applique à tout le
-    contrôleur, et les middlewares de méthode s'exécutent après ceux de la
-    classe (voir [Middlewares](middlewares.md)).
+    public function __register_routes(): void
+    {
+        $this->router->get('/ping', fn () => ['pong' => true]);
+    }
+}
 
-!!! note "Pourquoi des contrôleurs ?"
-    Les closures suffisent pour un exemple ou un prototype. Dès qu'un projet
-    grossit, la classe permet d'isoler des responsabilités, d'injecter un
-    service par le constructeur et de monter le même contrôleur sous deux
-    préfixes.
+$app->include_router(null, V1Router::class, [], '/v1');
+```
+
+## Enregistrement par méthode dédiée
+
+Pour une organisation différente, une classe peut enregistrer ses routes sur
+l'application :
+
+```php
+<?php
+
+final class AdminRoutes
+{
+    public function __register_routes(EorbahAPI $app): void
+    {
+        $app->get('/admin/stats', fn () => ['users' => 3]);
+    }
+}
+
+$app->register_routes(AdminRoutes::class);
+```
+
+## Sous-applications
+
+Une application complète peut aussi être montée :
+
+```php
+<?php
+
+$admin = new EorbahAPI('Admin');
+$admin->include_controller(new AdminController());
+
+$app->mount('/admin', $admin);
+```
+
+Le préfixe est retiré avant de transmettre la requête ; les routes, la
+documentation et les middlewares de la sous-application restent indépendants.
+
+!!! tip "Documentation automatique"
+    Les contrôleurs n'ont rien à documenter : leurs attributs de paramètre et
+    leurs modèles alimentent OpenAPI comme les routes déclaratives — voir
+    [Documentation OpenAPI](openapi.md).
 
 ## Récapitulatif
 
-- `Eorbahapi\Routing\Attributes\{Get, Post, Put, Patch, Delete, Head, Options}` déclarent une route par verbe ;
-- `#[Route('/login', methods: ['GET', 'POST'])]` partage un handler entre plusieurs verbes ;
-- `$app->include_controller($instanceOuClasse, prefix: '/api', args: [...])` monte le contrôleur ;
-- `include_routes()` est l'alias historique de `include_controller()` ;
-- seules les méthodes publiques portant un attribut de route sont enregistrées ;
-- `$app->router` (`Eorbahapi\APIRouter`) permet un enregistrement programmatique.
+- `#[Get]`, `#[Post]`… déclarent les routes d'un contrôleur ;
+- `include_controller()` monte le contrôleur, avec un préfixe optionnel ;
+- `#[Middleware]` s'applique à la classe ou à la méthode ;
+- `APIRouter` + `include_router()` modularisent les routes ;
+- `register_routes()` charge une classe `__register_routes()` ;
+- `mount()` monte une application complète.
 
 [Suivant : Fichiers statiques](static-files.md){ .md-button }

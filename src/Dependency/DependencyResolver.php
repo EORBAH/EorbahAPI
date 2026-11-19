@@ -39,11 +39,19 @@ use Eorbahapi\Response;
  *  3. les injections classiques : valeur fournie par le routeur, `Request` /
  *     `Response`, service du conteneur, instanciation automatique, valeur par
  *     défaut.
+ *
+ * La réflexion des paramètres est faite **une seule fois par callback** :
+ * `describe()` produit des `ParameterDescriptor` réutilisés par chaque requête
+ * (et par le générateur OpenAPI). C'est le premier étage du cache interne
+ * d'EorbahAPI, indépendant du cache fichier activé par `EorbahAPI(cache: true)`.
  */
 class DependencyResolver
 {
     /** @var array<string, mixed> Services enregistrés (et instances mises en cache). */
     private array $container = [];
+
+    /** @var array<string, list<ParameterDescriptor>> Descripteurs par callback. */
+    private static array $descriptors = [];
 
     public function __construct(
         private Request $request,
@@ -65,26 +73,100 @@ class DependencyResolver
         $this->response = $response;
     }
 
+    // ------------------------------------------------------------------
+    // Description des paramètres (réflexion mise en cache)
+    // ------------------------------------------------------------------
+
     /**
-     * Résout les arguments pour le callable donné.
+     * Décrit les paramètres d'un callback, une seule fois par processus.
      *
-     * @param callable $callback
-     * @param array    $providedParams Paramètres nommés ou indexés (ex: segments d'URL, body JSON-RPC)
-     * @return array
+     * Les descripteurs ne dépendent pas de la requête : `Request` et `Response`
+     * sont injectés au moment de la résolution. Le générateur OpenAPI
+     * (`Eorbahapi\Openapi`) s'appuie sur la même description, si bien que la
+     * documentation et l'exécution ne peuvent pas diverger.
+     *
+     * @return list<ParameterDescriptor>
      */
-    public function resolve(callable $callback, array $providedParams = []): array
+    public static function describe(callable $callback): array
     {
-        $reflection = $this->reflect($callback);
+        $key = self::callbackKey($callback);
 
-        $args = [];
-        foreach ($reflection->getParameters() as $param) {
-            $args[] = $this->resolveParameter($param, $providedParams);
-        }
-
-        return $args;
+        return self::$descriptors[$key] ??= self::buildDescriptors($callback);
     }
 
-    private function reflect(callable $callback): ReflectionFunction|ReflectionMethod
+    /**
+     * Identifiant stable d'un callback, utilisé comme clé de cache.
+     */
+    public static function callbackKey(callable $callback): string
+    {
+        if (is_array($callback)) {
+            $owner = is_object($callback[0]) ? $callback[0]::class : (string) $callback[0];
+
+            return $owner . '::' . $callback[1];
+        }
+
+        if ($callback instanceof \Closure) {
+            $reflection = new ReflectionFunction($callback);
+            $file = $reflection->getFileName() ?: 'internal';
+
+            return 'closure:' . $file . ':' . $reflection->getStartLine() . ':' . $reflection->getEndLine();
+        }
+
+        if (is_object($callback)) {
+            return 'invokable:' . $callback::class;
+        }
+
+        if (is_string($callback) && str_contains($callback, '::')) {
+            return $callback;
+        }
+
+        return 'function:' . (string) $callback;
+    }
+
+    /**
+     * Fichier source d'un callback (null pour une fonction interne).
+     */
+    public static function callbackFile(callable $callback): ?string
+    {
+        try {
+            $file = self::reflect($callback)->getFileName();
+        } catch (\ReflectionException) {
+            return null;
+        }
+
+        return $file !== false ? $file : null;
+    }
+
+    /**
+     * @return list<ParameterDescriptor>
+     */
+    private static function buildDescriptors(callable $callback): array
+    {
+        $reflection = self::reflect($callback);
+        $descriptors = [];
+
+        foreach ($reflection->getParameters() as $param) {
+            $hasDefault = $param->isDefaultValueAvailable();
+
+            $descriptors[] = new ParameterDescriptor(
+                name: $param->getName(),
+                position: $param->getPosition(),
+                depends: self::attribute($param, Depends::class),
+                param: self::paramAttribute($param),
+                type: $param->getType(),
+                typeName: self::declaredClass($param),
+                hasDefault: $hasDefault,
+                default: $hasDefault ? $param->getDefaultValue() : null,
+                allowsNull: $param->allowsNull(),
+                expectsModel: self::expectsModel($param),
+                expectsWholePayload: self::expectsWholePayload($param),
+            );
+        }
+
+        return $descriptors;
+    }
+
+    private static function reflect(callable $callback): ReflectionFunction|ReflectionMethod
     {
         if (is_array($callback)) {
             return new ReflectionMethod($callback[0], $callback[1]);
@@ -105,67 +187,83 @@ class DependencyResolver
         return new ReflectionFunction($callback);
     }
 
-    private function resolveParameter(ReflectionParameter $param, array $providedParams): mixed
-    {
-        $type = $param->getType();
-        $typeName = $this->declaredClass($param);
-        $paramName = $param->getName();
+    // ------------------------------------------------------------------
+    // Résolution d'une requête
+    // ------------------------------------------------------------------
 
+    /**
+     * Résout les arguments pour le callable donné.
+     *
+     * @param callable $callback
+     * @param array    $providedParams Paramètres nommés ou indexés (ex: segments d'URL, body JSON-RPC)
+     * @return array
+     */
+    public function resolve(callable $callback, array $providedParams = []): array
+    {
+        $args = [];
+
+        foreach (self::describe($callback) as $descriptor) {
+            $args[] = $this->resolveParameter($descriptor, $providedParams);
+        }
+
+        return $args;
+    }
+
+    private function resolveParameter(ParameterDescriptor $descriptor, array $providedParams): mixed
+    {
         // 1. Dépendances explicites.
-        $dependsAttr = $this->attribute($param, Depends::class);
-        if ($dependsAttr !== null) {
-            return $this->resolveFromDependsAttribute($dependsAttr, $typeName);
+        if ($descriptor->depends !== null) {
+            return $this->resolveFromDependsAttribute($descriptor->depends, $descriptor->typeName);
         }
 
         // 2. Paramètres de requête, validés par Svinx\Validator.
-        $paramAttr = $this->paramAttribute($param);
-        if ($paramAttr !== null) {
-            return $this->resolveFromParam($paramAttr, $param, $providedParams);
+        if ($descriptor->param !== null) {
+            return $this->resolveFromParam($descriptor->param, $descriptor, $providedParams);
         }
 
         // 3. Paramètre fourni par la requête (URL ou body JSON-RPC).
-        $value = $this->extractProvidedValue($param, $providedParams);
+        $value = $this->extractProvidedValue($descriptor, $providedParams);
 
         if ($value !== null) {
-            return $this->castValue($value, $type);
+            return $this->castValue($value, $descriptor->type);
         }
 
         // 4. Request / Response (injection automatique).
-        if ($typeName === Request::class) {
+        if ($descriptor->typeName === Request::class) {
             return $this->request;
         }
-        if ($typeName === Response::class) {
+        if ($descriptor->typeName === Response::class) {
             return $this->response;
         }
 
         // 5. Service enregistré dans le conteneur.
-        if ($typeName !== null && array_key_exists($typeName, $this->container)) {
-            return $this->container[$typeName];
+        if ($descriptor->typeName !== null && array_key_exists($descriptor->typeName, $this->container)) {
+            return $this->container[$descriptor->typeName];
         }
 
         // 6. Instanciation automatique (constructeur sans paramètres requis).
-        if ($typeName !== null && class_exists($typeName)) {
-            $reflectionClass = new \ReflectionClass($typeName);
+        if ($descriptor->typeName !== null && class_exists($descriptor->typeName)) {
+            $reflectionClass = new \ReflectionClass($descriptor->typeName);
             $constructor = $reflectionClass->getConstructor();
 
             if ($constructor === null || $constructor->getNumberOfRequiredParameters() === 0) {
-                $instance = $this->container[$typeName] ??= $reflectionClass->newInstance();
+                $instance = $this->container[$descriptor->typeName] ??= $reflectionClass->newInstance();
                 return $instance;
             }
         }
 
         // 7. Valeur par défaut du paramètre.
-        if ($param->isDefaultValueAvailable()) {
-            return $param->getDefaultValue();
+        if ($descriptor->hasDefault) {
+            return $descriptor->default;
         }
 
         // 8. Null autorisé.
-        if ($type !== null && $type->allowsNull()) {
+        if ($descriptor->allowsNull) {
             return null;
         }
 
         throw new DependencyScopeError(
-            "Impossible de résoudre le paramètre '{$paramName}' de type '{$typeName}'"
+            "Impossible de résoudre le paramètre '{$descriptor->name}' de type '{$descriptor->typeName}'"
         );
     }
 
@@ -181,23 +279,23 @@ class DependencyResolver
      *
      * @param array $providedParams Paramètres de route déjà extraits par le routeur.
      */
-    public function resolveFromParam(Param $attr, ReflectionParameter $param, array $providedParams = []): mixed
+    public function resolveFromParam(Param $attr, ParameterDescriptor $descriptor, array $providedParams = []): mixed
     {
         $location = $attr->location();
 
         if ($location === ParamTypes::SECURITY) {
-            return $this->resolveSecurityDependency($attr, $param);
+            return $this->resolveSecurityDependency($attr, $descriptor);
         }
 
-        $name = $this->wireName($attr, $param);
-        [$present, $raw] = $this->extractParamValue($location, $name, $param, $providedParams);
+        $name = $this->wireName($attr, $descriptor);
+        [$present, $raw] = $this->extractParamValue($location, $name, $descriptor, $providedParams);
 
         if (!$present) {
-            return $this->fallbackValue($attr, $param, $location, $name);
+            return $this->fallbackValue($attr, $descriptor, $location, $name);
         }
 
         try {
-            return $this->typeFor($attr, $param)->validate($raw, [], $this->label($location, $name));
+            return $this->typeFor($attr, $descriptor)->validate($raw, [], $this->label($location, $name));
         } catch (ValidationError $error) {
             throw RequestValidationError::fromValidationError($location->value, $name, $error);
         }
@@ -206,9 +304,9 @@ class DependencyResolver
     /**
      * Nom du paramètre tel qu'il apparaît dans la requête.
      */
-    private function wireName(Param $attr, ReflectionParameter $param): string
+    private function wireName(Param $attr, ParameterDescriptor $descriptor): string
     {
-        $name = $attr->nameFor($param->getName());
+        $name = $attr->nameFor($descriptor->name);
 
         // Convention FastAPI : `user_agent` côté PHP lit `User-Agent`.
         return $attr instanceof Header ? str_replace('_', '-', $name) : $name;
@@ -222,7 +320,7 @@ class DependencyResolver
     private function extractParamValue(
         ParamTypes $location,
         string $name,
-        ReflectionParameter $param,
+        ParameterDescriptor $descriptor,
         array $providedParams
     ): array {
         switch ($location) {
@@ -244,13 +342,13 @@ class DependencyResolver
                 return $this->lookup($this->request->cookie(), $name);
 
             case ParamTypes::BODY:
-                return $this->lookupPayload($this->request->body(), $name, $param);
+                return $this->lookupPayload($this->request->body(), $name, $descriptor);
 
             case ParamTypes::FORM:
-                return $this->lookupPayload($this->request->post(), $name, $param);
+                return $this->lookupPayload($this->request->post(), $name, $descriptor);
 
             case ParamTypes::FILE:
-                return $this->lookupFile($name, $param);
+                return $this->lookupFile($name, $descriptor);
         }
 
         return [false, null];
@@ -299,13 +397,13 @@ class DependencyResolver
      *
      * @return array{0: bool, 1: mixed}
      */
-    private function lookupPayload(mixed $payload, string $name, ReflectionParameter $param): array
+    private function lookupPayload(mixed $payload, string $name, ParameterDescriptor $descriptor): array
     {
         if (!is_array($payload)) {
             return [false, null];
         }
 
-        if ($this->expectsModel($param)) {
+        if ($descriptor->expectsModel) {
             return [true, $payload];
         }
 
@@ -313,7 +411,7 @@ class DependencyResolver
             return [true, $payload[$name]];
         }
 
-        if ($this->expectsWholePayload($param)) {
+        if ($descriptor->expectsWholePayload) {
             return [true, $payload];
         }
 
@@ -323,7 +421,7 @@ class DependencyResolver
     /**
      * @return array{0: bool, 1: mixed}
      */
-    private function lookupFile(string $name, ReflectionParameter $param): array
+    private function lookupFile(string $name, ParameterDescriptor $descriptor): array
     {
         $files = $this->request->file();
 
@@ -331,21 +429,21 @@ class DependencyResolver
             return [false, null];
         }
 
-        return [true, $this->buildUploadValue($files[$name], $param, $name)];
+        return [true, $this->buildUploadValue($files[$name], $descriptor, $name)];
     }
 
     /**
      * Convertit une entrée de `$_FILES` en `UploadFile` lorsque le type déclaré
      * le demande ; sinon l'entrée brute est transmise telle quelle.
      */
-    private function buildUploadValue(mixed $entry, ReflectionParameter $param, string $name): mixed
+    private function buildUploadValue(mixed $entry, ParameterDescriptor $descriptor, string $name): mixed
     {
         if (!is_array($entry) || !array_key_exists('tmp_name', $entry)) {
             // Téléversement multiple : tableau d'entrées, conservé tel quel.
             return $entry;
         }
 
-        $class = $this->declaredClass($param);
+        $class = $descriptor->typeName;
 
         if ($class === null || !is_a($class, UploadFile::class, true)) {
             return $entry;
@@ -392,9 +490,9 @@ class DependencyResolver
      * Le mode laxiste active la coercition des scalaires ("42" -> 42), les
      * valeurs HTTP étant toujours des chaînes.
      */
-    private function typeFor(Param $attr, ReflectionParameter $param): Type
+    private function typeFor(Param $attr, ParameterDescriptor $descriptor): Type
     {
-        return Type::fromReflection($param->getType())
+        return Type::fromReflection($descriptor->type)
             ->lax()
             ->withConstraints($attr);
     }
@@ -403,17 +501,21 @@ class DependencyResolver
      * Valeur utilisée lorsque le paramètre est absent : défaut de l'attribut,
      * puis défaut PHP, puis null si le type l'autorise.
      */
-    private function fallbackValue(Param $attr, ReflectionParameter $param, ParamTypes $location, string $name): mixed
-    {
+    private function fallbackValue(
+        Param $attr,
+        ParameterDescriptor $descriptor,
+        ParamTypes $location,
+        string $name
+    ): mixed {
         if ($attr->default !== null || $attr->default_factory !== null) {
             return $attr->getDefault();
         }
 
-        if ($param->isDefaultValueAvailable()) {
-            return $param->getDefaultValue();
+        if ($descriptor->hasDefault) {
+            return $descriptor->default;
         }
 
-        if ($param->allowsNull()) {
+        if ($descriptor->allowsNull) {
             return null;
         }
 
@@ -437,7 +539,7 @@ class DependencyResolver
     /**
      * Attribut de source déclaré sur le paramètre (un seul autorisé).
      */
-    private function paramAttribute(ReflectionParameter $param): ?Param
+    private static function paramAttribute(ReflectionParameter $param): ?Param
     {
         $attributes = $param->getAttributes(Param::class, ReflectionAttribute::IS_INSTANCEOF);
 
@@ -467,7 +569,7 @@ class DependencyResolver
     /**
      * Premier attribut d'une classe donnée sur le paramètre.
      */
-    private function attribute(ReflectionParameter $param, string $class): ?object
+    private static function attribute(ReflectionParameter $param, string $class): ?object
     {
         $attributes = $param->getAttributes($class, ReflectionAttribute::IS_INSTANCEOF);
 
@@ -502,16 +604,16 @@ class DependencyResolver
     /**
      * Exécute le schéma de sécurité et retourne la valeur injectée au paramètre.
      */
-    private function resolveSecurityDependency(Param $attr, ReflectionParameter $param): mixed
+    private function resolveSecurityDependency(Param $attr, ParameterDescriptor $descriptor): mixed
     {
         /** @var Security $attr */
-        $dependency = $attr->dependency ?? $this->declaredClass($param);
+        $dependency = $attr->dependency ?? $descriptor->typeName;
 
         if ($dependency === null) {
             throw new DependencyScopeError(sprintf(
                 "Le paramètre '%s' doit préciser le schéma de sécurité à utiliser "
                 . '(ex: #[Security(HTTPBearer::class)]).',
-                $param->getName()
+                $descriptor->name
             ));
         }
 
@@ -561,16 +663,14 @@ class DependencyResolver
     // Aides
     // ------------------------------------------------------------------
 
-    private function extractProvidedValue(ReflectionParameter $param, array $providedParams): mixed
+    private function extractProvidedValue(ParameterDescriptor $descriptor, array $providedParams): mixed
     {
-        $name = $param->getName();
-        if (array_key_exists($name, $providedParams)) {
-            return $providedParams[$name];
+        if (array_key_exists($descriptor->name, $providedParams)) {
+            return $providedParams[$descriptor->name];
         }
 
-        $pos = $param->getPosition();
-        if (array_key_exists($pos, $providedParams)) {
-            return $providedParams[$pos];
+        if (array_key_exists($descriptor->position, $providedParams)) {
+            return $providedParams[$descriptor->position];
         }
 
         return null;
@@ -599,7 +699,7 @@ class DependencyResolver
     /**
      * Classe déclarée par le type du paramètre (null si type natif ou absent).
      */
-    private function declaredClass(ReflectionParameter $param): ?string
+    private static function declaredClass(ReflectionParameter $param): ?string
     {
         $type = $param->getType();
 
@@ -611,9 +711,9 @@ class DependencyResolver
     /**
      * Le paramètre attend-il un modèle Svinx (tout le corps est alors utilisé) ?
      */
-    private function expectsModel(ReflectionParameter $param): bool
+    private static function expectsModel(ReflectionParameter $param): bool
     {
-        $class = $this->declaredClass($param);
+        $class = self::declaredClass($param);
 
         return $class !== null && is_subclass_of($class, BaseModel::class);
     }
@@ -621,7 +721,7 @@ class DependencyResolver
     /**
      * Le paramètre attend-il le payload complet (`array` ou `mixed`) ?
      */
-    private function expectsWholePayload(ReflectionParameter $param): bool
+    private static function expectsWholePayload(ReflectionParameter $param): bool
     {
         $type = $param->getType();
 

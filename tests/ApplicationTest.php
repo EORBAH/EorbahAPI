@@ -57,6 +57,19 @@ class StopMiddleware
     }
 }
 
+/**
+ * Classe de réponse personnalisée : enveloppe JSON `{data: …}`.
+ */
+class EnvelopeResponse extends Response
+{
+    public function __construct(mixed $data, int $status = 200, array $headers = [])
+    {
+        $headers['Content-Type'] ??= 'application/vnd.api+json';
+
+        parent::__construct(json_encode(['data' => $data]), $status, $headers);
+    }
+}
+
 class ApplicationTest extends TestCase
 {
     protected function setUp(): void
@@ -197,6 +210,83 @@ class ApplicationTest extends TestCase
 
         $this->assertSame(301, $response->status());
         $this->assertSame('/new', $response->header('Location'));
+    }
+
+    #[Test]
+    public function the_default_response_class_is_json_response(): void
+    {
+        $app = new EorbahAPI();
+
+        $this->assertSame(JSONResponse::class, $app->response_class);
+
+        $app->get('/data', fn () => ['ok' => true]);
+        $app->get('/text', fn () => 'bonjour');
+
+        $response = (new TestClient($app))->get('/data');
+
+        $this->assertSame('application/json', $response->header('Content-Type'));
+        $this->assertSame(['ok' => true], $response->json());
+
+        // Un scalaire reste un corps texte, même avec JSONResponse par défaut.
+        $this->assertSame('bonjour', (new TestClient($app))->get('/text')->text());
+    }
+
+    #[Test]
+    public function the_response_class_can_be_customized(): void
+    {
+        $app = new EorbahAPI(default_response_class: EnvelopeResponse::class);
+        $app->get('/data', fn () => ['ok' => true]);
+
+        $response = (new TestClient($app))->get('/data');
+
+        $this->assertSame(EnvelopeResponse::class, $app->response_class);
+        $this->assertSame('application/vnd.api+json', $response->header('Content-Type'));
+        $this->assertSame(['data' => ['ok' => true]], $response->json());
+    }
+
+    #[Test]
+    public function the_response_class_can_be_changed_after_construction(): void
+    {
+        $app = new EorbahAPI();
+        $app->set_response_class(EnvelopeResponse::class);
+        $app->get('/data', fn () => ['ok' => true]);
+
+        $response = (new TestClient($app))->get('/data');
+
+        $this->assertSame(EnvelopeResponse::class, $app->response_class);
+        $this->assertSame(['data' => ['ok' => true]], $response->json());
+    }
+
+    #[Test]
+    public function the_response_class_renders_default_route_payloads_too(): void
+    {
+        $app = new EorbahAPI(default_response_class: EnvelopeResponse::class);
+        $app->default_route(418, fn () => ['detail' => 'théière']);
+
+        $response = (new TestClient($app))->get('/absent');
+
+        $this->assertSame(418, $response->status());
+        $this->assertSame(['data' => ['detail' => 'théière']], $response->json());
+    }
+
+    #[Test]
+    public function a_response_instance_bypasses_the_response_class(): void
+    {
+        $app = new EorbahAPI(default_response_class: EnvelopeResponse::class);
+        $app->get('/custom', fn () => new JSONResponse(['x' => 1], 201));
+
+        $response = (new TestClient($app))->get('/custom');
+
+        $this->assertSame(201, $response->status());
+        $this->assertSame(['x' => 1], $response->json());
+    }
+
+    #[Test]
+    public function an_invalid_response_class_is_rejected(): void
+    {
+        $this->expectException(\Eorbahapi\Exceptions\EorbahAPIError::class);
+
+        new EorbahAPI(default_response_class: \stdClass::class);
     }
 
     #[Test]

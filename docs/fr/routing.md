@@ -2,122 +2,201 @@
 
 ## Ce que vous allez apprendre
 
-Enregistrer une route pour chaque verbe HTTP, déclarer une route paramétrée,
-rattacher plusieurs verbes au même chemin avec `add_api_route()` — et savoir ce
-que le routeur fait du slash final, de la priorité des routes et d'une URL
-inconnue.
+Enregistrer des routes pour chaque verbe HTTP, utiliser des paramètres de chemin,
+comprendre les priorités, et organiser les routes en contrôleurs et en routers.
 
-## Le code
+## Les verbes HTTP
 
-`docs_src/RoutingExample.php` :
+Chaque verbe a sa méthode, avec la même signature :
 
 ```php
 <?php
-
-namespace Eorbahapi\Examples;
 
 use Eorbahapi\EorbahAPI;
 
-final class RoutingExample extends DocsExample
-{
-    public static function app(): EorbahAPI
-    {
-        $app = new EorbahAPI();
+$app = new EorbahAPI();
 
-        $app->get('/items', fn () => ['items' => ['a', 'b']]);
-        $app->post('/items', fn () => ['created' => true]);
-        $app->put('/items/{id}', fn (\Eorbahapi\Request $request) => ['updated' => $request->param('id')]);
-        $app->delete('/items/{id}', fn (\Eorbahapi\Request $request) => ['deleted' => $request->param('id')]);
+$app->get('/items', fn () => ['liste' => []]);
+$app->post('/items', fn () => ['créé' => true]);
+$app->put('/items/{id}', fn () => ['remplacé' => true]);
+$app->patch('/items/{id}', fn () => ['modifié' => true]);
+$app->delete('/items/{id}', fn () => ['supprimé' => true]);
+$app->head('/items', fn () => null);
+$app->options('/items', fn () => null);
 
-        // Route statique prioritaire sur la route paramétrée.
-        $app->get('/items/new', fn () => ['form' => true]);
-
-        // Une même route pour plusieurs verbes.
-        $app->add_api_route('/multi', 'GET|POST', fn () => ['multi' => true]);
-
-        return $app;
-    }
-}
+$app->run();
 ```
 
-## Ce qui se passe
-
-Une route est un couple **chemin + verbe**. Les sept verbes ont leur méthode :
-`get`, `post`, `put`, `patch`, `delete`, `head`, `options`, toutes de la forme
-`$app->verbe($chemin, $handler, $middlewares = [])`.
-
-`add_api_route($chemin, $methods, $handler)` accepte soit une chaîne séparée par
-des barres verticales (`'GET|POST'`), soit un tableau (`['GET', 'POST']`). Le
-verbe est mis en majuscules à l'enregistrement : un `PATCH` sur `/multi` ne
-trouve donc rien, puisque `/multi` n'existe que pour `GET` et `POST`.
-
-Le routeur range les routes en deux familles :
-
-- **routes statiques** — un chemin sans `{…}`, stocké dans `$routes[verbe][chemin]` ;
-- **routes paramétrées** — un chemin avec `{…}`, stocké dans `$dynamicRoutes[verbe]`
-  et compilé en expression régulière (`{id}` devient `[^/]+`, `{chemin:path}`
-  devient `.*`).
-
-La recherche consulte **d'abord les routes statiques**, puis les routes
-paramétrées : une route comme `GET /items/new` ne sera donc jamais capturée par
-un `{id}` égal à `new`, même si vous ajoutez plus tard `GET /items/{id}`.
-
-La route paramétrée reçoit ses valeurs par `Request::param('id')`, qui renvoie
-toujours une **chaîne** (`"7"`, pas `7`) tant qu'aucun typage n'est déclaré. Les
-chapitres suivants montrent comment obtenir un vrai `int`.
-
-### Les scénarios de l'exemple
+Pour plusieurs verbes d'un coup :
 
 ```php
 <?php
-public static function scenarios(): array
-{
-    return [
-        self::scenario('GET', '/items', json: ['items' => ['a', 'b']]),
-        self::scenario('POST', '/items', json: ['created' => true]),
-        self::scenario('PUT', '/items/7', json: ['updated' => '7']),
-        self::scenario('DELETE', '/items/7', json: ['deleted' => '7']),
-        self::scenario('GET', '/items/new', json: ['form' => true]),
-        self::scenario('GET', '/multi', json: ['multi' => true]),
-        self::scenario('POST', '/multi', json: ['multi' => true]),
-        self::scenario('PATCH', '/multi', status: 404),
-    ];
-}
+
+$app->add_api_route('/items', ['GET', 'POST'], function () {
+    return ['méthode' => 'GET ou POST'];
+});
 ```
 
-| Requête | Statut | Corps |
-| --- | --- | --- |
-| `GET /items` | 200 | `{"items":["a","b"]}` |
-| `POST /items` | 200 | `{"created":true}` |
-| `PUT /items/7` | 200 | `{"updated":"7"}` |
-| `DELETE /items/7` | 200 | `{"deleted":"7"}` |
-| `GET /items/new` | 200 | `{"form":true}` |
-| `GET /multi` | 200 | `{"multi":true}` |
-| `POST /multi` | 200 | `{"multi":true}` |
-| `PATCH /multi` | 404 | `Not Found` |
+## Routes statiques et dynamiques
 
-!!! note "Le slash final est ignoré, la racine devient la route vide"
-    Le routeur normalise chaque chemin avec `rtrim($path, '/')` : `/items/` et
-    même `/items//` atteignent la route `/items`. Conséquence directe : `/` est
-    enregistré comme la route **vide**, et `GET /` y répond normalement. En
-    revanche, la casse compte : `GET /ITEMS` ne correspond à rien.
+Un segment entre accolades devient un paramètre :
 
-!!! warning "`HEAD` et `OPTIONS` ne sont pas implicites"
-    Déclarer `GET /items` ne crée pas la route `HEAD /items` : un `HEAD` renvoie
-    `404`. Si vous voulez répondre à `head` ou `options`, enregistrez-les
-    explicitement avec `$app->head(...)` ou `$app->options(...)`.
+```php
+<?php
 
-Une route inconnue renvoie le statut `404` et le corps texte `Not Found` — pas du
-JSON. Vous pouvez changer ce comportement global avec `default_route()` :
-[Gestion des erreurs](errors.md).
+$app->get('/users/{id}', fn () => 'utilisateur');
+$app->get('/files/{chemin:path}', fn () => 'fichier imbriqué');
+```
+
+- `{id}` capture un segment (`[^/]+`) ;
+- `{chemin:path}` capture le reste du chemin (`.*`), slashs compris.
+
+Les routes statiques sont prioritaires sur les routes paramétrées :
+
+```php
+<?php
+
+$app->get('/items/{id}', fn (int $id) => "dynamique $id");
+$app->get('/items/new', fn () => 'statique');
+// GET /items/new  -> statique
+// GET /items/42   -> dynamique 42
+```
+
+## Middlewares de route
+
+Un middleware de route s'exécute uniquement pour cette route :
+
+```php
+<?php
+
+use Eorbahapi\Responses\JSONResponse;
+
+$app->get('/admin', fn () => ['ok' => true], [
+    static function ($request, $response, $next) {
+        if ($request->getHeader('X-Api-Key') !== 'secret') {
+            return new JSONResponse(['detail' => 'Clé invalide'], 401);
+        }
+
+        return $next();
+    },
+]);
+```
+
+Voir [Middlewares](middlewares.md) pour les middlewares globaux et l'ordre
+d'exécution.
+
+## Route par défaut
+
+Quand aucune route ne correspond, retournez une réponse personnalisée :
+
+```php
+<?php
+
+use Eorbahapi\Responses\JSONResponse;
+
+$app->default_route(404, fn () => new JSONResponse(['detail' => 'Introuvable'], 404));
+```
+
+Sans handler, `default_route(405)` fixe simplement le statut par défaut.
+
+## Contrôleurs
+
+Les attributs remplacent `$app->get()` pour les classes :
+
+```php
+<?php
+
+use Eorbahapi\Routing\Attributes\Get;
+use Eorbahapi\Routing\Attributes\Post;
+use Eorbahapi\Routing\Attributes\Middleware;
+
+use MyApp\Middleware\MyRouteMiddleware;
+
+final class UsersController
+{
+    #[Get('/users')]
+    #[Middleware(middleware: MyRouteMiddleware::class, args: [])]
+    public function index(): array
+    {
+        return ['users' => []];
+    }
+
+    #[Post('/users')]
+    public function store(): array
+    {
+        return ['created' => true];
+    }
+}
+
+$app->include_controller(new UsersController(), '/api');
+// GET  /api/users
+// POST /api/users
+```
+
+Les attributs disponibles : `Route`, `Get`, `Post`, `Put`, `Patch`, `Delete`,
+`Head`, `Options`, `Middleware`.
+
+## Routers inclus
+
+Un `APIRouter` regroupe des routes réutilisables :
+
+```php
+<?php
+
+use Eorbahapi\APIRouter;
+
+$router = new APIRouter('/v1', tags: ['v1']);
+$router->get('/ping', fn () => ['pong' => true]);
+$router->post('/items', fn () => ['created' => true]);
+
+$app->include_router($router);
+// GET /v1/ping, POST /v1/items
+```
+
+`register_routes()` charge une classe exposant `__register_routes(EorbahAPI $app)` :
+
+```php
+<?php
+
+final class RouteRegistrar
+{
+    public function __register_routes(EorbahAPI $app): void
+    {
+        $app->get('/registre', fn () => ['ok' => true]);
+    }
+}
+
+$app->register_routes(RouteRegistrar::class);
+```
+
+## Sous-applications
+
+Une application complète peut être montée sur un préfixe :
+
+```php
+<?php
+
+$admin = new EorbahAPI();
+$admin->get('/stats', fn () => ['users' => 3]);
+
+$app->mount('/admin', $admin);
+// GET /admin/stats
+```
+
+Le préfixe est retiré de l'URI avant d'atteindre la sous-application ; les
+paramètres `pathInfo()` et `uri()` sont ajustés pendant l'appel.
+
+!!! warning "Priorité des sous-applications"
+    Les sous-applications sont testées avant les routes de l'application hôte :
+    un montage sur `/` intercepte toutes les requêtes.
 
 ## Récapitulatif
 
-- `$app->get()`, `post()`, `put()`, `patch()`, `delete()`, `head()`, `options()` ;
-- `add_api_route($chemin, 'GET|POST', $handler)` pour plusieurs verbes d'un coup ;
-- une route statique est toujours examinée avant une route paramétrée ;
-- `{id}` capture un segment, `{chemin:path}` capture le reste du chemin ;
-- le slash final est retiré, donc `/` est la route vide et `/items/` vaut `/items` ;
-- un verbe non enregistré ou un chemin inconnu donne `404` (`Not Found`, personnalisable avec `default_route()`).
+- une route par verbe via `get()`, `post()`, `put()`, `patch()`, `delete()`… ;
+- `{name}` capture un segment, `{name:path}` capture le chemin restant ;
+- les routes statiques passent avant les dynamiques ;
+- les middlewares de route s'ajoutent en 3ᵉ argument ;
+- un contrôleur s'inclut avec `include_controller()`, un router avec
+  `include_router()`, une sous-application avec `mount()`.
 
 [Suivant : Paramètres de chemin](path-params.md){ .md-button }

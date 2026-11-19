@@ -3,7 +3,19 @@
 ## Application
 
 ```php
-$app = new EorbahAPI(?string $title = null, ?string $description = null, bool $debug = false, ?string $prefix = '');
+$app = new EorbahAPI(
+    string $title = 'EorbahAPI', string $description = '', bool $debug = false, ?string $prefix = '',
+    bool $cache = false, ?string $cache_dir = null, ?int $cache_ttl = null,
+    ?string $summary = null, string $version = '0.1.0', ?string $terms_of_service = null,
+    ?array $contact = null, ?array $license_info = null,
+    ?string $openapi_url = '/openapi.json', ?array $openapi_tags = null,
+    ?array $openapi_external_docs = null,
+    string $default_response_class = JSONResponse::class,   // rendu des retours array/object
+    ?string $docs_url = '/docs', ?string $redoc_url = '/redoc',
+    ?string $swagger_ui_oauth2_redirect_url = '/docs/oauth2-redirect',
+    ?array $swagger_ui_init_oauth = null, ?array $swagger_ui_parameters = null,
+);   // les routes de documentation sont enregistrées automatiquement
+$app->set_response_class(string $class): self;   // validation + remplacement
 $app->run(?Request $request = null): void;                    // envoie
 $app->handle(Request $request, ?Response $response = null): Response; // ne fait pas d'envoi
 $app->get|post|put|patch|delete|head|options(string $route, callable $callback, array $middlewares = []): void;
@@ -17,9 +29,69 @@ $app->mount(string $prefix, mixed $app, $name = null): self;
 $app->register(string $id, mixed $value): self;
 $app->setExceptionHandler(string $class, callable $handler): self;
 $app->setRequestResponse(Request $request, Response $response): void;
+
+// Cache
+$app->cache_manager(): CacheManager;
+$app->set_cache_manager(CacheManager $manager): self;
+
+// Documentation OpenAPI
+$app->openapi(array $options = []): array;                    // spec 3.1 (cache fichier si cache: true)
+$app->openapi_json(array $options = [], bool $pretty = true): string;
+$app->write_openapi(string $path = 'openapi.json', array $options = []): string;  // écrit le .json
+$app->openapi_routes(
+    string $prefix = '', array $options = [],
+    string|false|null $openapi_url = null,   // chemin relatif au préfixe
+    string|false|null $docs_url = null,
+    string|false|null $redoc_url = null,
+    string|false|null $oauth2_redirect_url = null,   // false = route désactivée
+    array $openapi_options = [],             // options du générateur (title, version, servers…)
+    array $swagger_options = [],             // options de Swagger UI (swagger_js_url…)
+    array $redoc_options = [],               // options de ReDoc (redoc_js_url…)
+): self;
+$app->docs(array $options = []): HTMLResponse;                // Swagger UI
+$app->redoc(array $options = []): HTMLResponse;
+$app->swagger_ui_oauth2_redirect_html(): HTMLResponse;
+$app->documentation_routes(): list<string>;
+$app->mounted_apps(): array;
+
 $app->router;   // APIRouter
 $app->request; $app->response;
 ```
+
+## Cache
+
+```php
+$cache = new CacheManager(bool $enabled = false, ?CacheInterface $store = null, ?string $directory = null, int $ttl = 0);
+$cache->enabled(): bool; $cache->store(): CacheInterface; $cache->directory(): ?string; $cache->ttl(): int;
+$cache->get|set|has|delete|clear|remember(...);               // remember($key, $callback, ?$ttl = null)
+
+new FileCache(string $directory, int $ttl = 0, string $namespace = 'eorbahapi');  // fichiers PHP atomiques
+new ArrayCache(); new NullCache();
+
+// Défaut : new EorbahAPI()                         -> NullCache
+// new EorbahAPI(cache: true)                       -> cache/eorbahapi (FileCache)
+// new EorbahAPI(cache: true, cache_dir: '/var/cache/api', cache_ttl: 3600)
+```
+
+## OpenAPI
+
+```php
+$spec = (new OpenApiBuilder($app, array $options = []))->build(): array;
+$builder->fingerprint(): string;        // clé de cache (routes + options + mtime des fichiers)
+$builder->collectRoutes(): array;       // routes + sous-applications montées
+
+Utils::get_openapi($app, array $options = []): array;
+Utils::get_openapi_json($app, array $options = [], bool $pretty = true): string;
+Utils::write_openapi($app, string $path = 'openapi.json', array $options = []): string;
+
+Docs::get_swagger_ui_html(string $openapi_url = '/openapi.json', ?string $title = null, ?string $oauth2_redirect_url = null, array $options = []): string;
+Docs::get_redoc_html(string $openapi_url = '/openapi.json', ?string $title = null, array $options = []): string;
+Docs::get_swagger_ui_oauth2_redirect_html(): string;
+```
+
+Options du générateur : `title`, `description`, `version`, `servers`,
+`operations` (clé `"GET /users/{id}"` → `summary` / `description` / `tags`),
+`components`, `securitySchemes`.
 
 ## Routeur
 
@@ -30,7 +102,7 @@ $router->match(string $uri, string $method): ?array;   // ['callback', 'middlewa
 $router->dispatch(Request $request, ?Response $response = null, ?DependencyResolver $resolver = null): ?Response;
 $router->routesFor(string $method): array;
 
-APIRouter::toResponse(mixed $result, Response $response): Response;
+APIRouter::toResponse(mixed $result, Response $response, ?string $responseClass = null): Response;
 APIRouter::normalizeMiddleware(mixed $config): array;   // ['class' => ..., 'args' => [...]]
 APIRouter::makeMiddleware(array $config): object;
 APIRouter::invokeMiddleware(object $mw, Request $request, Response $response, callable $next): mixed;
@@ -171,3 +243,67 @@ $response->body(); $response->text(); $response->json(); $response->raw();
 $response->isSuccess(); $response->isRedirect();
 $response->assertStatus(int $code); $response->assertSee(string $needle);
 ```
+
+## WebSockets
+
+```php
+$app->websocket(string $route, callable $handler): self;
+$app->websocket_routes(): WebSocketRouter;
+
+new WebSocketRouter(); $router->add(string $route, callable $handler);
+$router->match(string $path): ?array; $router->has(string $path): bool; $router->count(): int;
+
+new WebSocketServer(string $host = '127.0.0.1', int $port = 8081);
+$server->run(WebSocketRouter|EorbahAPI $routes): void;
+$server->handle(resource $stream, WebSocketRouter $router): void;
+
+WebSocket::computeAccept(string $key): string;
+$ws->accept(); $ws->send(string); $ws->send_json(mixed); $ws->send_bytes(string);
+$ws->receive(): ?string; $ws->receive_json(): ?array; $ws->receive_bytes(): ?string;
+$ws->close(int $code = 1000, string $reason = ''); $ws->state(): WebSocketState;
+$ws->path(); $ws->params(); $ws->query(); $ws->headers(); $ws->client(); $ws->server();
+```
+
+## Tâches, logs, utilitaires
+
+```php
+$tasks = new BackgroundTasks();
+$tasks->add(callable $task, array $args = []): self; $tasks->add_task(...): self;
+$tasks->run(): void; $tasks->count(): int; $tasks->is_empty(): bool; $tasks->clear(): void;
+$tasks->errors(): list<Throwable>; $tasks->clear_errors(): void;
+new BackgroundTasksMiddleware(BackgroundTasks $tasks);
+
+$logger = new Logger(string $logLevel = 'info');
+$logger->log(string $level, string $message, array $context = []): void;
+$logger->debug|info|warning|error|critical(string $message, array $context = []): void;
+
+Status::HTTP_404_NOT_FOUND; Status::text(int $code, string $default = 'Unknown Status Code'): string;
+Status::isSuccess/isRedirect/isClientError/isServerError/isError(int $code): bool;
+
+Utils::getRoutePath(string $route, array $params = []): string;
+Utils::normalizePath(string $path): string;
+Utils::isAsyncCallable(callable $callback): bool;
+```
+
+## Contrats et adaptateurs
+
+`EorbahAPI` implémente directement `ESGIAppInterface`.
+
+```php
+interface Eorbahapi\Contracts\ESGIAppInterface { __invoke(RequestInterface, ResponseInterface): ResponseInterface; }
+interface Eorbahapi\Contracts\ServerAdapterInterface { run(ESGIAppInterface, string $host = '127.0.0.1', int $port = 8000, bool $reload = false): void; }
+interface Eorbahapi\Contracts\CacheAdapterInterface extends CacheInterface { driver(): string; }
+
+new Eorbahapi\Adapter\Http\RequestAdapter(Request $request);   // implements RequestInterface
+new Eorbahapi\Adapter\Http\ResponseAdapter(Response $response); // create/from/unwrap
+new Eorbahapi\Adapter\Datastructures\UploadFileAdapter(UploadFile $file);
+new Eorbahapi\Adapter\Cache\MemoryCacheAdapter(); new FileCacheAdapter(string $dir, int $ttl = 0); new RedisCacheAdapter(array|object $config = []);
+new Eorbahapi\Adapter\Server\MinimalServerAdapter(); new SwooleServerAdapter(int $workers = 1);
+
+new Eorbahapi\Server\ESGIAppRunner(?ESGIAppInterface $app = null, ?ServerAdapterInterface $adapter = null);
+$runner->run(?ESGIAppInterface $app = null, string $host = '127.0.0.1', int $port = 8000, bool $reload = false, ?ServerAdapterInterface $serverAdapter = null): void;
+```
+
+Les interfaces historiques (`Middlewares\MiddlewareInterface`,
+`Dependency\DependencyInterface`, `Testing\TestClientInterface`) héritent des
+contrats : le code existant les satisfait déjà.

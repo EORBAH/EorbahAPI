@@ -13,6 +13,7 @@ use Eorbahapi\Response;
  * réponse partagée dans `process()` et la retourne sans l'envoyer. `run()` reste
  * disponible pour un usage autonome (elle envoie la réponse).
  */
+
 class BaseMountedApplication {
     public Request $request;
     public Response $response;

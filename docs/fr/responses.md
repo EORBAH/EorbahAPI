@@ -2,151 +2,183 @@
 
 ## Ce que vous allez apprendre
 
-Choisir ce que renvoie un handler — tableau encodé en JSON, réponse typée,
-HTML, redirection, flux — et piloter le statut, les en-têtes et le
-`Content-Type` avec les helpers de `Eorbahapi\Response`.
+Choisir ce que renvoie un handler, contrôler statut et en-têtes, servir du HTML,
+des redirections et des flux, et changer la classe de réponse par défaut.
 
-## Le code
+## Normalisation des retours
 
-`docs_src/ResponsesExample.php` :
+Un handler n'a pas besoin de construire une `Response` :
+
+| Retour | Résultat |
+| --- | --- |
+| `array` / `object` | corps JSON (`Content-Type: application/json`) |
+| `Response` | renvoyée telle quelle |
+| `string` | corps texte |
+| `'redirect:code:url'` | statut + en-tête `Location` |
+| `null` / `bool` | réponse en cours inchangée |
 
 ```php
 <?php
 
-namespace Eorbahapi\Examples;
+$app->get('/auto', fn () => ['ok' => true]);                       // {"ok":true}
+$app->get('/text', fn () => 'bonjour');                            // bonjour
+$app->get('/go', fn () => 'redirect:301:/auto');                   // 301 + Location
+```
 
-use Eorbahapi\EorbahAPI;
+## Réponses typées
+
+```php
+<?php
+
 use Eorbahapi\Responses\HTMLResponse;
 use Eorbahapi\Responses\JSONResponse;
 use Eorbahapi\Responses\RedirectResponse;
 
-/**
- * Réponses : statut, en-têtes, contenu, redirections.
- */
-final class ResponsesExample extends DocsExample
-{
-    public static function app(): EorbahAPI
-    {
-        $app = new EorbahAPI();
+$app->post('/created', fn () => new JSONResponse(['created' => true], 201, [
+    'X-Trace' => 'abc',
+]));
 
-        // Un tableau est encodé en JSON automatiquement.
-        $app->get('/auto', fn () => ['ok' => true]);
+$app->get('/html', fn () => new HTMLResponse('<h1>Bonjour</h1>'));
 
-        // Contrôle explicite du statut et des en-têtes.
-        $app->post('/created', fn () => new JSONResponse(['created' => true], 201, ['X-Trace' => 'abc']));
-
-        // Réponse HTML.
-        $app->get('/html', fn () => new HTMLResponse('<h1>Bonjour</h1>'));
-
-        // Redirection typée.
-        $app->get('/go', fn () => new RedirectResponse('/auto', 307));
-
-        // Redirection raccourcie : "redirect:code:url".
-        $app->get('/short', fn () => 'redirect:301:/auto');
-
-        // Texte brut.
-        $app->get('/text', fn () => 'bonjour');
-
-        return $app;
-    }
-}
+$app->get('/go', fn () => new RedirectResponse('/auto', 307));
 ```
 
-Un handler n'est pas obligé de retourner un `Response` : le framework normalise
-le retour. Un `array` ou un `object` devient un corps JSON, une chaîne devient un
-corps texte, une chaîne préfixée par `redirect:` devient une redirection, et
-`null` / `true` laissent la réponse en cours inchangée.
+`HTMLResponse` fixe `Content-Type: text/html; charset=UTF-8` ;
+`JSONResponse` fixe `application/json` sauf en-tête fourni.
 
-## Ce qui se passe
-
-| Requête | Statut | Corps / en-têtes |
-| --- | --- | --- |
-| `GET /auto` | 200 | `{"ok":true}` |
-| `POST /created` | 201 | `{"created":true}` + `X-Trace: abc` |
-| `GET /html` | 200 | `<h1>Bonjour</h1>` + `Content-Type: text/html; charset=UTF-8` |
-| `GET /go` | 307 | `Location: /auto` |
-| `GET /short` | 301 | `Location: /auto` |
-| `GET /text` | 200 | `bonjour` |
-
-`JSONResponse` prend les données, un statut (200 par défaut) et un tableau
-d'en-têtes ; il ajoute `Content-Type: application/json` sauf si vous le
-fournissez déjà (`$headers['Content-Type'] ??= 'application/json'`).
-`HTMLResponse` fait de même avec `text/html; charset=UTF-8`.
-`RedirectResponse` enregistre l'URL dans `Location` et fixe le statut (302 par
-défaut, `307` ici pour conserver la méthode et le corps).
-
-La chaîne `redirect:code:url` produit le même résultat sans instancier de classe :
-`'redirect:301:/auto'` découpe sur `:` en trois parties, applique le statut et
-l'en-tête `Location`. Le corps, lui, reste la chaîne elle-même.
-
-### Réponses en flux
-
-Un `Generator` alimente `StreamingResponse` (`Eorbahapi\Responses\StreamingResponse`) :
-chaque `yield` est envoyé au client puis vidé, ce qui convient aux gros contenus
-et aux progressions. La signature est
-`new StreamingResponse(\Generator $generator, int $status = 200, array $headers = [])`.
+## Streaming et SSE
 
 ```php
 <?php
+
+use Eorbahapi\Responses\EventStreamResponse;
+use Eorbahapi\Responses\StreamingResponse;
+
 $app->get('/chunks', fn () => new StreamingResponse((static function (): \Generator {
     yield 'a';
     yield 'b';
     yield 'c';
 })()));
-```
 
-`EventStreamResponse` (`Eorbahapi\Responses\EventStreamResponse`) étend ce
-comportement pour le Server-Sent Events (SSE) : il préremplit
-`Content-Type: text/event-stream`, `Cache-Control: no-cache` et
-`Connection: keep-alive`. Il ne reste qu'à produire des trames au format SSE
-(`data: ...` suivi d'une ligne vide).
-
-```php
 $app->get('/events', fn () => new EventStreamResponse((static function (): \Generator {
     yield "data: ping\n\n";
 })()));
 ```
 
-Ces deux réponses n'ont pas de corps avant l'envoi : c'est `send()` — appelé par
-`run()` — qui consomme le générateur et pousse chaque morceau. Sous `TestClient`,
-`body()` reste donc vide ; un test vérifie la sortie, pas la réponse.
+`StreamingResponse` envoie chaque `yield` puis vide le tampon ;
+`EventStreamResponse` préconfigure le SSE (`text/event-stream`, `no-cache`,
+`keep-alive`). Le corps n'est consommé qu'à l'envoi : sous `TestClient`, testez
+la sortie avec `expectOutputString()`.
 
-### Helpers de `Response`
+## Fichiers et téléchargements
 
-| Méthode | Rôle |
+`FileResponse` sert un fichier (ou un `UploadFile`) avec les en-têtes HTTP
+attendus, les requêtes `Range` et les validateurs de cache :
+
+```php
+<?php
+
+use Eorbahapi\Request;
+use Eorbahapi\Responses\FileResponse;
+
+$app->get('/exports/{id}', function (Request $request, int $id) {
+    return new FileResponse(__DIR__ . "/exports/$id.csv", request: $request);
+});
+
+$app->get('/rapport', function (Request $request) {
+    return FileResponse::download(__DIR__ . '/rapports/2024.csv', 'rapport-2024.csv', $request);
+});
+```
+
+| Fonctionnalité | Détail |
 | --- | --- |
-| `status()` | statut HTTP courant |
-| `body()` | corps brut (`string`, `array` ou `null`) |
-| `headers()` | tableau des en-têtes |
-| `text()` | corps en chaîne, les tableaux étant encodés en JSON |
-| `set_content_type()` | `Content-Type` + `Cache-Control` en un appel |
+| En-têtes | `Content-Type`, `Content-Length`, `ETag`, `Last-Modified`, `Accept-Ranges` |
+| `Range: bytes=0-6` | **206** + `Content-Range`, contenu partiel |
+| `If-None-Match` / `If-Modified-Since` | **304** sans corps |
+| Plage invalide | **416** + `Content-Range: bytes */taille` |
+| `HEAD` | en-têtes seulement, sans corps |
+| `download()` | `Content-Disposition: attachment` + nom de fichier |
+| `UploadFile` | `FileResponse::fromUploadFile($uploadFile)` |
 
-`set_content_type('json')`, `'html'`, `'text'`, `'svg'`, `'png'`… acceptent un
-nom court traduit en type MIME, avec `charset=UTF-8` ajouté pour les types
-textuels. Sans âge de cache, l'appel pose `Cache-Control: no-store` et
-`Pragma: no-cache` ; avec `set_content_type('pdf', 3600)`, il pose
-`public, max-age=3600` et `Expires`. Les options `disposition`, `filename` et
-`custom_headers` complètent le réglage.
+`EorbahAPI::handle()` rattache automatiquement la requête courante à la
+`FileResponse` : `Range` et `If-None-Match` fonctionnent sans passer `request:`.
+Le corps est diffusé par morceaux (`send()`), et Swoole utilise `sendfile()`.
 
-!!! tip "Le plus court chemin d'abord"
-    Tant que vous n'avez pas besoin d'un statut ou d'un en-tête particulier,
-    retournez un tableau : l'encodage JSON et le corps sont pris en charge.
-    Passez à `JSONResponse` dès qu'un statut (`201`) ou un en-tête maison peut
-    être utile au client.
+!!! note "Tester un fichier"
+    `TestResponse` ne contient pas le corps binaire (il est diffusé à l'envoi).
+    Vérifiez les en-têtes/statut, ou utilisez `$response->contents()` côté
+    `FileResponse` pour lire la tranche.
 
-!!! warning "La redirection raccourcie ne transporte pas de corps"
-    `'redirect:301:/auto'` sert uniquement à rediriger : le corps vaut la chaîne
-    de redirection. Utilisez `new RedirectResponse($url, $status)` si vous voulez
-    une réponse typée, et réservez les statuts `307` / `308` aux redirections
-    qui doivent conserver la méthode et le corps de la requête.
+## Classe de réponse par défaut
+
+Les retours structurés sont rendus par `JSONResponse`. Une autre classe peut
+être imposée à toute l'application :
+
+```php
+<?php
+
+use Eorbahapi\EorbahAPI;
+use Eorbahapi\Responses\JSONResponse;
+
+$app = new EorbahAPI(default_response_class: JSONResponse::class); // défaut
+```
+
+La classe reçoit `(mixed $data, int $status, array $headers)` :
+
+```php
+<?php
+
+final class EnvelopeResponse extends \Eorbahapi\Response
+{
+    public function __construct(mixed $data, int $status = 200, array $headers = [])
+    {
+        $headers['Content-Type'] ??= 'application/vnd.api+json';
+
+        parent::__construct(json_encode(['data' => $data]), $status, $headers);
+    }
+}
+
+$app = new EorbahAPI(default_response_class: EnvelopeResponse::class);
+$app->get('/items', fn () => ['items' => [1, 2, 3]]);
+// {"data":{"items":[1,2,3]}}
+```
+
+Le rendu ne s'applique qu'aux valeurs structurées : un scalaire reste un corps
+texte, une `Response` retournée garde le contrôle. `$app->response_class`
+expose la classe courante, `set_response_class()` la remplace.
+
+## Statut, en-têtes et cookies
+
+```php
+<?php
+
+use Eorbahapi\Request;
+use Eorbahapi\Response;
+
+$app->get('/custom', function (Request $request, Response $response) {
+    $response->status = 202;
+    $response->headers['X-Route'] = $request->path();
+    $response->cookie('vu', '1', ['secure' => false]);
+
+    return ['accepted' => true];
+});
+```
+
+Helpers : `status()`, `body()`, `headers()`, `text()`, `set_content_type()`,
+`cookie()`, `clearCookie()`, `removeHeader()`.
+
+!!! warning "`Response::header()` est un setter"
+    `$response->header('X-Nom', 'valeur')` (et `setHeader()`) posent l'en-tête et
+    appellent `header()` immédiatement. En test, préférez
+    `$response->headers['X-Nom'] = 'valeur'`.
 
 ## Récapitulatif
 
-- un tableau ou un objet retourné est encodé en JSON automatiquement ;
-- `JSONResponse($data, $status, $headers)` contrôle statut et en-têtes ;
-- `HTMLResponse` fixe `text/html; charset=UTF-8` ;
-- `RedirectResponse($url, $status)` et `'redirect:code:url'` posent `Location` ;
-- `StreamingResponse` envoie un `Generator` par morceaux, `EventStreamResponse` en SSE ;
-- `status()`, `body()`, `headers()`, `text()` et `set_content_type()` inspectent et ajustent la réponse.
+- un tableau/objet devient du JSON ; un scalaire du texte ;
+- `JSONResponse`, `HTMLResponse`, `RedirectResponse`, `StreamingResponse`,
+  `EventStreamResponse` couvrent les besoins courants ;
+- `default_response_class` remplace la classe de rendu des données ;
+- `Response` expose statut, en-têtes, cookies et helpers ;
+- les flux s'envoient au `send()`, pas à la construction.
 
-[Suivant : Dépendances](dependencies.md){ .md-button }
+[Suivant : Tâches d'arrière-plan](background-tasks.md){ .md-button }

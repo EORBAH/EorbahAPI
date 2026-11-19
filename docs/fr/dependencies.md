@@ -2,152 +2,134 @@
 
 ## Ce que vous allez apprendre
 
-Déclarer des paramètres qui ne viennent pas de la requête mais d'une dépendance :
-`#[Depends]`, le contrat `DependencyInterface`, une fonction ou une méthode
-statique comme dépendance, et le conteneur de l'application.
+Injecter un service, une connexion ou une valeur calculée dans un handler avec
+`#[Depends]`, utiliser le conteneur et l'autowiring.
 
-## Le code
+## Dépendance callable
 
-`docs_src/DependenciesExample.php` :
+`#[Depends]` exécute un callable et injecte son retour :
 
 ```php
 <?php
 
-namespace Eorbahapi\Examples;
+use Eorbahapi\Params\Depends;
+use Eorbahapi\Request;
+
+function client_ip(Request $request): string
+{
+    return $request->getClientIP();
+}
+
+$app->get('/ip', function (
+    #[Depends('client_ip')] string $ip,
+) {
+    return ['ip' => $ip];
+});
+```
+
+Le callable reçoit lui-même les dépendances résolues (`Request`, `Response`,
+services…).
+
+## Dépendance classe
+
+Une classe peut être instanciée puis appelée :
+
+```php
+<?php
+
+final class UtilisateurCourant
+{
+    public function __invoke(Request $request): ?string
+    {
+        return $request->getHeader('X-User');
+    }
+}
+
+$app->get('/admin', function (
+    #[Depends(UtilisateurCourant::class)] ?string $user,
+) {
+    return ['user' => $user];
+});
+```
+
+Si la classe implémente `Eorbahapi\Dependency\DependencyInterface` (qui hérite de
+`Eorbahapi\Contracts\DependencyInterface`), `resolve(Request, Response)` est
+appelé :
+
+```php
+<?php
 
 use Eorbahapi\Dependency\DependencyInterface;
-use Eorbahapi\EorbahAPI;
-use Eorbahapi\Params\Depends;
 use Eorbahapi\Request;
 use Eorbahapi\Response;
 
-/**
- * Dépendance qui lit l'utilisateur courant dans les en-têtes.
- */
-final class CurrentUser implements DependencyInterface
+final class BaseDeDonnees implements DependencyInterface
 {
     public function resolve(Request $request, Response $response): mixed
     {
-        return $request->getHeader('X-User') ?? 'anonyme';
+        return new \PDO('sqlite::memory:');
     }
 }
 
-/**
- * Service applicatif injecté par le conteneur.
- */
-final class Greeter
-{
-    public function greet(string $name): string
-    {
-        return 'Bonjour ' . $name;
-    }
-}
-
-/**
- * Fonction utilisée comme dépendance.
- */
-function eorbah_api_greeting(): string
-{
-    return 'Bonjour depuis une fonction';
-}
-
-/**
- * Dépendances : `#[Depends]`, `DependencyInterface` et conteneur.
- */
-final class DependenciesExample extends DocsExample
-{
-    public static function app(): EorbahAPI
-    {
-        $app = new EorbahAPI();
-
-        // Une dépendance `DependencyInterface` reçoit la requête et la réponse.
-        $app->get('/me', function (#[Depends(CurrentUser::class)] string $user) {
-            return ['user' => $user];
-        });
-
-        // Une fonction peut servir de dépendance.
-        $app->get('/greeting', function (#[Depends('\Eorbahapi\Examples\eorbah_api_greeting')] string $message) {
-            return ['message' => $message];
-        });
-
-        // Service enregistré dans le conteneur puis injecté par son type.
-        $app->register(Greeter::class, new Greeter());
-        $app->get('/hello', function (Greeter $greeter, #[Depends(CurrentUser::class)] string $user) {
-            return ['message' => $greeter->greet($user)];
-        });
-
-        // Instanciation automatique (constructeur sans paramètre requis).
-        $app->get('/auto', fn (Greeter $greeter) => ['message' => $greeter->greet('monde')]);
-
-        return $app;
-    }
-
-    public static function scenarios(): array
-    {
-        return [
-            self::scenario('GET', '/me', json: ['user' => 'anonyme']),
-            self::scenario('GET', '/me', ['headers' => ['X-User' => 'oumar']], json: ['user' => 'oumar']),
-            self::scenario('GET', '/greeting', json: ['message' => 'Bonjour depuis une fonction']),
-            self::scenario('GET', '/hello', json: ['message' => 'Bonjour anonyme']),
-            self::scenario('GET', '/auto', json: ['message' => 'Bonjour monde']),
-        ];
-    }
-}
+$app->get('/db', function (#[Depends(BaseDeDonnees::class)] \PDO $db) {
+    return ['driver' => $db->getAttribute(\PDO::ATTR_DRIVER_NAME)];
+});
 ```
 
-## Ce qui se passe
+## Conteneur
 
-| Requête | Statut | Corps |
-| --- | --- | --- |
-| `GET /me` | 200 | `{"user":"anonyme"}` |
-| `GET /me` avec `X-User: oumar` | 200 | `{"user":"oumar"}` |
-| `GET /greeting` | 200 | `{"message":"Bonjour depuis une fonction"}` |
-| `GET /hello` | 200 | `{"message":"Bonjour anonyme"}` |
-| `GET /auto` | 200 | `{"message":"Bonjour monde"}` |
+`register()` associe un identifiant à une instance partagée ; l'autowiring par
+type la retrouve sans attribut :
 
-### Ce que fait `#[Depends]`
+```php
+<?php
 
-`Eorbahapi\Params\Depends` accepte deux arguments : `dependency` (une classe, une
-fonction ou un tableau `[Classe::class, 'methodeStatique']`) et `args` (les
-arguments passés au constructeur de la dépendance). La valeur de retour est
-injectée dans le paramètre : c'est pour cela que `/me` reçoit une chaîne, et non
-l'objet `CurrentUser`.
+use Eorbahapi\BackgroundTasks;
 
-Une classe qui implémente `Eorbahapi\Dependency\DependencyInterface` reçoit la
-requête et la réponse courantes via `resolve(Request $request, Response
-$response): mixed`. Une classe ordinaire est instanciée — ou reprise du conteneur
-si `$app->register()` l'a déjà enregistrée — et l'instance elle-même est injectée.
+$tasks = new BackgroundTasks();
+$app->register(BackgroundTasks::class, $tasks);
 
-### L'ordre de résolution d'un paramètre
+$app->post('/users', function (BackgroundTasks $background) {
+    $background->add(static fn () => null);
 
-`DependencyResolver::resolveParameter()` essaie les sources dans cet ordre et
-s'arrête à la première qui répond :
+    return ['created' => true];
+});
+```
 
-1. les attributs de dépendance (`#[Depends]`, `#[Security]`) ;
-2. la valeur fournie par le routeur (segment d'URL, paramètre de body) ;
-3. `Request` et `Response`, injectés automatiquement ;
-4. le service enregistré dans le conteneur (`$app->register(Greeter::class, new Greeter())`) ;
-5. l'instanciation automatique de la classe si son constructeur n'a aucun paramètre requis (`/auto`) ;
-6. la valeur par défaut du paramètre ;
-7. `null` si le type l'autorise ;
-8. sinon une `Eorbahapi\Exceptions\DependencyScopeError`.
+L'autowiring instancie aussi une classe dont le constructeur n'exige aucun
+paramètre (`new $classe()`), et met l'instance en cache.
 
-!!! tip "Une seule famille d'attributs par paramètre"
-    `#[Depends]` sert à calculer une valeur ; `#[Query]`, `#[Path]`, `#[Body]`…
-    servent à lire une valeur dans la requête. Déclarer deux attributs de source
-    sur le même paramètre lève une `DependencyScopeError`.
+## `Request` et `Response`
 
-!!! note "Ordre des sources"
-    Un paramètre typé `Greeter` sans attribut passe par l'étape 4 avant l'étape
-    5 : c'est le conteneur qui décide si votre application partage une instance
-    ou en fabrique une nouvelle à chaque appel.
+Ils sont injectés automatiquement par type :
+
+```php
+<?php
+
+$app->get('/info', function (Request $request, Response $response) {
+    $response->headers['X-Method'] = $request->method();
+
+    return ['path' => $request->path()];
+});
+```
+
+## Résolution et erreurs
+
+Pour un paramètre sans attribut, l'ordre est : valeur fournie par le routeur,
+`Request`/`Response`, conteneur, instanciation automatique, valeur par défaut,
+`null` si autorisé. Si rien ne convient, `DependencyScopeError` (500) est levée :
+c'est une erreur de programmation.
+
+!!! tip "Partager un état par requête"
+    Pour un service réellement par requête, passez par `#[Depends]` avec un
+    callable ou enregistrez une fabrique qui construit à chaque appel.
 
 ## Récapitulatif
 
-- `#[Depends(Classe::class)]` exécute une dépendance et injecte sa valeur ;
-- une dépendance est une classe (`DependencyInterface` ou constructeur simple), un nom de fonction, ou `[Classe::class, 'methodeStatique']` ;
-- `args:` passe les arguments au constructeur de la dépendance ;
-- `$app->register(Cle::class, $service)` alimente le conteneur, consulté avant l'instanciation automatique ;
-- la résolution va des attributs vers la valeur de route, `Request`/`Response`, le conteneur, l'autowiring, le défaut, `null`, puis `DependencyScopeError`.
+- `#[Depends]` injecte le retour d'un callable ou d'une classe ;
+- les dépendances reçoivent elles-mêmes `Request`, `Response` et les services ;
+- `DependencyInterface::resolve()` permet une logique dédiée ;
+- `register()` + type-hint partagent une instance ;
+- `Request` et `Response` sont injectés sans configuration.
 
 [Suivant : Sécurité](security.md){ .md-button }

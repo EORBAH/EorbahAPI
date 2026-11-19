@@ -2,9 +2,12 @@
 
 namespace Eorbahapi\Middlewares;
 
-use Eorbahapi\Request;
-use Eorbahapi\Response;
-
-interface MiddlewareInterface {
-    public function __invoke(Request $request, Response $response, callable $next): mixed;
+/**
+ * Contrat historique des middlewares.
+ *
+ * Il hérite de `Eorbahapi\Contracts\MiddlewareInterface` : les middlewares
+ * écrits aujourd'hui respectent donc déjà le contrat figé, sans modification.
+ */
+interface MiddlewareInterface extends \Eorbahapi\Contracts\MiddlewareInterface
+{
 }

@@ -5,44 +5,47 @@
 - **Le français est la source** : tout est écrit dans `docs/fr/`. Les autres
   langues (`docs/en/`, …) sont générées par `scripts/translate.py`.
 - Le site est un **cours progressif** inspiré de la documentation de FastAPI.
-- Chaque page suit le même plan :
+- Chaque page suit un plan proche de FastAPI :
 
   1. `# Titre`
   2. `## Ce que vous allez apprendre`
-  3. `## Le code` (bloc ```php)
-  4. `## Ce qui se passe` + tableau `Requête | Statut | Corps`
-  5. 1 ou 2 encadrés Material (`!!! tip`, `!!! note`, `!!! warning`) — informatifs, jamais décoratifs
-  6. `## Récapitulatif` (liste à puces)
+  3. étapes `##`/`###` avec du code réel
+  4. tableaux « Requête | Statut | Corps » quand c'est utile
+  5. 1 à 3 encadrés Material (`!!! tip`, `!!! note`, `!!! warning`)
+  6. `## Récapitulatif`
   7. `[Suivant : …](page.md){ .md-button }`
 
 - Vouvoiement, phrases courtes, présent de l'indicatif.
 - Pas d'emoji, pas de marketing.
 
-## Les exemples sont exécutés
+## Le code des pages est autonome
 
-Toute page cite un fichier réel de `docs_src/` :
+Contrairement à l'ancienne convention, **les pages ne recopient plus les classes
+de `docs_src/`** :
 
-```markdown
-`docs_src/QueryParamsExample.php` :
+- snippets réutilisables directement (fichier complet `<?php` + `require
+  vendor/autoload.php` + `use`, ou extrait ciblé) ;
+- pas de `final class XExample extends DocsExample`, pas de
+  `DocsExample::scenario()` ;
+- les attributs et signatures doivent correspondre au code réel (vérifier
+  `src/`) ;
+- `docs_src/` reste la suite de régression exécutée par `tests/ExamplesTest.php`
+  (fixtures), mais n'apparaît plus dans le cours.
 
-```php
-// extrait fidèle du fichier
-```
-```
+## Couverture
 
-Règles :
-
-- le code montré est **copié** du fichier d'exemple (pas réécrit de mémoire) ;
-- le tableau « Ce qui se passe » reprend les `scenarios()` du fichier ;
-- `./vendor/bin/phpunit --filter ExamplesTest` doit rester vert.
+Le cours doit couvrir toute la surface publique : routage, paramètres, corps,
+validation, réponses, fichiers, formulaires, sécurité, dépendances,
+middlewares, contrôleurs, fichiers statiques, templates, OpenAPI, cache,
+contrats/adaptateurs, WebSockets, tâches d'arrière-plan, journalisation,
+utilitaires, JSON-RPC, tests, runners, erreurs.
 
 ## Ajouter une page
 
 1. écrire `docs/fr/<page>.md` ;
-2. ajouter l'entrée dans le `nav` de `mkdocs.yml` ;
-3. créer ou réutiliser l'exemple `docs_src/<Brique>Example.php` et l'inscrire dans
-   `docs_src/registry.php` ;
-4. lancer les tests puis `mkdocs serve` pour vérifier le rendu.
+2. ajouter l'entrée dans le `nav` de `mkdocs.yml` et sa traduction
+   (`nav_translations` pour `en`) ;
+3. vérifier les liens internes et `mkdocs build`.
 
 ## Traduction
 
@@ -53,19 +56,16 @@ python scripts/translate.py --lang en             # LLM_API_KEY requis
 
 - Ne jamais éditer `docs/en/*.md` à la main : la prochaine traduction l'écraserait.
 - Le prompt (`scripts/prompts/translate.md`) impose de **copier les blocs de code
-  à l'identique** — ils correspondent aux fichiers de `docs_src/`.
-- Le glossaire (`scripts/prompts/glossary.md`) fige la terminologie et la liste
-  des identifiants à ne pas traduire.
+  à l'identique**.
 - Manifeste par langue : `docs/<lang>/.manifest.json` (SHA-256 de la source).
 
 ## Nommage
 
 | Élément | Convention |
 | --- | --- |
-| pages | `kebab-case.md` (`query-params.md`, `static-files.md`) |
-| exemples | `PascalCaseExample.php` (`QueryParamsExample.php`) |
+| pages | `kebab-case.md` (`query-params.md`, `background-tasks.md`) |
+| exemples exécutés | `PascalCaseExample.php` dans `docs_src/` |
 | namespace des exemples | `Eorbahapi\Examples` (PSR-4 → `docs_src/`) |
-| encadrés d'exemple | `` `docs_src/QueryParamsExample.php` `` en tête de chapitre |
 
 ## Vérifications avant commit
 
@@ -73,4 +73,5 @@ python scripts/translate.py --lang en             # LLM_API_KEY requis
 ./vendor/bin/phpunit                       # toute la suite
 python scripts/translate.py --lang all --check
 find src docs_src -name '*.php' -exec php -l {} \;
+mkdocs build
 ```

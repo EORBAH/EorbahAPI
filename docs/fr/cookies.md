@@ -2,131 +2,112 @@
 
 ## Ce que vous allez apprendre
 
-Lire un cookie avec `#[Cookie]`, distinguer un cookie obligatoire d'un cookie
-optionnel (valeur par défaut PHP), valider la valeur avec les contraintes Svinx,
-comprendre la réponse `422` — et écrire un cookie côté réponse.
+Lire un cookie avec `#[Cookie]`, poser un cookie de réponse avec ses options, et
+utiliser la session PHP via le middleware fourni.
 
-## Le code
-
-`docs_src/CookiesExample.php` :
+## Lire un cookie
 
 ```php
 <?php
 
-namespace Eorbahapi\Examples;
+require __DIR__ . '/vendor/autoload.php';
 
 use Eorbahapi\EorbahAPI;
 use Eorbahapi\Params\Cookie;
 
-/**
- * Cookies.
- */
-final class CookiesExample extends DocsExample
-{
-    public static function app(): EorbahAPI
-    {
-        $app = new EorbahAPI();
+$app = new EorbahAPI();
 
-        $app->get('/session', function (#[Cookie] string $session_id) {
-            return ['session_id' => $session_id];
-        });
+$app->get('/profil', function (#[Cookie] ?string $session = null) {
+    return ['session' => $session];
+});
 
-        // Cookie optionnel, avec contrainte de format.
-        $app->get('/theme', function (
-            #[Cookie(choices: ['light', 'dark'])] string $theme = 'light'
-        ) {
-            return ['theme' => $theme];
-        });
-
-        return $app;
-    }
-}
+$app->run();
 ```
 
-`Cookie` vit dans le namespace `Eorbahapi\Params` :
-`use Eorbahapi\Params\Cookie;`. La lecture se fait dans `$_COOKIE` — c'est ce que
-fait `Eorbahapi\Request::cookie()`, que le résolveur de paramètres interroge.
-Rien d'autre n'est à câbler, et la signature du handler suffit à décrire le
-contrat.
+```console
+$ curl "http://127.0.0.1:8000/profil" --cookie "session=abc123"
+{"session":"abc123"}
+```
 
-| Écriture | Comportement |
-| --- | --- |
-| `#[Cookie] string $session_id` | cookie `session_id` **obligatoire**, `422` s'il manque |
-| `#[Cookie] string $theme = 'light'` | cookie **optionnel**, `light` par défaut |
-| `#[Cookie(choices: ['light', 'dark'])]` | valeur restreinte, `422` sinon |
-| `#[Cookie('sid')] string $session_id` | nom explicite `sid` dans les cookies |
+Un cookie requis (sans valeur par défaut ni type nullable) absent produit une
+**422** (`loc: ["cookie", "session"]`).
 
-## Ce qui se passe
+## Poser un cookie de réponse
 
-Les scénarios de l'exemple décrivent ce comportement :
+Un handler peut recevoir l'objet `Response` et y ajouter un cookie :
 
 ```php
 <?php
-    public static function scenarios(): array
-    {
-        return [
-            self::scenario('GET', '/session', [
-                'cookies' => ['session_id' => 'abc123'],
-            ], json: ['session_id' => 'abc123']),
 
-            self::scenario('GET', '/session', [], status: 422, contains: 'missing'),
+use Eorbahapi\Response;
 
-            self::scenario('GET', '/theme', [
-                'cookies' => ['theme' => 'dark'],
-            ], json: ['theme' => 'dark']),
+$app->post('/login', function (Response $response) {
+    $response->cookie('session', 'abc123', [
+        'expires' => time() + 3600,
+        'path' => '/',
+        'secure' => false,      // true en production HTTPS
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
 
-            self::scenario('GET', '/theme', json: ['theme' => 'light']),
-
-            self::scenario('GET', '/theme', [
-                'cookies' => ['theme' => 'rose'],
-            ], status: 422, contains: 'value_error'),
-        ];
-    }
+    return ['connecté' => true];
+});
 ```
 
-| Requête | Statut | Corps / en-têtes |
+Options acceptées par `Response::cookie()` :
+
+| Option | Défaut | Rôle |
 | --- | --- | --- |
-| `GET /session` avec `session_id=abc123` | 200 | `{"session_id":"abc123"}` |
-| `GET /session` sans cookie | 422 | `missing` : le paramètre `cookie 'session_id'` est requis |
-| `GET /theme` avec `theme=dark` | 200 | `{"theme":"dark"}` |
-| `GET /theme` sans cookie | 200 | `{"theme":"light"}` (valeur par défaut) |
-| `GET /theme` avec `theme=rose` | 422 | `value_error` : `rose` hors de `choices` |
+| `expires` | `0` (session) | expiration (timestamp) |
+| `path` | `/` | portée du cookie |
+| `domain` | `''` | domaine |
+| `secure` | `true` | HTTPS uniquement |
+| `httponly` | `true` | inaccessible en JavaScript |
+| `samesite` | `Strict` | `Strict`, `Lax` ou `None` |
 
-Le corps d'une `422` reste un JSON
-`{"error": true, "status": 422, "message": ..., "details": [...]}` : chaque
-entrée de `details` indique `loc` (`["cookie", "theme"]`), `type` (`missing` ou
-`value_error`) et `msg`. Les contraintes disponibles sont celles de
-`Svinx\Validator` (`min_length`, `max_length`, `pattern`, `choices`, `ge`, `le`…),
-en arguments nommés de l'attribut.
+**Supprimer un cookie** :
 
-Pour **écrire** un cookie, c'est la réponse qui s'en charge. `Response::cookie()`
-accepte un nom, une valeur et un tableau d'options ; les valeurs par défaut sont
-sûres : `path => '/'`, `secure => true`, `httponly => true`,
-`samesite => 'Strict'`, `expires => 0` (cookie de session). L'appel enregistre
-aussi la valeur dans `$_COOKIE`, si bien que la requête suivante du même
-processus la relit. Pour supprimer un cookie, `Response::clearCookie($name)` :
-il réexpédie le cookie avec une date d'expiration passée
-(`time() - 3600`) et le retire de `$_COOKIE`. En pratique, dans un handler :
+```php
+<?php
 
-`$response->cookie('theme', 'dark', ['path' => '/']);`
+$app->post('/logout', function (Response $response) {
+    $response->clearCookie('session');
 
-!!! tip "Défaut PHP plutôt que défaut d'attribut"
-    `#[Cookie] string $theme = 'light'` laisse le défaut dans la signature PHP :
-    c'est la forme la plus lisible, et elle fonctionne même sans cookie. Les
-    deux autres écritures (`default: 'light'` dans l'attribut, ou un type
-    nullable `?string $theme = null`) sont équivalentes.
+    return ['déconnecté' => true];
+});
+```
 
-!!! warning "Un cookie de session n'est pas chiffré"
-    Un cookie circule en clair chez le client : ne stockez jamais un mot de
-    passe ou un rôle d'autorisation directement dedans. Gardez la valeur opaque
-    (identifiant de session, jeton signé) et vérifiez-la côté serveur.
+## Session PHP
+
+Le middleware `SessionMiddleware` démarre la session et expose les helpers de
+`Request` :
+
+```php
+<?php
+
+use Eorbahapi\Middlewares\SessionMiddleware;
+
+$app->add_middleware(SessionMiddleware::class);
+
+$app->get('/panier', function (Request $request) {
+    $request->setSessionValue('vu', true);
+
+    return ['panier' => $request->session('panier', [])];
+});
+```
+
+Voir [Middlewares](middlewares.md) pour le cycle de session et ses options.
+
+!!! warning "Cookie `secure` par défaut"
+    `secure` vaut `true` par défaut : en développement HTTP, passez
+    `'secure' => false` ou le navigateur ignorera le cookie.
 
 ## Récapitulatif
 
-- `#[Cookie]` lit `$_COOKIE` via `Eorbahapi\Request::cookie()` ;
-- sans défaut PHP, le cookie est obligatoire et son absence donne une `422` `missing` ;
-- `= 'light'` (ou `default:`) rend le cookie optionnel ;
-- `choices`, `pattern`, `min_length`… valident la valeur et produisent une `422` `value_error` ;
-- pour écrire, utilisez `Response::cookie()` et `Response::clearCookie()`.
+- `#[Cookie]` lit un cookie, avec validation et valeur par défaut ;
+- `Response::cookie()` pose un cookie avec ses options (durée, `secure`,
+  `SameSite`…) ;
+- `Response::clearCookie()` le supprime ;
+- `SessionMiddleware` gère la session PHP et `Request::session()`.
 
 [Suivant : Réponses](responses.md){ .md-button }
